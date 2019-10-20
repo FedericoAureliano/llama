@@ -1,0 +1,7 @@
+(executables
+ (names llama)
+ (libraries lia))
+
+(install
+ (section bin)
+ (files (llama.exe as llama)))
