@@ -1,12 +1,14 @@
 # llama
-[ʎ](https://en.wikipedia.org/wiki/Palatal_lateral_approximant)ama is (will be) an [SMT-LIB](http://smtlib.cs.uiowa.edu/index.shtml) function enumerator playground.
+[ʎ](https://en.wikipedia.org/wiki/Ye%C3%ADsmo)ama is (will be) an [SMT-LIB](http://smtlib.cs.uiowa.edu/index.shtml) function enumerator playground.
 
 # Install
 ```sh
-dune build bin/llama.exe
+# You can skip this if you want
+dune build @install
 ```
 
 # Run
 ```sh
-dune exec bin/llama.exe
+# Installs and executes bin/llama.ml
+dune exec llama 
 ```
