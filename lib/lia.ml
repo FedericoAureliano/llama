@@ -77,12 +77,12 @@ let rec check (t : term) : bool =
   | Times (e, f)     -> check e  && check f  && (try ordered e f with | Tie -> true) && constant e
   | ITE   (e, f)     -> e <> f   && check e  && check f
 
-let first = Lit  (List.hd literals)
+let bottom = Lit (List.hd literals)
 
 let rec leftmost (t : term) : term =
   match t with 
-  | Lit    _     -> first
-  | Var    _     -> first
+  | Lit    _     -> bottom
+  | Var    _     -> bottom
   | Plus  (e, v) -> Plus (leftmost e, leftmost v)
   | Minus (e, v) -> Plus (leftmost e, leftmost v)
   | Times (e, v) -> Plus (leftmost e, leftmost v)
