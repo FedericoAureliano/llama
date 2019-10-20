@@ -1,8 +1,5 @@
 exception Tie
 
-let literals  = ["0"; "1"]
-let variables = ["x"; "y"]
-
 let rec next_ls (ls: (string list)) (x : string) : string option = 
   match ls with
     | y::ys -> if ((x = y) && ((List.length ys) > 0)) then Some (List.hd ys) else (next_ls ys x) 
@@ -77,70 +74,71 @@ let rec check (t : term) : bool =
   | Times (e, f)     -> check e  && check f  && (try ordered e f with | Tie -> true) && constant e
   | ITE   (e, f)     -> e <> f   && check e  && check f
 
-let bottom = Lit (List.hd literals)
+let bottom (ls : (string list)) (vs : (string list)) = 
+  if List.length ls > 0 then Lit (List.hd ls) else Var (List.hd vs)
 
-let rec leftmost (t : term) : term =
+let rec leftmost (ls : (string list)) (vs : (string list)) (t : term) : term =
   match t with 
-  | Lit    _     -> bottom
-  | Var    _     -> bottom
-  | Plus  (e, v) -> Plus (leftmost e, leftmost v)
-  | Minus (e, v) -> Plus (leftmost e, leftmost v)
-  | Times (e, v) -> Plus (leftmost e, leftmost v)
-  | ITE   (e, v) -> Plus (leftmost e, leftmost v)   
+  | Lit    _     -> bottom ls vs
+  | Var    _     -> bottom ls vs
+  | Plus  (e, v) -> Plus (leftmost ls vs e, leftmost ls vs v)
+  | Minus (e, v) -> Plus (leftmost ls vs e, leftmost ls vs v)
+  | Times (e, v) -> Plus (leftmost ls vs e, leftmost ls vs v)
+  | ITE   (e, v) -> Plus (leftmost ls vs e, leftmost ls vs v)   
 
-let next_group (t : term) : term option =
+let next_group (ls : (string list)) (vs : (string list)) (t : term) : term option =
   match t with
-  | Lit    e     -> (match next_ls literals e with
+  | Lit    e     -> (match next_ls ls e with
                       | Some n -> Some (Lit (n))
-                      | None   -> Some (Var (List.hd variables))) 
-  | Var    e     -> (match next_ls variables e with
+                      | None   -> Some (Var (List.hd vs))) 
+  | Var    e     -> (match next_ls vs e with
                       | Some n -> Some (Var (n))
                       | None   -> None)
-  | Plus  (e, v) -> Some (Minus (leftmost e, leftmost v))
-  | Minus (e, v) -> Some (Times (leftmost e, leftmost v))
-  | Times (e, v) -> Some (ITE (leftmost e, leftmost v))
+  | Plus  (e, v) -> Some (Minus (leftmost ls vs e, leftmost ls vs v))
+  | Minus (e, v) -> Some (Times (leftmost ls vs e, leftmost ls vs v))
+  | Times (e, v) -> Some (ITE (leftmost ls vs e, leftmost ls vs v))
   | _            -> None
 
-let rec next_column (t : term) : term option =
+let rec next_column (ls : (string list)) (vs : (string list)) (t : term) : term option =
   match t with 
-  | Plus (e, v)  -> (match next_column e with 
+  | Plus (e, v)  -> (match next_column ls vs e with 
                     | Some n -> Some (Plus (n, v))
                     | None   -> 
-                      (match next_column v with 
-                      | Some n -> Some (Plus (leftmost e, n))
-                      | None   -> next_group t))
-  | Minus (e, v)  -> (match next_column e with 
+                      (match next_column ls vs v with 
+                      | Some n -> Some (Plus (leftmost ls vs e, n))
+                      | None   -> next_group ls vs t))
+  | Minus (e, v)  -> (match next_column ls vs e with 
                     | Some n -> Some (Minus (n, v))
                     | None   -> 
-                      (match next_column v with 
-                      | Some n -> Some (Minus (leftmost e, n))
-                      | None   -> next_group t))
-  | Times (e, v)  -> (match next_column e with 
+                      (match next_column ls vs v with 
+                      | Some n -> Some (Minus (leftmost ls vs e, n))
+                      | None   -> next_group ls vs t))
+  | Times (e, v)  -> (match next_column ls vs e with 
                     | Some n -> Some (Times (n, v))
                     | None   -> 
-                      (match next_column v with 
-                      | Some n -> Some (Times (leftmost e, n))
-                      | None   -> next_group t))
-  | ITE (e, v)    -> (match next_column e with 
+                      (match next_column ls vs v with 
+                      | Some n -> Some (Times (leftmost ls vs e, n))
+                      | None   -> next_group ls vs t))
+  | ITE (e, v)    -> (match next_column ls vs e with 
                     | Some n -> Some (ITE (n, v))
                     | None   -> 
-                      (match next_column v with 
-                      | Some n -> Some (ITE (leftmost e, n))
-                      | None   -> next_group t))
-  | _             -> next_group t
+                      (match next_column ls vs v with 
+                      | Some n -> Some (ITE (leftmost ls vs e, n))
+                      | None   -> next_group ls vs t))
+  | _             -> next_group ls vs t
 
-let rec next (t : term) : term =
+let rec next (ls : (string list)) (vs : (string list)) (t : term) : term =
   (* Var and ITE are rightmost: they jump to next row. *)
   let r = (match t with 
-  | Var _        -> (match next_column t with
+  | Var _        -> (match next_column ls vs t with
                     | Some n -> n
-                    | None   -> Plus (Lit (List.hd literals), Lit (List.hd literals)))
-  | ITE (e, v)   -> (match next_column t with
+                    | None   -> Plus (bottom ls vs, bottom ls vs))
+  | ITE (e, v)   -> (match next_column ls vs t with
                     | Some n -> n
                     | None   -> if ((size e) <= (size v)) 
-                                  then (Plus (Plus(leftmost e, Lit (List.hd literals)), leftmost v))
-                                  else (Plus (leftmost v, Plus(leftmost v, Lit (List.hd literals)))))
-  | _            -> (match next_column t with
+                                  then (Plus (Plus(leftmost ls vs e, bottom ls vs), leftmost ls vs v))
+                                  else (Plus (leftmost ls vs v, Plus(leftmost ls vs v, bottom ls vs))))
+  | _            -> (match next_column ls vs t with
                     | Some n -> n
                     | None   -> raise (Failure "Unreachable")))
-  in (if check r then r else next r)
+  in (if check r then r else next ls vs r)

@@ -6,8 +6,5 @@ type term =
   | Times of (term * term)
   | ITE   of (term * term)
 
-val literals  : (string list)
-val variables : (string list)
 val to_string : term -> string
-val bottom    : term
-val next      : term -> term
+val next      : (string list) -> (string list) -> term -> term
