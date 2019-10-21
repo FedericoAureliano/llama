@@ -8,7 +8,7 @@ let rec next_ls (ls: (string list)) (x : string) : string option =
 type term =
   | True
   | False
-  | TProp
+  | TFunc
   | Var   of string
   | Not   of (term)
   | Or    of (term * term)
@@ -18,7 +18,7 @@ let rec to_string (t : term) : string =
   match t with
   | True         -> "true"
   | False        -> "false"
-  | TProp        -> "?t"
+  | TFunc        -> "?b?"
   | Var    e     -> e
   | Not    e     -> "(not "    ^ (to_string e) ^ ")"
   | Or    (e, f) -> "(or "     ^ (to_string e) ^ " " ^ (to_string f) ^ ")"
@@ -38,14 +38,14 @@ let rec ordered (t : term) (e : term) : bool =
   | True, _                        -> true
   | False, True                    -> false
   | False, _                       -> true
-  | TProp, TProp                   -> true
-  | TProp, True                    -> false
-  | TProp, False                   -> false
-  | TProp, _                       -> true
+  | TFunc, TFunc                   -> true
+  | TFunc, True                    -> false
+  | TFunc, False                   -> false
+  | TFunc, _                       -> true
   | Var   a, Var b                 -> if a = b then raise Tie else a < b
   | Var   _, True                  -> false
   | Var   _, False                 -> false
-  | Var   _, TProp                 -> false
+  | Var   _, TFunc                 -> false
   | Var   _, _                     -> true
   | Not   a, Not b                 -> ordered a b
   | Not   _, And (_, _)            -> true
@@ -77,7 +77,7 @@ let rec leftmost (t : term) : term =
   match t with 
   | True             -> True
   | False            -> True
-  | TProp            -> True
+  | TFunc            -> True
   | Var  _           -> True
   | Or  (e, v)       -> Or (leftmost e, leftmost v)
   | Not  e           -> leftmost e
@@ -86,8 +86,8 @@ let rec leftmost (t : term) : term =
 let next_group (vs : (string list)) (t : term) : term option =
   match t with
   | True             -> Some False
-  | False            -> Some TProp
-  | TProp            -> if ((List.length vs) > 0) then Some (Var (List.hd vs)) else None
+  | False            -> Some TFunc
+  | TFunc            -> if ((List.length vs) > 0) then Some (Var (List.hd vs)) else None
   | Var      e       -> (match next_ls vs e with
                          | Some n -> Some (Var (n))
                          | None   -> None)
@@ -127,9 +127,9 @@ let rec next_column (vs : (string list)) (t : term) : term option =
 
 let rec next (vs : (string list)) (t : term) : term =
   (* Var and Not And are rightmost: they jump to next row. 
-     Var can be empty which would make TProp the rightmost*)
+     Var can be empty which would make TFunc the rightmost*)
   let r = (match t with 
-  | TProp            -> (match next_column vs t with
+  | TFunc            -> (match next_column vs t with
                         | Some n -> n
                         | None   -> Or (True, True))
   | Var _            -> (match next_column vs t with

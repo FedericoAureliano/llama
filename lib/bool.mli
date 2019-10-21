@@ -1,7 +1,7 @@
 type term =
   | True
   | False
-  | TProp
+  | TFunc
   | Var   of string
   | Not   of (term)
   | Or    of (term * term)

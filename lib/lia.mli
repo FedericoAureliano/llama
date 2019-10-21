@@ -1,6 +1,7 @@
 type term =
   | Lit   of string
   | Var   of string
+  | TFunc
   | Plus  of (term * term)
   | Minus of (term * term)
   | Times of (term * term)

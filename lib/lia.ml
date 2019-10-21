@@ -8,6 +8,7 @@ let rec next_ls (ls: (string list)) (x : string) : string option =
 type term =
   | Lit   of string
   | Var   of string
+  | TFunc
   | Plus  of (term * term)
   | Minus of (term * term)
   | Times of (term * term)
@@ -17,19 +18,19 @@ let rec to_string (t : term) : string =
   match t with
   | Lit    e     -> e
   | Var    e     -> e
-  | Plus  (e, f) -> "(+ "      ^ (to_string e) ^ " " ^ (to_string f) ^ ")"
-  | Minus (e, f) -> "(- "      ^ (to_string e) ^ " " ^ (to_string f) ^ ")"
-  | Times (e, f) -> "(* "      ^ (to_string e) ^ " " ^ (to_string f) ^ ")"
-  | ITE   (e, f) -> "(ite ?b " ^ (to_string e) ^ " " ^ (to_string f) ^ ")"
+  | TFunc        -> "?i?"
+  | Plus  (e, f) -> "(+ "       ^ (to_string e) ^ " " ^ (to_string f) ^ ")"
+  | Minus (e, f) -> "(- "       ^ (to_string e) ^ " " ^ (to_string f) ^ ")"
+  | Times (e, f) -> "(* "       ^ (to_string e) ^ " " ^ (to_string f) ^ ")"
+  | ITE   (e, f) -> "(ite ?b? " ^ (to_string e) ^ " " ^ (to_string f) ^ ")"
 
 let rec size (t : term) : int =
   match t with
-  | Lit    _     -> 1
-  | Var    _     -> 1
   | Plus  (e, f) -> 1 + (size e) + (size f)
   | Minus (e, f) -> 1 + (size e) + (size f)
   | Times (e, f) -> 1 + (size e) + (size f)
   | ITE   (e, f) -> 1 + (size e) + (size f)
+  | _            -> 1
 
 let rec ordered (t : term) (e : term) : bool =
   if size t < size e then true else
@@ -37,12 +38,17 @@ let rec ordered (t : term) (e : term) : bool =
   match t, e with 
   | Lit   a, Lit b                 -> if a = b then raise Tie else a < b  
   | Lit   _, _                     -> true
+  | TFunc  , TFunc                 -> true
+  | TFunc  , Lit _                 -> false
+  | TFunc  , _                     -> true
   | Var   a, Var b                 -> if a = b then raise Tie else a < b
   | Var   _, Lit _                 -> false
+  | Var   _, TFunc                 -> false
   | Var   _, _                     -> true
   | Plus  (a1, a2),  Plus (b1, b2) -> (try ordered a1 b1 with | Tie -> ordered a2 b2)
   | Plus  (_, _) , Lit _           -> false
   | Plus  (_, _) , Var _           -> false
+  | Plus  (_, _) , TFunc           -> false
   | Plus  (_, _),  _               -> true
   | Minus (a1, a2), Minus (b1, b2) -> (try ordered a1 b1 with | Tie -> ordered a2 b2)
   | Minus (_, _), Times (_, _)     -> true
@@ -58,6 +64,7 @@ let rec constant (t : term) : bool =
   match t with
   | Lit    _     -> true
   | Var    _     -> false
+  | TFunc        -> false
   | Plus  (e, f) -> (constant e) && (constant f)
   | Minus (e, f) -> (constant e) && (constant f)
   | Times (e, f) -> (constant e) && (constant f)
@@ -67,6 +74,7 @@ let rec prune (t : term) : bool =
   match t with
   | Lit    _         -> false
   | Var    _         -> false
+  | TFunc            -> false
   | Plus  (Lit v, f) -> v = "0" || prune f  || (try not (ordered (Lit v) f ) with | Tie -> false)
   | Plus  (e, Lit v) -> v = "0" || prune e  || (try not (ordered e (Lit v) ) with | Tie -> false)
   | Plus  (e, f)     -> prune e || prune f  || (try not (ordered e f) with | Tie -> false)
@@ -84,6 +92,7 @@ let rec leftmost (ls : (string list)) (vs : (string list)) (t : term) : term =
   match t with 
   | Lit    _     -> bottom ls vs
   | Var    _     -> bottom ls vs
+  | TFunc        -> bottom ls vs
   | Plus  (e, v) -> Plus (leftmost ls vs e, leftmost ls vs v)
   | Minus (e, v) -> Plus (leftmost ls vs e, leftmost ls vs v)
   | Times (e, v) -> Plus (leftmost ls vs e, leftmost ls vs v)
@@ -96,7 +105,8 @@ let next_group (ls : (string list)) (vs : (string list)) (t : term) : term optio
                       | None   -> Some (Var (List.hd vs))) 
   | Var    e     -> (match next_ls vs e with
                       | Some n -> Some (Var (n))
-                      | None   -> None)
+                      | None   -> Some (TFunc))
+  | TFunc        -> None
   | Plus  (e, v) -> Some (Minus (leftmost ls vs e, leftmost ls vs v))
   | Minus (e, v) -> Some (Times (leftmost ls vs e, leftmost ls vs v))
   | Times (e, v) -> Some (ITE (leftmost ls vs e, leftmost ls vs v))
@@ -131,11 +141,9 @@ let rec next_column (ls : (string list)) (vs : (string list)) (t : term) : term 
   | _             -> next_group ls vs t
 
 let rec next (ls : (string list)) (vs : (string list)) (t : term) : term =
-  (* Var and ITE are rightmost: they jump to next row. *)
+  (* TFunc and ITE are rightmost: they jump to next row. *)
   let r = (match t with 
-  | Var _        -> (match next_column ls vs t with
-                    | Some n -> n
-                    | None   -> Plus (bottom ls vs, bottom ls vs))
+  | TFunc        -> Plus (bottom ls vs, bottom ls vs)
   | ITE (e, v)   -> (match next_column ls vs t with
                     | Some n -> n
                     | None   -> if ((size e) <= (size v)) 
