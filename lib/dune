@@ -1,2 +1,2 @@
 (library
- (name lia))
+ (name llama_lib))

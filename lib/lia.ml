@@ -37,14 +37,17 @@ let rec ordered (t : term) (e : term) : bool =
   match t, e with 
   | Lit   a, Lit b                 -> if a = b then raise Tie else a < b  
   | Lit   _, _                     -> true
-  | Var   _, Lit _                 -> false
   | Var   a, Var b                 -> if a = b then raise Tie else a < b
+  | Var   _, Lit _                 -> false
   | Var   _, _                     -> true
   | Plus  (a1, a2),  Plus (b1, b2) -> (try ordered a1 b1 with | Tie -> ordered a2 b2)
+  | Plus  (_, _) , Lit _           -> false
+  | Plus  (_, _) , Var _           -> false
   | Plus  (_, _),  _               -> true
-  | Minus (_, _), Plus (_, _)      -> false
   | Minus (a1, a2), Minus (b1, b2) -> (try ordered a1 b1 with | Tie -> ordered a2 b2)
-  | Minus (_, _), _                -> true
+  | Minus (_, _), Times (_, _)     -> true
+  | Minus (_, _), ITE (_, _)       -> true
+  | Minus (_, _), _                -> false
   | Times (a1, a2), Times (b1, b2) -> (try ordered a1 b1 with | Tie -> ordered a2 b2)
   | Times (_, _), ITE (_, _)       -> true
   | Times (_, _), _                -> false
@@ -60,19 +63,19 @@ let rec constant (t : term) : bool =
   | Times (e, f) -> (constant e) && (constant f)
   | ITE   (e, f) -> (constant e) && (constant f)
 
-let rec check (t : term) : bool =
+let rec prune (t : term) : bool =
   match t with
-  | Lit    _         -> true
-  | Var    _         -> true
-  | Plus  (Lit v, f) -> v <> "0" && check f  && (try ordered (Lit v) f  with | Tie -> true)
-  | Plus  (e, Lit v) -> v <> "0" && check e  && (try ordered e (Lit v)  with | Tie -> true)
-  | Plus  (e, f)     -> check e  && check f  && (try ordered e f with | Tie -> true)
-  | Minus (e, Lit v) -> v <> "0" && check e
-  | Minus (e, f)     -> e <> f   && check e  && check f
-  | Times (Lit v, f) -> v <> "1" && v <> "0" && check f && (try ordered (Lit v) f with | Tie -> true)
-  | Times (e, Lit v) -> v <> "1" && v <> "0" && check e && (try ordered e (Lit v) with | Tie -> true) && constant e
-  | Times (e, f)     -> check e  && check f  && (try ordered e f with | Tie -> true) && constant e
-  | ITE   (e, f)     -> e <> f   && check e  && check f
+  | Lit    _         -> false
+  | Var    _         -> false
+  | Plus  (Lit v, f) -> v = "0" || prune f  || (try not (ordered (Lit v) f ) with | Tie -> false)
+  | Plus  (e, Lit v) -> v = "0" || prune e  || (try not (ordered e (Lit v) ) with | Tie -> false)
+  | Plus  (e, f)     -> prune e || prune f  || (try not (ordered e f) with | Tie -> false)
+  | Minus (e, Lit v) -> v = "0" || prune e
+  | Minus (e, f)     -> e = f   || prune e  || prune f
+  | Times (Lit v, f) -> v = "1" || v = "0"  || prune f || (try not (ordered (Lit v) f) with | Tie -> false)
+  | Times (e, Lit v) -> v = "1" || v = "0"  || prune e || (try not (ordered e (Lit v)) with | Tie -> false) || constant e
+  | Times (e, f)     -> prune e || prune f  || (try not (ordered e f) with | Tie -> false) || constant e
+  | ITE   (e, f)     -> e = f   || prune e  || prune f
 
 let bottom (ls : (string list)) (vs : (string list)) = 
   if List.length ls > 0 then Lit (List.hd ls) else Var (List.hd vs)
@@ -141,4 +144,4 @@ let rec next (ls : (string list)) (vs : (string list)) (t : term) : term =
   | _            -> (match next_column ls vs t with
                     | Some n -> n
                     | None   -> raise (Failure "Unreachable")))
-  in (if check r then r else next ls vs r)
+  in (if prune r then next ls vs r else r)

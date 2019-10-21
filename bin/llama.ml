@@ -1,14 +1,23 @@
-let rec print_next_n (ls : (string list)) (vs : (string list)) (t : Lia.term) (n : int): unit = 
-  ((print_string (Lia.to_string t ^ "\n")); if (n > 0) then (print_next_n ls vs (Lia.next ls vs t) (n - 1)));;
+open Llama_lib
 
-(* Print first 10 LIA terms
-      - with constants 0 and 1
-      - with variables x and y
-      - with boolean placeholders ("?b") for if-then-else operator *)
-let int_lits = ["0"; "1"] in
-let int_vars = ["x"; "y"] in
-print_next_n int_lits int_vars (Lia.Lit "0") 10;
+let int_lits  = ["0"; "1"];;
+let int_vars  = ["x"; "y"];;
+let bool_vars = ["a"; "b"];;
 
-print_string "\nStart at a bigger term and print the next 10\n\n";
-let curr = Lia.Plus (Lia.Times (Lia.Lit "0", Lia.Var "x"), Lia.Times (Lia.Lit "0", Lia.Lit "0")) in
-print_next_n int_lits int_vars curr 10;;
+let iters = 10;;
+
+let rec print_n_ints (t : Lia.term) (n : int): unit = 
+  ((print_string (Lia.to_string t ^ "\n")); 
+  if (n > 0) then (print_n_ints (Lia.next int_lits int_vars t) (n - 1)));;
+
+let rec print_n_bools (t : Bool.term) (n : int): unit = 
+  ((print_string (Bool.to_string t ^ "\n")); 
+  if (n > 0) then (print_n_bools (Bool.next bool_vars t) (n - 1)));;
+
+print_string "LIA terms with 0, 1, x, and y\n\n";;
+print_n_ints (Lia.Lit "0") iters;;
+print_string "\nStart at a bigger term and continue\n\n";;
+print_n_ints (Lia.Plus (Lia.Times (Lia.Lit "0", Lia.Var "x"), Lia.Times (Lia.Lit "0", Lia.Lit "0"))) iters;;
+
+print_string "\nNow print boolean terms\n\n";;
+print_n_bools Bool.True iters;
