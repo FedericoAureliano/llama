@@ -1,2 +1,3 @@
 (library
- (name llama_lib))
+ (name llama_lib)
+ (libraries core))

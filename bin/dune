@@ -1,6 +1,6 @@
 (executables
  (names llama)
- (libraries llama_lib))
+ (libraries llama_lib core))
 
 (install
  (section bin)
