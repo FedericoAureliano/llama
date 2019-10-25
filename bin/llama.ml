@@ -1,17 +1,18 @@
-open Llama_lib
+open Llama_lib.Llcore
 
-let hole = Llcore.mk_int_hole;;
-let plus = Llcore.mk_int_func "+" [hole; hole];;
-let x    = Llcore.mk_int_func "x" [];;
-let y    = Llcore.mk_int_func "y" [];;
-let zero = Llcore.mk_int_lit 0;;
-let one  = Llcore.mk_int_lit 1;;
+let start = mk_int_hole;;
+let plus  = mk_int_func "+" [start; start];;
+let x     = mk_int_func "x" [];;
+let y     = mk_int_func "y" [];;
+let zero  = mk_int_lit 0;;
+let one   = mk_int_lit 1;;
+let depth = 3;;
 
-let grammar (t : Llcore.sterm) : (Llcore.sterm list) = 
+let grammar (t : sterm) : (sterm list) = 
   match t with 
-  | Int Placeholder -> [zero; one; x; y; plus]
+  | Int Hole -> [zero; one; x; y; plus]
   | _ -> [];;
 
-let ps = Llcore.generate grammar 3 hole;;
+let ps = generate grammar depth start;;
 
-print_string ((Llcore.pset_to_string ps) ^ "\n")
+print_string ((pset_to_string ps) ^ "\n");;

@@ -1,5 +1,5 @@
 type uterm = 
-  | Placeholder
+  | Hole
   | Literal     of string
   | Function    of (string * (sterm list))
 and sterm = 
@@ -12,7 +12,6 @@ type pset = Node of (sterm * (pset list))
 
 val term_to_string : sterm -> string
 val pset_to_string : pset  -> string
-val size           : sterm -> int
 val generate       : (sterm -> (sterm list)) -> int -> sterm -> pset
 
 val mk_int_hole : sterm
