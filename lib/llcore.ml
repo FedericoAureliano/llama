@@ -55,25 +55,47 @@ let expand (grammar : term list C.String.Map.t) (label : string) : (term list) =
     | None -> raise (Failure "Nonterminal not in grammar!")
     | Some x -> x
 
-let rec blast (g : term list C.String.Map.t) (i : int) (t: term): term_set =
-  if i > 0 
+let rec blast_expand (g : term list C.String.Map.t) (i : int) (t: term): term_set =
+  if (i >= 0 && i < 15)
   then (
     match t with 
-    | Int    Nonterminal l            -> Node (t, List.map (blast g (i-1)) (expand g l))
+    | Int    Nonterminal l            -> Node (t, List.map (blast_expand g (i-1)) (expand g l))
     | Int    Literal    (_)           -> Node (t, [])
-    | Int    Function   (_, ls)       -> Node (t, List.map (blast g (i-1)) ls)
-    | Bool   Nonterminal l            -> Node (t, List.map (blast g (i-1)) (expand g l))
+    | Int    Function   (_, ls)       -> Node (t, List.map (blast_expand g (i-1)) ls)
+    | Bool   Nonterminal l            -> Node (t, List.map (blast_expand g (i-1)) (expand g l))
     | Bool   Literal    (_)           -> Node (t, [])
-    | Bool   Function   (_, ls)       -> Node (t, List.map (blast g (i-1)) ls)
-    | BitVec (_, Nonterminal l)       -> Node (t, List.map (blast g (i-1)) (expand g l))
+    | Bool   Function   (_, ls)       -> Node (t, List.map (blast_expand g (i-1)) ls)
+    | BitVec (_, Nonterminal l)       -> Node (t, List.map (blast_expand g (i-1)) (expand g l))
     | BitVec (_, Literal (_))         -> Node (t, []) 
-    | BitVec (_, Function (_, ls))    -> Node (t, List.map (blast g (i-1)) ls)
-    | Array  (_, _, Nonterminal l)    -> Node (t, List.map (blast g (i-1)) (expand g l))
+    | BitVec (_, Function (_, ls))    -> Node (t, List.map (blast_expand g (i-1)) ls)
+    | Array  (_, _, Nonterminal l)    -> Node (t, List.map (blast_expand g (i-1)) (expand g l))
     | Array  (_, _, Literal (_))      -> Node (t, []) 
-    | Array  (_, _, Function (_, ls)) -> Node (t, List.map (blast g (i-1)) ls))
+    | Array  (_, _, Function (_, ls)) -> Node (t, List.map (blast_expand g (i-1)) ls))
   else Node (t, [])
 
 (* mk functions *)
+let mk_bool_nonterminal l = Bool (Nonterminal l)
+let mk_bool_func n ls     = Bool (Function (n, ls))
+
 let mk_int_nonterminal l = Int (Nonterminal l)
 let mk_int_func n ls     = Int (Function (n, ls))
+let mk_int_const n       = Int (Function (n, []))
 let mk_int_lit  v        = Int (Literal (string_of_int v))
+
+let start = mk_int_nonterminal "START"
+let v     = mk_int_nonterminal "VAR"
+let l     = mk_int_nonterminal "LIT"
+let b     = mk_bool_nonterminal "COMP"
+let plus  = mk_int_func "+" [start; start]
+let minus = mk_int_func "-" [start; start]
+let times = mk_int_func "*" [l; start]
+let ite   = mk_int_func "ite" [b; start; start]
+let eq    = mk_bool_func "=" [start; start]
+let lt    = mk_bool_func "<" [start; start]
+let mk_lia_grammar (lits : (term list)) (vars : (term list)) : (term list C.String.Map.t) = 
+  C.String.Map.of_alist_exn [
+  ("START", [l; v; plus; minus; times; ite]);
+  ("LIT", lits);
+  ("VAR", vars);
+  ("COMP", [eq; lt])
+]
