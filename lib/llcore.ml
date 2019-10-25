@@ -3,14 +3,14 @@ module C = Core
 type uterm = 
   | Nonterminal of string
   | Literal     of string
-  | Function    of (string * (sterm list))
-and sterm = 
+  | Function    of (string * (term list))
+and term = 
   | Int    of uterm
   | Bool   of uterm
   | BitVec of (int * uterm)
-  | Array  of (sterm * sterm * uterm)
+  | Array  of (term * term * uterm)
 
-type pset = Node of (sterm * (pset list))
+type term_set = Node of (term * (term_set list))
 
 let rec term_to_string_u (t : uterm) : string = 
   match t with
@@ -18,7 +18,7 @@ let rec term_to_string_u (t : uterm) : string =
   | Literal     v       -> v
   | Function    (f, []) -> f
   | Function    (f, x)  -> "(" ^ f ^ " "  ^ (String.concat " " (List.map term_to_string x)) ^ ")"
-and term_to_string (s : sterm) : string =
+and term_to_string (s : term) : string =
   match s with
   | Int    t         -> term_to_string_u t
   | Bool   t         -> term_to_string_u t
@@ -31,7 +31,7 @@ let term_to_name_u (t : uterm) : string =
   | Literal     v      -> v
   | Function    (f, _) -> f
 
-let term_to_name (s : sterm) : string =
+let term_to_name (s : term) : string =
   match s with
   | Int    t         -> term_to_name_u t
   | Bool   t         -> term_to_name_u t
@@ -41,36 +41,36 @@ let term_to_name (s : sterm) : string =
 let string_repeat s n =
   String.concat "" (Array.to_list (Array.make n s))
 
-let rec pset_to_string_depth (d : int) (p : pset): string =
+let rec term_set_to_string_depth (d : int) (p : term_set): string =
   let s = 
   (match p with
   | Node (x, []) -> (string_repeat "  " d) ^ (term_to_string x)
-  | Node (x, ls) -> (string_repeat "  " d) ^ (term_to_name x)  ^ (String.concat " " (List.map (pset_to_string_depth (d+1)) ls)))
+  | Node (x, ls) -> (string_repeat "  " d) ^ (term_to_name x)  ^ (String.concat " " (List.map (term_set_to_string_depth (d+1)) ls)))
   in (if d <> 0 then ("\n" ^ s) else s)
 
-let pset_to_string = pset_to_string_depth 0
+let term_set_to_string = term_set_to_string_depth 0
 
-let expand (grammar : sterm list C.String.Map.t) (label : string) : (sterm list) =
+let expand (grammar : term list C.String.Map.t) (label : string) : (term list) =
   match C.Map.find grammar label with
     | None -> raise (Failure "Nonterminal not in grammar!")
     | Some x -> x
 
-let rec generate (g : sterm list C.String.Map.t) (i : int) (t: sterm): pset =
+let rec blast (g : term list C.String.Map.t) (i : int) (t: term): term_set =
   if i > 0 
   then (
     match t with 
-    | Int    Nonterminal l            -> Node (t, List.map (generate g (i-1)) (expand g l))
+    | Int    Nonterminal l            -> Node (t, List.map (blast g (i-1)) (expand g l))
     | Int    Literal    (_)           -> Node (t, [])
-    | Int    Function   (_, ls)       -> Node (t, List.map (generate g (i-1)) ls)
-    | Bool   Nonterminal l            -> Node (t, List.map (generate g (i-1)) (expand g l))
+    | Int    Function   (_, ls)       -> Node (t, List.map (blast g (i-1)) ls)
+    | Bool   Nonterminal l            -> Node (t, List.map (blast g (i-1)) (expand g l))
     | Bool   Literal    (_)           -> Node (t, [])
-    | Bool   Function   (_, ls)       -> Node (t, List.map (generate g (i-1)) ls)
-    | BitVec (_, Nonterminal l)       -> Node (t, List.map (generate g (i-1)) (expand g l))
+    | Bool   Function   (_, ls)       -> Node (t, List.map (blast g (i-1)) ls)
+    | BitVec (_, Nonterminal l)       -> Node (t, List.map (blast g (i-1)) (expand g l))
     | BitVec (_, Literal (_))         -> Node (t, []) 
-    | BitVec (_, Function (_, ls))    -> Node (t, List.map (generate g (i-1)) ls)
-    | Array  (_, _, Nonterminal l)    -> Node (t, List.map (generate g (i-1)) (expand g l))
+    | BitVec (_, Function (_, ls))    -> Node (t, List.map (blast g (i-1)) ls)
+    | Array  (_, _, Nonterminal l)    -> Node (t, List.map (blast g (i-1)) (expand g l))
     | Array  (_, _, Literal (_))      -> Node (t, []) 
-    | Array  (_, _, Function (_, ls)) -> Node (t, List.map (generate g (i-1)) ls))
+    | Array  (_, _, Function (_, ls)) -> Node (t, List.map (blast g (i-1)) ls))
   else Node (t, [])
 
 (* mk functions *)
