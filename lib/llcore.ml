@@ -50,25 +50,46 @@ let rec term_set_to_string_depth (d : int) (p : term_set): string =
 
 let term_set_to_string = term_set_to_string_depth 0
 
-let expand (grammar : term list C.String.Map.t) (label : string) : (term list) =
-  match C.Map.find grammar label with
-    | None -> raise (Failure "Nonterminal not in grammar!")
-    | Some x -> x
+let nonterminal_compare_u (t : uterm) (s : uterm) : int = 
+  match t, s with
+  | Nonterminal a, Nonterminal b     -> String.compare a b
+  | Nonterminal _, _                 -> -1
+  | Literal a, Literal b             -> String.compare a b
+  | Literal _, Nonterminal _         -> 1
+  | Literal _, Function (_, _)       -> -1
+  | Function (a, _), Function (b, _) -> String.compare a b
+  | Function (_, _), _               -> 1
 
-let rec blast_expand (g : term list C.String.Map.t) (i : int) (t: term): term_set =
-  if (i >= 0 && i < 15)
+let nonterminal_compare (t : term) (s : term) : int =
+  match t, s with
+  | Int a, Int b                     -> nonterminal_compare_u a b
+  | Int _, _                         -> -1
+  | Bool a, Bool b                   -> nonterminal_compare_u a b
+  | Bool _, Int _                    -> 1
+  | Bool _, _                        -> -1
+  | BitVec (_, a), BitVec (_, b)     -> nonterminal_compare_u a b
+  | BitVec (_, _), Array  (_, _, _)  -> -1
+  | BitVec (_, _), _                 -> 1
+  | Array (_, _, a), Array (_, _, b) -> nonterminal_compare_u a b
+  | Array (_, _, _), _               -> 1; 
+
+module TermMap = Map.Make(struct type t = term let compare = nonterminal_compare end)
+
+let rec blast_expand (g : term list TermMap.t) (i : int) (t: term): term_set =
+  if i > 10 then raise (Failure "Blasting that deep is too scary for me. Sorry.") else
+  if i >= 0
   then (
     match t with 
-    | Int    Nonterminal l            -> Node (t, List.map (blast_expand g (i-1)) (expand g l))
+    | Int    Nonterminal _            -> Node (t, List.map (blast_expand g (i-1)) (TermMap.find t g))
     | Int    Literal    (_)           -> Node (t, [])
     | Int    Function   (_, ls)       -> Node (t, List.map (blast_expand g (i-1)) ls)
-    | Bool   Nonterminal l            -> Node (t, List.map (blast_expand g (i-1)) (expand g l))
+    | Bool   Nonterminal _            -> Node (t, List.map (blast_expand g (i-1)) (TermMap.find t g))
     | Bool   Literal    (_)           -> Node (t, [])
     | Bool   Function   (_, ls)       -> Node (t, List.map (blast_expand g (i-1)) ls)
-    | BitVec (_, Nonterminal l)       -> Node (t, List.map (blast_expand g (i-1)) (expand g l))
+    | BitVec (_, Nonterminal _)       -> Node (t, List.map (blast_expand g (i-1)) (TermMap.find t g))
     | BitVec (_, Literal (_))         -> Node (t, []) 
     | BitVec (_, Function (_, ls))    -> Node (t, List.map (blast_expand g (i-1)) ls)
-    | Array  (_, _, Nonterminal l)    -> Node (t, List.map (blast_expand g (i-1)) (expand g l))
+    | Array  (_, _, Nonterminal _)    -> Node (t, List.map (blast_expand g (i-1)) (TermMap.find t g))
     | Array  (_, _, Literal (_))      -> Node (t, []) 
     | Array  (_, _, Function (_, ls)) -> Node (t, List.map (blast_expand g (i-1)) ls))
   else Node (t, [])
@@ -82,20 +103,23 @@ let mk_int_func n ls     = Int (Function (n, ls))
 let mk_int_const n       = Int (Function (n, []))
 let mk_int_lit  v        = Int (Literal (string_of_int v))
 
-let start = mk_int_nonterminal "START"
-let v     = mk_int_nonterminal "VAR"
-let l     = mk_int_nonterminal "LIT"
-let b     = mk_bool_nonterminal "COMP"
-let plus  = mk_int_func "+" [start; start]
-let minus = mk_int_func "-" [start; start]
-let times = mk_int_func "*" [l; start]
-let ite   = mk_int_func "ite" [b; start; start]
-let eq    = mk_bool_func "=" [start; start]
-let lt    = mk_bool_func "<" [start; start]
-let mk_lia_grammar (lits : (term list)) (vars : (term list)) : (term list C.String.Map.t) = 
-  C.String.Map.of_alist_exn [
-  ("START", [l; v; plus; minus; times; ite]);
-  ("LIT", lits);
-  ("VAR", vars);
-  ("COMP", [eq; lt])
-]
+let mk_grammar (ls : (term * term list) list) : (term list TermMap.t) =
+  List.fold_left (fun a (x, y) -> TermMap.add x y a) TermMap.empty ls
+
+let lia_start = mk_int_nonterminal  "START"
+let vnonterm  = mk_int_nonterminal  "VAR"
+let lnonterm  = mk_int_nonterminal  "LIT"
+let bnonterm  = mk_bool_nonterminal "COMP"
+let plus      = mk_int_func  "+"   [lia_start; lia_start]
+let minus     = mk_int_func  "-"   [lia_start; lia_start]
+let times     = mk_int_func  "*"   [lnonterm; lia_start]
+let ite       = mk_int_func  "ite" [bnonterm; lia_start; lia_start]
+let eq        = mk_bool_func "="   [lia_start; lia_start]
+let lt        = mk_bool_func "<"   [lia_start; lia_start]
+
+let default_lia_grammar (lits : (term list)) (vars : (term list)) : (term list TermMap.t) = 
+  mk_grammar [
+    (lia_start, [lnonterm; vnonterm; plus; minus; times; ite]);
+    (lnonterm, lits);
+    (vnonterm, vars);
+    (bnonterm, [eq; lt])]
