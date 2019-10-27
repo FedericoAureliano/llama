@@ -1,5 +1,3 @@
-module C = Core
-
 type uterm = 
   | Nonterminal of string
   | Literal     of string
@@ -26,5 +24,5 @@ val mk_int_func        : string -> (term list) -> term
 val mk_int_const       : string -> term
 val mk_int_lit         : int -> term
 
-val default_lia_grammar : (term list) -> (term list) -> (term list TermMap.t)
+val default_lia_grammar : (term list) -> (term list TermMap.t)
 val lia_start : term
