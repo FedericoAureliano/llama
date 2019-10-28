@@ -16,7 +16,7 @@ dune build @install
 # Run
 ```sh
 # Executes bin/llama.ml
-dune exec llama 
+dune exec llama_synth 
 ```
 
 # Clean

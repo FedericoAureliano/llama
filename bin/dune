@@ -1,7 +1,7 @@
 (executables
- (names llama)
+ (names llama_synth)
  (libraries llama_lib))
 
 (install
  (section bin)
- (files (llama.exe as llama)))
+ (files (llama_synth.exe as llama_synth)))
