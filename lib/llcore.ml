@@ -1,144 +1,93 @@
 (* -------------- Basic types --------------- *)
-type nonterm = string
+type terminal    = string
+type nonterminal = string
 
-type sort = 
-  | Array  of (sort * sort)
-  | BitVec of int
-  | Bool
-  | Int
-  | String
+type derivation =
+  | T of (terminal)
+  | N of (nonterminal)
+  | F of (terminal * (derivation list))
 
-type term = (sort * uterm)
-and uterm = 
-  | Q   of nonterm
-  | Lit of string
-  | App of (func * (term list))
-and func = 
-  | Defn of string * ((string * sort) list) * sort * term 
-  | Decl of string * (sort list) * sort
-
-type command =
-  | Declare of func
-  | Assert  of term
-  | Check
-
-type query = (command list)
-
-(* -------------- Mk Functions --------------- *)
-let decl_func (n: string) (ag : (sort list)) (s : sort) = Decl (n, ag, s)
-let mk_const (n : string) (s : sort) = (s, App (decl_func n [] s, []))
-
-
-(* -------------- To Strings --------------- *)
-let get_name (f : func) : string =
-  match f with
-  | Defn (n, _, _, _) -> n
-  | Decl (n, _, _)    -> n
-
-let rec sort_to_string (s : sort) : string =
-  match s with
-  | Array  (i,c) -> "(Array " ^ (sort_to_string i) ^ " " ^ (sort_to_string c) ^ ")"
-  | BitVec (w)   -> "(BitVec" ^ (string_of_int w) ^ ")" 
-  | Bool         -> "Bool"
-  | Int          -> "Int"
-  | String       -> "String"
-and uterm_to_string (u : uterm) : string = 
-  match u with
-  | Q n         -> n
-  | Lit v       -> v
-  | App (f, []) -> get_name f
-  | App (f, ls) -> "(" ^ (get_name f) ^ " " ^ (String.concat " " (List.map term_to_string ls)) ^ ")"
-and term_to_string (t: term) : string = 
-  match t with
-  | _, u -> uterm_to_string u
-
-let sig_pair_to_string (p : string * sort) : string = "(" ^ (fst p) ^ " " ^ (sort_to_string (snd p))^ ")" 
-
-let func_to_string (f : func) : string = 
-  match f with
-  | Defn (n, ar, s, b) -> "(define-fun " ^ n ^ " (" ^ (String.concat " " (List.map sig_pair_to_string ar)) ^ (sort_to_string s) ^ (term_to_string b) ^ ")" 
-  | Decl (n, ar, s)    -> "(declare-fun " ^ n ^ " (" ^ (String.concat " " (List.map sort_to_string ar)) ^ (sort_to_string s) ^ ")"
-
-let command_to_string (c : command) : string = 
-  match c with
-  | Declare f -> func_to_string f
-  | Assert b  -> "(assert " ^ (term_to_string b) ^ ")"
-  | Check     -> "(check-sat)"
-
-let query_to_string (q : query) : string = (String.concat "\n" (List.map command_to_string q))
-
-let term_to_name_u (u : uterm) : string = 
-  match u with
-  | Q n         -> n
-  | Lit v       -> v
-  | App (f, _) -> get_name f
-
-let term_to_name (s : term) : string =
-  match s with
-  | _, u         -> term_to_name_u u
-
+type rule = (nonterminal * (derivation list))
 
 (* -------------- Grammars --------------- *)
-let nonterm_compare (n : nonterm) (m : nonterm) : int = 
-  if n = "START" && m = "START" then 0 
-  else if n = "START" then -1 
-  else if m = "START" then  1 
+(* This means that if there is no Start symbol, then the entry point to the
+   grammar is the first nonterminal in alphabetical order. *)
+let nonterminal_compare (n : nonterminal) (m : nonterminal) : int = 
+  if n = "Start" && m = "Start" then 0 
+  else if n = "Start" then -1 
+  else if m = "Start" then  1 
   else String.compare n m
 
-module NontermMap = Map.Make(struct type t = nonterm let compare = nonterm_compare end)
+module NTMap = Map.Make(struct type t = nonterminal let compare = nonterminal_compare end)
 
-type grammar = (term list NontermMap.t)
+(* A grammar is just a map from nonterminals to a list of derivations *)
+type grammar = (derivation list NTMap.t)
 
-let mk_grammar (ls : (nonterm * (term list)) list) : grammar =
-  List.fold_left (fun a (x, y) -> NontermMap.add x y a) NontermMap.empty ls
+(* You can make a grammar by passing in a list of rewrite rules *)
+let mk_grammar (ls : (rule list)) : grammar =
+  List.fold_left (fun a (x, y) -> NTMap.add x y a) NTMap.empty ls
 
-let get_start (g : grammar) (s : sort) : term = (s, Q (fst (NontermMap.min_binding g)))
+(* -------------- Helper Functions and To Strings --------------- *)
+let rec derivation_to_string (d : derivation) : string =
+  match d with
+  | T (k)     -> k
+  | N (e)     -> e
+  | F (f, ls) -> "(" ^ f ^ " " ^ (String.concat " " (List.map derivation_to_string ls)) ^ ")"
 
+let rec is_complete (d : derivation) : bool = 
+  match d with
+  | T ( _)     -> true
+  | N ( _)     -> false
+  | F ( _, ls) -> List.for_all is_complete ls
 
-(* -------------- Derivations --------------- *)
-type term_set = Node of (term * (term_set list))
+let get_start (g : grammar) : nonterminal = 
+  fst (NTMap.min_binding g)
 
-let string_repeat s n =
-  String.concat "" (Array.to_list (Array.make n s))
+let expand (g : grammar) (nt : nonterminal) : derivation list = 
+  (NTMap.find nt g)
 
-let rec term_set_to_string_depth (d : int) (p : term_set): string =
-  let s = 
-    (match p with
-     | Node (x, []) -> (string_repeat "  " d) ^ (term_to_string x)
-     | Node (x, ls) -> (string_repeat "  " d) ^ (term_to_name x)  ^ (String.concat " " (List.map (term_set_to_string_depth (d+1)) ls)))
-  in (if d <> 0 then ("\n" ^ s) else s)
+let rec map_until_some (f : 'a -> 'a option) (ls : 'a list) : 'a list option = 
+  match ls with
+  | []    -> None
+  | y::ys -> match (f y) with
+    | Some v -> Some (v :: ys)
+    | None   -> (match map_until_some f ys with
+        | Some ns -> Some (y :: ns)
+        | None    -> None)
 
-let term_set_to_string = term_set_to_string_depth 0
+(* -------------- Enumeration --------------- *)
+let first (g : grammar) : derivation = N (get_start g)
 
-let leaf_u (t : uterm) : bool = 
-  match t with
-  | Q   _       -> false
-  | Lit _       -> true
-  | App (_, []) -> true
-  | App (_, _)  -> false
+let rec expand_leftmost (g : grammar) (n : int) (d : derivation) : derivation option =
+  match d with
+  | T (_)     -> None
+  | N (nt)    -> List.nth_opt (expand g nt) n
+  | F (f, ls) -> (match map_until_some (expand_leftmost g n) ls with
+      | Some vs -> Some (F (f, vs))
+      | None    -> None)
 
-let leaf (s : term) : bool =
-  match s with
-  | _, u -> leaf_u u
+let rec get_neighbours_helper (g : grammar) (d : derivation) (n : int) : derivation list = 
+  match expand_leftmost g n d with 
+  | Some v -> v :: get_neighbours_helper g d (n + 1)
+  | None -> []
+  
+let get_neighbours (g : grammar) (d : derivation) : derivation list = get_neighbours_helper g d 0
 
-let rec realizable (ts : term_set) : bool =
-  match ts with
-  | Node (t, [])                -> leaf t
-  | Node ((_, App (_, gs)), ls) -> (List.compare_lengths gs (List.filter realizable ls)) = 0
-  | Node (_, ls)                -> List.for_all realizable ls 
+let enumerate (g : grammar) (n : int) : derivation list =
+  let q = Queue.create () in
+  Queue.push (first g) q;
 
-let rec clean_blast (ts : term_set) : term_set = 
-  match ts with 
-  | Node (t, ls) -> Node (t, List.filter realizable (List.map clean_blast ls))
+  let bfs (x : derivation) =
+    if (is_complete x)
+    then Some x
+    else ((List.iter (fun x -> Queue.add x q) (get_neighbours g x)); None)
+  in
+  
+  let rec build i =
+    if i = 0 then [] else 
+      match (bfs (Queue.pop q)) with
+      | Some v -> (v::build (i - 1))
+      | None   -> (build i)
+  in
 
-let rec blast_expand_helper (g : grammar) (i : int) (t: term): term_set =
-  if i > 10 then raise (Failure "Blasting that deep is too scary for me. Sorry.") else
-  if i >= 0
-  then (
-    match t with
-    | (_, Q n )        -> Node (t, List.map (blast_expand_helper g (i-1)) (NontermMap.find n g))
-    | (_, Lit _)       -> Node (t, [])
-    | (_, App (_, ls)) -> Node (t, List.map (blast_expand_helper g (i-1)) ls))
-  else Node (t, [])
-
-let blast_expand (g : grammar) (i : int) (t: term): term_set = clean_blast (blast_expand_helper g i t)
+  build n
