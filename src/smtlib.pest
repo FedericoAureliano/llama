@@ -1,0 +1,22 @@
+query = _{command*}
+command = _{setlogic | declare | assert | checksat | getmodel}
+
+setlogic = {"(set-logic " ~ logic ~ ")"}
+logic = {"QF_LIA" | "QF_BV"}
+
+declare = {"(declare-fun " ~ name ~ "("~ sort* ~")" ~ sort ~ ")"}
+name = @{ASCII_ALPHANUMERIC+}
+
+sort = {"Int" | "Bool" | bitvec}
+bitvec = {"(_ BitVec" ~ width ~ ")"}
+width = @{ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*}
+
+assert = {"(assert " ~ fapp ~ ")"}
+fapp = {"(" ~ function ~ fapp+ ~ ")" | constant}
+constant = @{ASCII_ALPHANUMERIC+}
+function = @{ MATH+ | ASCII_ALPHANUMERIC+}
+
+checksat = {"(check-sat)"}
+getmodel = {"(get-model)"}
+
+WHITESPACE = _{ " " | "\t" | "\n" }
