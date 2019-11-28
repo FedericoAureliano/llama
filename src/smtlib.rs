@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use petgraph::graph::{Graph, NodeIndex, EdgeReference};
 use petgraph::dot::{Dot};
 use petgraph::EdgeDirection;
@@ -16,18 +15,30 @@ use pest::error::Error;
 pub struct SMTLIBParser;
 
 pub enum Logic {
-    QFLIA
+    QFLIA,
+    QFUFLIA,
 }
 
 impl Logic {
     fn to_string (&self) -> String {
         match &self {
-            Logic::QFLIA => "QF_LIA".to_string()
+            Logic::QFLIA => "QF_LIA".to_string(),
+            Logic::QFUFLIA => "QF_UFLIA".to_string(),
         }
+    }
+
+    fn allows_uf (&self) -> bool {
+        match &self {
+            Logic::QFLIA => false,
+            Logic::QFUFLIA => true,
+        }   
     }
 }
 
 pub enum Sort {
+    Nary,
+    Any,
+    Tbd,
     Bool,
     Int,
 }
@@ -36,7 +47,10 @@ impl Sort {
     fn to_string (&self) -> String {
         match &self {
             Sort::Int => "Int".to_string(),
-            Sort::Bool => "Bool".to_string()
+            Sort::Bool => "Bool".to_string(),
+            Sort::Nary 
+            | Sort::Any 
+            | Sort:: Tbd => unreachable!("Nary, Any, and Tbd should never be printed"),
         }
     }
 }
@@ -67,6 +81,7 @@ impl Query {
     pub fn set_logic(&mut self, logic : Logic) {
         match logic {
             Logic::QFLIA => self.add_lia_symbols(),
+            Logic::QFUFLIA => self.add_lia_symbols(),
         }
         self.logic = Some(logic);
     }
@@ -74,11 +89,10 @@ impl Query {
     fn add_lia_symbols(&mut self) {
         self.add_bool_symbols();
 
-        self.st.insert("+".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Int, true));
+        self.st.insert("+".to_string(), (vec! [Sort::Nary, Sort::Int], Sort::Int, true));
         self.st.insert("-".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Int, true));
-        self.st.insert("*".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Int, true));
+        self.st.insert("*".to_string(), (vec! [Sort::Nary, Sort::Int], Sort::Int, true));
 
-        self.st.insert("=".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool, true));
         self.st.insert("<".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool, true));
         self.st.insert("<=".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool, true));
         self.st.insert(">".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool, true));
@@ -86,33 +100,50 @@ impl Query {
     }
     
     fn add_bool_symbols(&mut self) {
-        self.st.insert("and".to_string(), (vec! [Sort::Bool, Sort::Bool], Sort::Bool, true));
-        self.st.insert("or".to_string(), (vec! [Sort::Bool, Sort::Bool], Sort::Bool, true));
-        self.st.insert("=".to_string(), (vec! [Sort::Bool, Sort::Bool], Sort::Bool, true));
+        self.st.insert("and".to_string(), (vec! [Sort::Nary, Sort::Bool], Sort::Bool, true));
+        self.st.insert("or".to_string(), (vec! [Sort::Nary, Sort::Bool], Sort::Bool, true));
+        self.st.insert("=".to_string(), (vec! [Sort::Nary, Sort::Any], Sort::Bool, true));
     }
 
-    pub fn declare_fun(&mut self, name: &str, asorts: Option<Vec<Sort>>, rsort: Sort) -> bool {
-        if !self.st.contains_key(&name.to_string()) {
-            self.st.insert(name.to_string(), (asorts.unwrap_or_default(), rsort, false));
-            true
-        } else {
-            false
+    pub fn declare_fun(&mut self, name: &str, asorts: Vec<Sort>, rsort: Sort) {
+        debug!("declaring function: {}", name);
+        assert!(!self.st.contains_key(name), "Can't declare a function twice!");
+
+        match &self.logic {
+            Some(l) => assert!(asorts.len() == 0 || l.allows_uf(), "Logic does not support uninterpreted functions!"),
+            None => (),
         }
+
+        self.st.insert(name.to_string(), (asorts, rsort, false));
     }
 
-    pub fn apply(&mut self, name: &str, args: Option<Vec<NodeIndex>>) -> NodeIndex {
+    pub fn apply(&mut self, name: &str, args: Vec<NodeIndex>) -> NodeIndex {
+        // TODO: Typechecking and inference
         let parent = self.ast.add_node(name.to_string());
-        match args {
-            Some(ls) => {
-                let mut count = 0;
-                for child in ls {
-                    self.ast.add_edge(parent, child, count);
-                    count += 1;
-                }
-                parent
+        if args.len() > 0 {
+            let mut count = 0;
+            for child in args {
+                self.ast.add_edge(parent, child, count);
+                count += 1;
             }
-            None => parent,
+            parent
+        } else {
+            if !self.st.contains_key(name) {
+                self.st.insert(name.to_string(), (vec! [], Sort::Tbd, true));
+            }
+            parent
         }
+    }
+
+    pub fn check_sat(&mut self) {
+        assert!(!self.checksat, "Cannot check-sat twice!");
+        self.checksat = true
+    }
+
+    pub fn get_model(&mut self) {
+        assert!(self.checksat, "Must check-sat before get-model!");
+        assert!(!self.getmodel, "Cannot get-model twice!");
+        self.getmodel = true
     }
 
     pub fn write_dot(&self, file_name: String) {
@@ -125,11 +156,9 @@ impl Query {
         let mut children : Vec<EdgeReference<u8>> = self.ast.edges_directed(parent, EdgeDirection::Outgoing).collect();
         children.sort_by(|x, y| x.weight().cmp(y.weight()));
 
-        if !self.st.contains_key(&self.ast[parent]) {
-            // Assume that if the symbol is not in the symbol table, 
-            // then it is an interpreted constant
-            format!("{}", self.ast[parent])
-        } else if self.st[&self.ast[parent]].0.len() == 0 {
+        assert!(self.st.contains_key(&self.ast[parent]), "Unknown symbol!");
+
+        if self.st[&self.ast[parent]].0.len() == 0 {
             // Otherwise, if it has no arguments, make it a leaf
             format!("{}", self.ast[parent])
         } else {
@@ -144,7 +173,11 @@ impl Query {
         for (name, (asorts, rsort, interp)) in &self.st {
             if !interp {
                 let args : Vec<String> = asorts.into_iter().map(|s| s.to_string()).collect();
-                decls.push(format!("(declare-fun {} ({}) {})", name, args.join(" "), rsort.to_string()));
+                if args.len() > 0 {
+                    decls.insert(0, format!("(declare-fun {} ({}) {})", name, args.join(" "), rsort.to_string()));
+                } else {
+                    decls.insert(0, format!("(declare-const {} {})", name, rsort.to_string()));
+                }
             }
         }
         let mut assertions = Vec::new();
@@ -166,86 +199,102 @@ impl Query {
 }
 
 pub fn parse_smtlib_file(file: &str) -> Result<Query, Error<Rule>> {
-    let mut q = Query::new();
-
-    let smtlib = SMTLIBParser::parse(Rule::query, file).unwrap();
     use pest::iterators::Pair;
+    let mut q = Query::new();
+    let smtlib = SMTLIBParser::parse(Rule::query, file)?;
 
-    fn parse_logic(pair: Pair<Rule>) -> Logic {
+    fn parse_logic(pair: Pair<Rule>) -> Result<Logic, Error<Rule>> {
         match pair.as_rule() {
             Rule::logic => { 
                 let l = pair.as_span().as_str();
                 match l {
-                    "QF_LIA" => Logic::QFLIA,
-                    _ => unreachable!(format!("{:?}", pair))
+                    "QF_LIA" => Ok(Logic::QFLIA),
+                    "QF_UFLIA" => Ok(Logic::QFUFLIA),
+                    _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
+                        message: "unsupported logic!".to_owned(),
+                    }, pair.as_span()))
             }}
-            _ => unreachable!(format!("{:?}", pair)),
+            _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
+                        message: "expecting logic!".to_owned(),
+                    }, pair.as_span())),
     }}
 
-    fn parse_sort(pair: Pair<Rule>) -> Sort {
+    fn parse_sort(pair: Pair<Rule>) -> Result<Sort, Error<Rule>> {
         match pair.as_rule() {
             Rule::sort => { 
                 let s = pair.as_span().as_str();
                 match s {
-                    "Int" => Sort::Int,
-                    "Bool" => Sort::Bool,
-                    _ => unreachable!(format!("{:?}", pair)),
+                    "Int" => Ok(Sort::Int),
+                    "Bool" => Ok(Sort::Bool),
+                    _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
+                        message: "unsupported sort!".to_owned(),
+                    }, pair.as_span()))
             }}
-            _ => unreachable!(format!("{:?}", pair)),
+            _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
+                        message: "expecting sort!".to_owned(),
+                    }, pair.as_span())),
     }}
 
-    fn parse_fapp(pair: Pair<Rule>, q : &mut Query) -> NodeIndex {
+    fn parse_fapp(pair: Pair<Rule>, q : &mut Query) -> Result<NodeIndex, Error<Rule>> {
         match pair.as_rule() {
             Rule::fapp => {
                 let mut inner = pair.into_inner();
                 let func = inner.next().unwrap().as_span().as_str();
-                let mut args : Vec<NodeIndex> = vec!();
+                let mut args : Vec<NodeIndex> = vec! [];
                 for i in inner {
-                    args.push(parse_fapp(i, q))
+                    args.push(parse_fapp(i, q)?)
                 }
-                if args.len() > 0 {
-                    q.apply(func, Some(args))
-                } else {
-                    q.apply(func, None)
-                }
+                Ok(q.apply(func, args))
             },
-            _ => unreachable!(format!("{:?}", pair)),
+            _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
+                        message: "expecting function application!".to_owned(),
+                    }, pair.as_span())),
         }
     }
 
-    fn parse_query(pair: Pair<Rule>, q : &mut Query) {
+    fn parse_query(pair: Pair<Rule>, q : &mut Query) -> Result<(), Error<Rule>>{
         match pair.as_rule() {
             Rule::setlogic => {
-                let l = parse_logic(pair.into_inner().next().unwrap());
+                let l = parse_logic(pair.into_inner().next().unwrap())?;
                 q.set_logic(l);
+                Ok(())
             }
             Rule::declare => { 
                 let mut inner = pair.into_inner();
                 let name = inner.next().unwrap().as_span().as_str().to_string();
 
-                let mut sorts = vec!(); 
+                let mut sorts = vec! []; 
                 for i in inner {
-                    sorts.push(parse_sort(i));
+                    sorts.push(parse_sort(i)?);
                 }
 
                 let rsort = sorts.pop().unwrap();
-                let asorts = if sorts.len() > 0 {
-                    Some(sorts)
-                } else {
-                    None
-                };
-                q.declare_fun(&name, asorts, rsort);
+                q.declare_fun(&name, sorts, rsort);
+                Ok(())
             }
-            Rule::checksat => q.checksat = true,
-            Rule::getmodel => q.getmodel = true,
+            Rule::checksat => {q.check_sat(); Ok(())},
+            Rule::getmodel => {q.get_model(); Ok(())},
             Rule::assert => {
-                parse_fapp(pair.into_inner().next().unwrap(), q);
+                parse_fapp(pair.into_inner().next().unwrap(), q)?;
+                Ok(())
             },
-            _ => unreachable!(format!("{:?}", pair)),
-    }}
-    for r in smtlib {
-        parse_query(r, &mut q);
+            Rule::push
+            | Rule::pop => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
+                        message: "we do not support push or pop yet!".to_owned(),
+                    }, pair.as_span())),
+            _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
+                        message: "command not supported!".to_owned(),
+                    }, pair.as_span())),
+        }
     }
+
+    let mut empty = false;
+    for r in smtlib {
+        parse_query(r, &mut q)?;
+        empty = true
+    };
+    
+    assert!(empty, "problem with grammar: query is empty!");
     Ok(q)
 }
 
@@ -254,23 +303,23 @@ pub fn parse_smtlib_file(file: &str) -> Result<Query, Error<Rule>> {
 fn test_dot(){
     let mut q = Query::new();
     q.set_logic(Logic::QFLIA);
-    q.declare_fun("x", None, Sort::Int);
-    let node_x = q.apply("x", None);
-    let node_7 = q.apply("7", None);
-    let node_gt = q.apply(">", Some(vec! [node_x, node_7]));
-    let node_lt = q.apply("<", Some(vec! [node_x, node_7]));
-    q.apply("or", Some(vec! [node_gt, node_lt]));
-    q.write_dot("example.dot".to_string());
+    q.declare_fun("x", vec! [], Sort::Int);
+    let node_x = q.apply("x", vec! []);
+    let node_7 = q.apply("7", vec! []);
+    let node_gt = q.apply(">", vec! [node_x, node_7]);
+    let node_lt = q.apply("<", vec! [node_x, node_7]);
+    q.apply("or", vec! [node_gt, node_lt]);
+    q.write_dot("tmp.dot".to_string());
 }
 
 #[test]
 fn test_subtree_to_string(){
     let mut q = Query::new();
     q.set_logic(Logic::QFLIA);
-    q.declare_fun("x", None, Sort::Int);
-    let node_x = q.apply("x", None);
-    let node_7 = q.apply("7", None);
-    let node_gt = q.apply(">", Some(vec! [node_x, node_7]));
+    q.declare_fun("x", vec! [], Sort::Int);
+    let node_x = q.apply("x", vec! []);
+    let node_7 = q.apply("7", vec! []);
+    let node_gt = q.apply(">", vec! [node_x, node_7]);
     println!("{}", q.subtree_to_string(node_gt));
 }
 
@@ -278,13 +327,13 @@ fn test_subtree_to_string(){
 fn test_to_smtlib(){
     let mut q = Query::new();
     q.set_logic(Logic::QFLIA);
-    q.declare_fun("x", None, Sort::Int);
-    let node_x = q.apply("x", None);
-    let node_7 = q.apply("7", None);
-    q.apply(">=", Some(vec! [node_x, node_7]));
-    q.apply("<=", Some(vec! [node_x, node_7]));
-    q.checksat = true;
-    q.getmodel = true;
+    q.declare_fun("x", vec! [], Sort::Int);
+    let node_x = q.apply("x", vec! []);
+    let node_7 = q.apply("7", vec! []);
+    q.apply(">=", vec! [node_x, node_7]);
+    q.apply("<=", vec! [node_x, node_7]);
+    q.check_sat();
+    q.get_model();
     println!("{}", q.to_smtlib());
 }
 
@@ -301,5 +350,26 @@ fn test_parse() {
     use std::fs;
     let unparsed_file = fs::read_to_string("examples/qflia.smt2").expect("cannot read file");
     let q = parse_smtlib_file(&unparsed_file).unwrap();
-    q.write_dot("example.dot".to_string());
+    q.write_dot("tmp.dot".to_string());
+}
+
+#[test]
+#[should_panic]
+fn test_reject_uf() {
+    let mut q = Query::new();
+    q.set_logic(Logic::QFLIA);
+    q.declare_fun("f", vec! [Sort::Int, Sort::Int], Sort::Int);
+}
+
+#[test]
+fn test_uf() {
+    let mut q = Query::new();
+    q.set_logic(Logic::QFUFLIA);
+    q.declare_fun("f", vec! [Sort::Int, Sort::Int], Sort::Int);
+    let node_n1 = q.apply("-1", vec! []);
+    let node_1 = q.apply("1", vec! []);
+    q.apply("f", vec! [node_n1, node_1]);
+    q.check_sat();
+    q.get_model();
+    println!("{}", q.to_smtlib());
 }

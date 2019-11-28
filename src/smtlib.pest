@@ -1,8 +1,11 @@
 query = _{command*}
-command = _{setlogic | declare | assert | checksat | getmodel}
+command = _{setlogic | declare | push | pop | assert | checksat | getmodel}
+
+push = {"(push 1)"}
+pop = {"(pop 1)"}
 
 setlogic = {"(set-logic " ~ logic ~ ")"}
-logic = {"QF_LIA" | "QF_BV"}
+logic = {"QF_LIA" | "QF_UFLIA" | "QF_BV"}
 
 declare = {"(declare-fun " ~ name ~ "("~ sort* ~")" ~ sort ~ ")"}
 name = @{ASCII_ALPHANUMERIC+}

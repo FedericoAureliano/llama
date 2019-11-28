@@ -1,5 +1,4 @@
 (set-logic QF_LIA)
 (declare-fun x () Int)
-(declare-fun f (Int Int) Int)
-(assert (and (= (f x 7) x) (> x 7)))
+(assert (and (= (+ x 7) x) (> x 7)))
 (check-sat)
