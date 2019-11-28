@@ -20,3 +20,5 @@ dot -T png -O qflia.dot
 - support push and pop
     -  keep track of assertions and check-sat/get-model
 - support bit-vectors, arrays, and strings
+- model representation and evaluators
+- interface to solvers
