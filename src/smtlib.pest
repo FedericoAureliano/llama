@@ -1,8 +1,8 @@
 query = _{command*}
 command = _{setlogic | declare | push | pop | assert | checksat | getmodel}
 
-push = {"(push 1)"}
-pop = {"(pop 1)"}
+push = {"(push)" | "(push 1)"}
+pop = {"(pop)" | "(pop 1)"}
 
 setlogic = {"(set-logic " ~ logic ~ ")"}
 logic = {"QF_LIA" | "QF_UFLIA" | "QF_BV"}

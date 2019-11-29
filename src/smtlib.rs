@@ -6,6 +6,7 @@ use std::collections::{HashMap};
 
 use std::fs::File;
 use std::io::{Write};
+use std::convert::TryInto;
 
 use pest::Parser;
 use pest::error::Error;
@@ -62,8 +63,13 @@ pub struct Query {
     ast: AST,
     st: SymbolTable,
     logic: Option<Logic>,
-    checksat : bool,
-    getmodel : bool,
+    assertions: Vec<NodeIndex>,
+    // each element is the last assertion ID
+    // before the check-sat/get-model/push/pop 
+    check_vec : Vec<u8>,
+    model_vec : Vec<u8>,
+    push_vec : Vec<u8>,
+    pop_vec : Vec<u8>,
 }
 
 impl Query {
@@ -72,8 +78,11 @@ impl Query {
             ast: Graph::new(),
             st: HashMap::new(),
             logic: None,
-            checksat: false,
-            getmodel: false,
+            assertions: vec! [],
+            check_vec: vec! [],
+            model_vec: vec! [],
+            push_vec: vec! [],
+            pop_vec: vec! []
         };
         solver
     }
@@ -135,15 +144,31 @@ impl Query {
         }
     }
 
+    pub fn assert(&mut self, node: NodeIndex) {
+        // TODO: how to check if boolea?
+        self.assertions.insert(0, node);
+    }
+
+    pub fn push(&mut self) {
+        let pos = (self.assertions.len() - 1).try_into().unwrap();
+        self.push_vec.push(pos);
+    }
+
+    pub fn pop(&mut self) {
+        let pos = (self.assertions.len() - 1).try_into().unwrap();
+        self.pop_vec.push(pos);
+    }
+
     pub fn check_sat(&mut self) {
-        assert!(!self.checksat, "Cannot check-sat twice!");
-        self.checksat = true
+        assert!(self.assertions.len() > 0, "there must be at least one assertion to check");
+        let pos = (self.assertions.len() - 1).try_into().unwrap();
+        self.check_vec.push(pos);
     }
 
     pub fn get_model(&mut self) {
-        assert!(self.checksat, "Must check-sat before get-model!");
-        assert!(!self.getmodel, "Cannot get-model twice!");
-        self.getmodel = true
+        let pos = (self.assertions.len() - 1).try_into().unwrap();
+        assert!(self.check_vec.last().unwrap_or(&u8::min_value()) == &pos, "must check-sat before get-model!");
+        self.model_vec.push(pos);
     }
 
     pub fn write_dot(&self, file_name: String) {
@@ -169,32 +194,41 @@ impl Query {
     }
 
     pub fn to_smtlib(&self) -> String {
-        let mut decls = Vec::new();
+        let mut query = Vec::new();
+        query.push(match &self.logic 
+            {Some(l) => format!("(set-logic {})", l.to_string()), None => "".to_string()
+        });
+
         for (name, (asorts, rsort, interp)) in &self.st {
             if !interp {
                 let args : Vec<String> = asorts.into_iter().map(|s| s.to_string()).collect();
                 if args.len() > 0 {
-                    decls.insert(0, format!("(declare-fun {} ({}) {})", name, args.join(" "), rsort.to_string()));
+                    query.push(format!("(declare-fun {} ({}) {})", name, args.join(" "), rsort.to_string()));
                 } else {
-                    decls.insert(0, format!("(declare-const {} {})", name, rsort.to_string()));
-                }
-            }
-        }
-        let mut assertions = Vec::new();
-        for idx in self.ast.node_indices() {
-            if self.ast.edges_directed(idx, EdgeDirection::Incoming).collect::<Vec<_>>().is_empty() {
-                match self.st[&self.ast[idx]].1 {
-                    Sort::Bool => assertions.push(format!("(assert {})", self.subtree_to_string(idx))),
-                    _ => ()
+                    query.push(format!("(declare-const {} {})", name, rsort.to_string()));
                 }
             }
         }
 
-        let log = match &self.logic {Some(l) => format!("(set-logic {})\n", l.to_string()), None => "".to_string()};
-        let cs = if self.checksat {"(check-sat)\n"} else {""};
-        let gm = if self.getmodel {"(get-model)\n"} else {""};
-        let post = format!("{}{}", cs, gm);
-        format!("{}{}\n{}\n{}", log, decls.join("\n"), assertions.join("\n"), post)
+        let mut id = u8::min_value();
+        for a in &self.assertions {
+            query.push(format!("(assert {})", self.subtree_to_string(*a)));
+            if self.check_vec.contains(&id) {
+                query.push("(check-sat)".to_string());
+            }
+            if self.model_vec.contains(&id) {
+                query.push("(get_model)".to_string());
+            }
+            if self.push_vec.contains(&id) {
+                query.push("(push)".to_string());
+            }
+            if self.pop_vec.contains(&id) {
+                query.push("(pop)".to_string());
+            }
+            id += 1;
+        }
+
+        query.join("\n")
     }
 }
 
@@ -275,13 +309,12 @@ pub fn parse_smtlib_file(file: &str) -> Result<Query, Error<Rule>> {
             Rule::checksat => {q.check_sat(); Ok(())},
             Rule::getmodel => {q.get_model(); Ok(())},
             Rule::assert => {
-                parse_fapp(pair.into_inner().next().unwrap(), q)?;
+                let node = parse_fapp(pair.into_inner().next().unwrap(), q)?;
+                q.assert(node);
                 Ok(())
             },
-            Rule::push
-            | Rule::pop => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
-                        message: "we do not support push or pop yet!".to_owned(),
-                    }, pair.as_span())),
+            Rule::push => {q.push(); Ok(())},
+            Rule::pop => {q.pop(); Ok(())},
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
                         message: "command not supported!".to_owned(),
                     }, pair.as_span())),
@@ -330,8 +363,10 @@ fn test_to_smtlib(){
     q.declare_fun("x", vec! [], Sort::Int);
     let node_x = q.apply("x", vec! []);
     let node_7 = q.apply("7", vec! []);
-    q.apply(">=", vec! [node_x, node_7]);
-    q.apply("<=", vec! [node_x, node_7]);
+    let a1 = q.apply(">=", vec! [node_x, node_7]);
+    let a2 = q.apply("<=", vec! [node_x, node_7]);
+    q.assert(a1);
+    q.assert(a2);
     q.check_sat();
     q.get_model();
     println!("{}", q.to_smtlib());
@@ -365,10 +400,11 @@ fn test_reject_uf() {
 fn test_uf() {
     let mut q = Query::new();
     q.set_logic(Logic::QFUFLIA);
-    q.declare_fun("f", vec! [Sort::Int, Sort::Int], Sort::Int);
+    q.declare_fun("f", vec! [Sort::Int, Sort::Int], Sort::Bool);
     let node_n1 = q.apply("-1", vec! []);
     let node_1 = q.apply("1", vec! []);
-    q.apply("f", vec! [node_n1, node_1]);
+    let a1 = q.apply("f", vec! [node_n1, node_1]);
+    q.assert(a1);
     q.check_sat();
     q.get_model();
     println!("{}", q.to_smtlib());
