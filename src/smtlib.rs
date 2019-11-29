@@ -6,7 +6,6 @@ use std::collections::{HashMap};
 
 use std::fs::File;
 use std::io::{Write};
-use std::convert::TryInto;
 
 use pest::Parser;
 use pest::error::Error;
@@ -27,13 +26,6 @@ impl Logic {
             Logic::QFUFLIA => "QF_UFLIA".to_string(),
         }
     }
-
-    fn allows_uf (&self) -> bool {
-        match &self {
-            Logic::QFLIA => false,
-            Logic::QFUFLIA => true,
-        }   
-    }
 }
 
 pub enum Sort {
@@ -51,25 +43,50 @@ impl Sort {
             Sort::Bool => "Bool".to_string(),
             Sort::Nary 
             | Sort::Any 
-            | Sort:: Tbd => unreachable!("Nary, Any, and Tbd should never be printed"),
+            | Sort::Tbd => unreachable!("Nary, Any, and Tbd should never be printed"),
+        }
+    }
+}
+
+pub enum Command {
+    SetLogic(Logic),
+    Declare(String),
+    Assert(NodeIndex),
+    CheckSat,
+    GetModel,
+    Push,
+    Pop,
+}
+
+impl Command {
+    fn to_string (&self, q: &Query) -> String {
+        match &self {
+            Command::SetLogic(l) => format!("(set-logic {})", l.to_string()),
+            Command::Declare(name) => {
+                let (asorts, rsort) = q.st.get(name).expect("unknown symbol");
+                let args : Vec<String> = asorts.into_iter().map(|s| s.to_string()).collect();
+                if args.len() > 0 {
+                    format!("(declare-fun {} ({}) {})", name, args.join(" "), rsort.to_string())
+                } else {
+                    format!("(declare-const {} {})", name, rsort.to_string())
+                }
+            },
+            Command::Assert(a) => format!("(assert {})", q.subtree_to_string(*a)),
+            Command::CheckSat => "(check-sat)".to_string(),
+            Command::GetModel => "(get-model)".to_string(),
+            Command::Push => "(push)".to_string(),
+            Command::Pop => "(pop)".to_string(),
         }
     }
 }
 
 type AST = Graph<String, u8>;
-type SymbolTable = HashMap<String, (Vec<Sort>, Sort, bool)>;
+type SymbolTable = HashMap<String, (Vec<Sort>, Sort)>;
 
 pub struct Query {
     ast: AST,
     st: SymbolTable,
-    logic: Option<Logic>,
-    assertions: Vec<NodeIndex>,
-    // each element is the last assertion ID
-    // before the check-sat/get-model/push/pop 
-    check_vec : Vec<u8>,
-    model_vec : Vec<u8>,
-    push_vec : Vec<u8>,
-    pop_vec : Vec<u8>,
+    script: Vec<Command>,
 }
 
 impl Query {
@@ -77,53 +94,51 @@ impl Query {
         let solver = Query {
             ast: Graph::new(),
             st: HashMap::new(),
-            logic: None,
-            assertions: vec! [],
-            check_vec: vec! [],
-            model_vec: vec! [],
-            push_vec: vec! [],
-            pop_vec: vec! []
+            script: vec! [],
         };
         solver
     }
 
     pub fn set_logic(&mut self, logic : Logic) {
+        for c in &self.script {
+            match c {
+                Command::SetLogic(_) => panic!("can't set logic twice!"),
+                _ => (),
+            }
+        }
         match logic {
             Logic::QFLIA => self.add_lia_symbols(),
             Logic::QFUFLIA => self.add_lia_symbols(),
         }
-        self.logic = Some(logic);
+        self.script.push(Command::SetLogic(logic));
     }
 
     fn add_lia_symbols(&mut self) {
         self.add_bool_symbols();
 
-        self.st.insert("+".to_string(), (vec! [Sort::Nary, Sort::Int], Sort::Int, true));
-        self.st.insert("-".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Int, true));
-        self.st.insert("*".to_string(), (vec! [Sort::Nary, Sort::Int], Sort::Int, true));
-
-        self.st.insert("<".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool, true));
-        self.st.insert("<=".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool, true));
-        self.st.insert(">".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool, true));
-        self.st.insert(">=".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool, true));
+        self.st.insert("+".to_string(), (vec! [Sort::Nary, Sort::Int], Sort::Int));
+        self.st.insert("*".to_string(), (vec! [Sort::Nary, Sort::Int], Sort::Int));
+        self.st.insert("-".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Int));
+        self.st.insert("<".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool));
+        self.st.insert("<=".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool));
+        self.st.insert(">".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool));
+        self.st.insert(">=".to_string(), (vec! [Sort::Int, Sort::Int], Sort::Bool));
     }
     
     fn add_bool_symbols(&mut self) {
-        self.st.insert("and".to_string(), (vec! [Sort::Nary, Sort::Bool], Sort::Bool, true));
-        self.st.insert("or".to_string(), (vec! [Sort::Nary, Sort::Bool], Sort::Bool, true));
-        self.st.insert("=".to_string(), (vec! [Sort::Nary, Sort::Any], Sort::Bool, true));
+        self.st.insert("and".to_string(), (vec! [Sort::Nary, Sort::Bool], Sort::Bool));
+        self.st.insert("or".to_string(), (vec! [Sort::Nary, Sort::Bool], Sort::Bool));
+        self.st.insert("=".to_string(), (vec! [Sort::Nary, Sort::Any], Sort::Bool));
     }
 
     pub fn declare_fun(&mut self, name: &str, asorts: Vec<Sort>, rsort: Sort) {
         debug!("declaring function: {}", name);
-        assert!(!self.st.contains_key(name), "Can't declare a function twice!");
+        assert!(!self.st.contains_key(name), "can't declare a function twice!");
 
-        match &self.logic {
-            Some(l) => assert!(asorts.len() == 0 || l.allows_uf(), "Logic does not support uninterpreted functions!"),
-            None => (),
-        }
-
-        self.st.insert(name.to_string(), (asorts, rsort, false));
+        // TODO: Check logic for UF
+        let decl = Command::Declare(name.to_string());
+        self.script.push(decl);
+        self.st.insert(name.to_string(), (asorts, rsort));
     }
 
     pub fn apply(&mut self, name: &str, args: Vec<NodeIndex>) -> NodeIndex {
@@ -138,37 +153,31 @@ impl Query {
             parent
         } else {
             if !self.st.contains_key(name) {
-                self.st.insert(name.to_string(), (vec! [], Sort::Tbd, true));
+                self.st.insert(name.to_string(), (vec! [], Sort::Tbd));
             }
             parent
         }
     }
 
     pub fn assert(&mut self, node: NodeIndex) {
-        // TODO: how to check if boolea?
-        self.assertions.insert(0, node);
+        // TODO: how to check if boolean?
+        self.script.push(Command::Assert(node));
     }
 
     pub fn push(&mut self) {
-        let pos = (self.assertions.len() - 1).try_into().unwrap();
-        self.push_vec.push(pos);
+        self.script.push(Command::Push);
     }
 
     pub fn pop(&mut self) {
-        let pos = (self.assertions.len() - 1).try_into().unwrap();
-        self.pop_vec.push(pos);
+        self.script.push(Command::Pop);
     }
 
     pub fn check_sat(&mut self) {
-        assert!(self.assertions.len() > 0, "there must be at least one assertion to check");
-        let pos = (self.assertions.len() - 1).try_into().unwrap();
-        self.check_vec.push(pos);
+        self.script.push(Command::CheckSat);
     }
 
     pub fn get_model(&mut self) {
-        let pos = (self.assertions.len() - 1).try_into().unwrap();
-        assert!(self.check_vec.last().unwrap_or(&u8::min_value()) == &pos, "must check-sat before get-model!");
-        self.model_vec.push(pos);
+        self.script.push(Command::GetModel);
     }
 
     pub fn write_dot(&self, file_name: String) {
@@ -181,54 +190,16 @@ impl Query {
         let mut children : Vec<EdgeReference<u8>> = self.ast.edges_directed(parent, EdgeDirection::Outgoing).collect();
         children.sort_by(|x, y| x.weight().cmp(y.weight()));
 
-        assert!(self.st.contains_key(&self.ast[parent]), "Unknown symbol!");
+        assert!(self.st.contains_key(&self.ast[parent]), "unknown symbol!");
 
-        if self.st[&self.ast[parent]].0.len() == 0 {
-            // Otherwise, if it has no arguments, make it a leaf
-            format!("{}", self.ast[parent])
-        } else {
-            // If it does have arguments, recurse down into them
-            let args : Vec<String> = children.into_iter().map(|s| self.subtree_to_string(s.target())).collect();
-            format!("({} {})", self.ast[parent], args.join(" "))
-        }
+        let args : Vec<String> = children.into_iter().map(|s| self.subtree_to_string(s.target())).collect();
+        format!("({} {})", self.ast[parent], args.join(" "))
     }
 
     pub fn to_smtlib(&self) -> String {
-        let mut query = Vec::new();
-        query.push(match &self.logic 
-            {Some(l) => format!("(set-logic {})", l.to_string()), None => "".to_string()
-        });
-
-        for (name, (asorts, rsort, interp)) in &self.st {
-            if !interp {
-                let args : Vec<String> = asorts.into_iter().map(|s| s.to_string()).collect();
-                if args.len() > 0 {
-                    query.push(format!("(declare-fun {} ({}) {})", name, args.join(" "), rsort.to_string()));
-                } else {
-                    query.push(format!("(declare-const {} {})", name, rsort.to_string()));
-                }
-            }
-        }
-
-        let mut id = u8::min_value();
-        for a in &self.assertions {
-            query.push(format!("(assert {})", self.subtree_to_string(*a)));
-            if self.check_vec.contains(&id) {
-                query.push("(check-sat)".to_string());
-            }
-            if self.model_vec.contains(&id) {
-                query.push("(get_model)".to_string());
-            }
-            if self.push_vec.contains(&id) {
-                query.push("(push)".to_string());
-            }
-            if self.pop_vec.contains(&id) {
-                query.push("(pop)".to_string());
-            }
-            id += 1;
-        }
-
-        query.join("\n")
+        let q_iter = self.script.iter();
+        let q_str : Vec<String> = q_iter.map(|c| c.to_string(self)).collect();
+        q_str.join("\n")
     }
 }
 
@@ -386,14 +357,6 @@ fn test_parse() {
     let unparsed_file = fs::read_to_string("examples/qflia.smt2").expect("cannot read file");
     let q = parse_smtlib_file(&unparsed_file).unwrap();
     q.write_dot("tmp.dot".to_string());
-}
-
-#[test]
-#[should_panic]
-fn test_reject_uf() {
-    let mut q = Query::new();
-    q.set_logic(Logic::QFLIA);
-    q.declare_fun("f", vec! [Sort::Int, Sort::Int], Sort::Int);
 }
 
 #[test]
