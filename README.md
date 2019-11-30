@@ -7,12 +7,9 @@ Lambda Loves Synthesis ([ʎ](https://en.wikipedia.org/wiki/Ye%C3%ADsmo) Ama Synt
 ```sh
 # executes src/main.rs
 # - parses examples/qflia.smt2
-# - generates a dot file in qflia.dot
+# - prints it back out
 # (for debugging use RUST_LOG=debug cargo run ...)
-cargo run examples/qflia.smt2 qflia.dot
-
-# to create an image from the dotfile
-dot -T png -O qflia.dot
+cargo run examples/qflia.smt2
 ```
 
 # TODO
