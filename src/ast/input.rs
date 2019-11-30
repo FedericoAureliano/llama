@@ -1,20 +1,20 @@
 use pest::Parser;
 use pest::error::Error;
 
-use crate::ast::Query;
+use crate::ast::Context;
 use crate::ast::ASTNode;
 
 #[derive(Parser)]
 #[grammar = "pest/synth.pest"]
 struct SynthParser;
 
-pub fn parse_synth_file(file: &str) -> Result<Query, Error<Rule>> {
+pub fn parse_synth_file(file: &str) -> Result<Context, Error<Rule>> {
     use pest::iterators::Pair;
-    let mut q = Query::new();
+    let mut q = Context::new();
     // TODO: why does this fail silently?
-    let smtlib = SynthParser::parse(Rule::query, file).expect("failed to read!");
+    let syntax = SynthParser::parse(Rule::query, file).expect("failed to read!");
 
-    fn parse_fapp(pair: Pair<Rule>, q : &mut Query) -> Result<ASTNode, Error<Rule>> {
+    fn parse_fapp(pair: Pair<Rule>, q : &mut Context) -> Result<ASTNode, Error<Rule>> {
         match pair.as_rule() {
             Rule::fapp => {
                 let mut inner = pair.into_inner();
@@ -45,7 +45,7 @@ pub fn parse_synth_file(file: &str) -> Result<Query, Error<Rule>> {
         }
     }
 
-    fn parse_query(pair: Pair<Rule>, q : &mut Query) -> Result<(), Error<Rule>>{
+    fn parse_query(pair: Pair<Rule>, q : &mut Context) -> Result<(), Error<Rule>>{
         match pair.as_rule() {
             Rule::setlogic => {
                 let mut inner = pair.into_inner();
@@ -90,6 +90,8 @@ pub fn parse_synth_file(file: &str) -> Result<Query, Error<Rule>> {
             },
             Rule::push => {q.push(); Ok(())},
             Rule::pop => {q.pop(); Ok(())},
+            Rule::sat => Ok(()),
+            Rule::unsat => Ok(()),
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
                         message: "command not supported!".to_owned(),
                     }, pair.as_span())),
@@ -97,7 +99,7 @@ pub fn parse_synth_file(file: &str) -> Result<Query, Error<Rule>> {
     }
 
     let mut empty = false;
-    for r in smtlib {
+    for r in syntax {
         parse_query(r, &mut q)?;
         empty = true
     };
@@ -115,9 +117,19 @@ fn test_read() {
 }
 
 #[test]
-fn test_parse() {
+fn test_parse_query() {
     use std::fs;
     let unparsed_file = fs::read_to_string("examples/qfuflia.smt2").expect("cannot read file");
     let q = parse_synth_file(&unparsed_file).unwrap();
     assert_eq!(unparsed_file, format!("{}", q));
+}
+
+#[test]
+fn test_parse_answer() {
+    use std::fs;
+    let unparsed_file = fs::read_to_string("examples/qfuflia_result.smt2").expect("cannot read file");
+    let q = parse_synth_file(&unparsed_file).unwrap();
+    let answer = "(define-fun x () Int 8)
+(define-fun f ((_ufmt_1 Int) (_ufmt_2 Int)) Int (- 1))";
+    assert_eq!(answer, format!("{}", q));
 }

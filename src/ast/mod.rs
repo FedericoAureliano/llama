@@ -21,17 +21,17 @@ pub enum Command {
     Pop,
 }
 
-pub struct Query {
+pub struct Context {
     ast:    Graph<String, usize>,
     utable: HashMap<String, (Vec<String>, String)>,
     itable: Solution,
     script: Vec<Command>,
 }
 
-impl Query {
-    pub fn new() -> Query {
-        let solver = Query {
-            ast   : Graph::new(),
+impl Context {
+    pub fn new() -> Context {
+        let solver = Context {
+            ast:    Graph::new(),
             utable: HashMap::new(),
             itable: HashMap::new(),
             script: vec![],
@@ -106,9 +106,13 @@ impl Query {
     pub fn get_model(&mut self) {
         self.script.push(Command::GetModel);
     }
+
+    pub fn get_interpretation(&self) -> &Solution {
+        &self.itable
+    }
 }
 
-impl<'a> IntoIterator for &'a Query {
+impl<'a> IntoIterator for &'a Context {
     type Item = &'a Command;
     type IntoIter = slice::Iter<'a, Command>;
 

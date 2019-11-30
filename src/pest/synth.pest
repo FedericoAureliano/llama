@@ -6,7 +6,10 @@ command  = _{setlogic
             |pop 
             |assert 
             |checksat 
-            |getmodel}
+            |getmodel
+            |sat
+            |unsat
+            |model}
 
 push     = {"(push)" | "(push 1)"}
 pop      = {"(pop)"  | "(pop 1)"}
@@ -18,7 +21,7 @@ logic    = {"QF_LIA"
 
 declare  = {"(declare-fun" ~ name ~ "("~ sort* ~")" ~ sort ~ ")" 
            |"(declare-const" ~ name ~ sort ~ ")"}
-name     = @{ASCII_ALPHANUMERIC+}
+name     = @{(ASCII_ALPHANUMERIC|"_")+}
 
 define   = {"(define-fun" ~ name ~ "("~ param* ~")" ~ sort ~ fapp ~ ")"}
 param    = {"("~ name ~ sort ~")"} 
@@ -36,5 +39,9 @@ function = @{ MATH+ | ASCII_ALPHANUMERIC+ | "-"}
 
 checksat = {"(check-sat)"}
 getmodel = {"(get-model)"}
+sat      = {"sat"}
+unsat    = {"unsat"}
+
+model    = _{"(model" ~ define* ~ ")"}
 
 WHITESPACE = _{ " " | "\t" | "\n" }

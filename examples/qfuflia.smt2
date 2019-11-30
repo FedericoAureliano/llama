@@ -4,3 +4,4 @@
 (define-fun g ((z Int)) Int (- 1))
 (assert (and (= (f x 7) (g x)) (> x 7)))
 (check-sat)
+(get-model)

@@ -1,10 +1,10 @@
 use std::fmt;
 
-use crate::ast::Query;
+use crate::ast::Context;
 use crate::ast::Command;
 use crate::ast::ASTNode;
 
-fn command_to_string(c : &Command, q: &Query) -> String {
+fn command_to_string(c : &Command, q: &Context) -> String {
     match c {
         Command::SetLogic(l) => format!("(set-logic {})", l),
         Command::Declare(name) => {
@@ -29,7 +29,7 @@ fn command_to_string(c : &Command, q: &Query) -> String {
     }
 }
 
-fn subtree_to_string(q: &Query, parent: &ASTNode) -> String {
+fn subtree_to_string(q: &Context, parent: &ASTNode) -> String {
     let children = q.get_args(parent);
     let args : Vec<String> = children.into_iter().map(|s| subtree_to_string(q, &s)).collect();
     if args.len() > 0 {
@@ -39,7 +39,7 @@ fn subtree_to_string(q: &Query, parent: &ASTNode) -> String {
     }
 }
 
-impl fmt::Display for Query {
+impl fmt::Display for Context {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let q_iter = self.into_iter();
         let q_str : Vec<String> = q_iter.map(|c| command_to_string(c, self)).collect();
@@ -49,7 +49,7 @@ impl fmt::Display for Query {
 
 #[test]
 fn test_subtree_to_string(){
-    let mut q = Query::new();
+    let mut q = Context::new();
     q.declare_fun("x", vec! [], "Int".to_owned());
     let node_x = q.apply("x", vec! []);
     let node_7 = q.apply("7", vec! []);
@@ -59,7 +59,7 @@ fn test_subtree_to_string(){
 
 #[test]
 fn test_to_smtlib(){
-    let mut q = Query::new();
+    let mut q = Context::new();
     q.declare_fun("x", vec! [], "Int".to_owned());
     let node_x = q.apply("x", vec! []);
     let node_7 = q.apply("7", vec! []);
@@ -74,7 +74,7 @@ fn test_to_smtlib(){
 
 #[test]
 fn test_uf() {
-    let mut q = Query::new();
+    let mut q = Context::new();
     q.set_logic("QF_LIA".to_owned());
     q.declare_fun("f", vec! ["Int".to_owned(), "Int".to_owned()], "Bool".to_owned());
     let node_n1 = q.apply("-1", vec! []);
