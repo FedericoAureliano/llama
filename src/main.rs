@@ -9,7 +9,8 @@ extern crate pest;
 extern crate log;
 extern crate env_logger;
 
-mod ast;
+mod context;
+mod eval;
 
 fn main() {
     env_logger::init();
@@ -19,6 +20,9 @@ fn main() {
     let f = args.get(1).expect("No input file given!");
 
     let unparsed_file = fs::read_to_string(f).expect("cannot read file");
-    let q = ast::input::parse_synth_file(&unparsed_file).expect("cannot parse file");
+    let mut q = context::Context::new();
+    q.parse_file(&unparsed_file).expect("cannot parse file");
+    println!("{}", q);
+    q.eval();
     println!("{}", q);
 }

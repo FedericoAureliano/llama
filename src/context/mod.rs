@@ -53,7 +53,16 @@ impl Context {
         children.into_iter().map(|c : EdgeReference<usize> | c.target()).collect()
     }
 
+    fn clone_ast(&self) -> Graph<String, usize> {
+        self.ast.clone()
+    }
+
+    fn set_ast(&mut self, ast: Graph<String, usize>) {
+        self.ast = ast;
+    }
+
     pub fn get_name(&self, node: &ASTNode) -> &String {
+        debug!("looking for {}", node.index());
         &self.ast[*node]
     }
 
@@ -79,6 +88,7 @@ impl Context {
 
     pub fn apply(&mut self, name: &str, args: Vec<ASTNode>) -> ASTNode {
         let parent = self.ast.add_node(name.to_string());
+        debug!("creating node with label {} at {}", name, parent.index());
         let mut count = 0;
         for child in args {
             self.ast.add_edge(parent, child, count);
@@ -118,5 +128,33 @@ impl<'a> IntoIterator for &'a Context {
 
     fn into_iter(self) -> slice::Iter<'a, Command> {
         self.script.iter()
+    }
+}
+
+impl Clone for Context {
+    fn clone(&self) -> Context {
+        let mut output = Context::new();
+        output.set_ast(self.clone_ast());
+        for command in self {
+            match command {
+                Command::SetLogic(l) => output.set_logic(l.clone()),
+                Command::Declare(name) => {
+                    let (asorts, rsort) = self.get_decl(&name);
+                    output.declare_fun(name, asorts.clone(), rsort.clone())
+                },
+                Command::Define(name) => {
+                    let (params, rsort, body) = self.get_defn(&name);
+                    output.define_fun(name, params.clone(), rsort.clone(), body.clone())
+                },
+                Command::Assert(a) => {
+                    output.assert(a.clone())
+                },
+                Command::CheckSat => output.check_sat(),
+                Command::GetModel => output.get_model(),
+                Command::Push => output.push(),
+                Command::Pop => output.pop(),
+            }
+        }
+        output
     }
 }

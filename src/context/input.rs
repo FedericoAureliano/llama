@@ -1,29 +1,25 @@
 use pest::Parser;
 use pest::error::Error;
+use pest::iterators::Pair;
 
-use crate::ast::Context;
-use crate::ast::ASTNode;
+use crate::context::Context;
+use crate::context::ASTNode;
 
 #[derive(Parser)]
 #[grammar = "pest/synth.pest"]
 struct SynthParser;
 
-pub fn parse_synth_file(file: &str) -> Result<Context, Error<Rule>> {
-    use pest::iterators::Pair;
-    let mut q = Context::new();
-    // TODO: why does this fail silently?
-    let syntax = SynthParser::parse(Rule::query, file).expect("failed to read!");
-
-    fn parse_fapp(pair: Pair<Rule>, q : &mut Context) -> Result<ASTNode, Error<Rule>> {
+impl Context {
+    fn parse_fapp(&mut self, pair: Pair<Rule>) -> Result<ASTNode, Error<Rule>> {
         match pair.as_rule() {
             Rule::fapp => {
                 let mut inner = pair.into_inner();
                 let func = inner.next().unwrap().as_span().as_str();
                 let mut args : Vec<ASTNode> = vec! [];
                 for i in inner {
-                    args.push(parse_fapp(i, q)?)
+                    args.push(self.parse_fapp(i)?)
                 }
-                Ok(q.apply(func, args))
+                Ok(self.apply(func, args))
             },
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
                         message: "expecting function application!".to_owned(),
@@ -31,7 +27,7 @@ pub fn parse_synth_file(file: &str) -> Result<Context, Error<Rule>> {
         }
     }
 
-    fn parse_param(pair: Pair<Rule>) -> Result<((String, String)), Error<Rule>> {
+    fn parse_param(&self, pair: Pair<Rule>) -> Result<((String, String)), Error<Rule>> {
         match pair.as_rule() {
             Rule::param => {
                 let mut inner = pair.into_inner();
@@ -45,12 +41,12 @@ pub fn parse_synth_file(file: &str) -> Result<Context, Error<Rule>> {
         }
     }
 
-    fn parse_query(pair: Pair<Rule>, q : &mut Context) -> Result<(), Error<Rule>>{
+    fn parse_query(&mut self, pair: Pair<Rule>) -> Result<(), Error<Rule>> {
         match pair.as_rule() {
             Rule::setlogic => {
                 let mut inner = pair.into_inner();
                 let name = inner.next().unwrap().as_span().as_str().to_owned();
-                q.set_logic(name);
+                self.set_logic(name);
                 Ok(())
             }
             Rule::declare => { 
@@ -63,7 +59,7 @@ pub fn parse_synth_file(file: &str) -> Result<Context, Error<Rule>> {
                 }
 
                 let rsort = sorts.pop().unwrap();
-                q.declare_fun(&name, sorts, rsort);
+                self.declare_fun(&name, sorts, rsort);
                 Ok(())
             }
             Rule::define => { 
@@ -75,21 +71,21 @@ pub fn parse_synth_file(file: &str) -> Result<Context, Error<Rule>> {
                     defn.push(s);
                 }
 
-                let body = parse_fapp(defn.pop().unwrap(), q)?;
+                let body = self.parse_fapp(defn.pop().unwrap())?;
                 let rsort = defn.pop().unwrap().as_span().as_str().to_owned();
-                let params = defn.into_iter().map(|r| parse_param(r).expect("something wrong with parameter pair")).collect();
-                q.define_fun(&name, params, rsort, body);
+                let params = defn.into_iter().map(|r| self.parse_param(r).expect("something wrong with parameter pair")).collect();
+                self.define_fun(&name, params, rsort, body);
                 Ok(())
             }
-            Rule::checksat => {q.check_sat(); Ok(())},
-            Rule::getmodel => {q.get_model(); Ok(())},
+            Rule::checksat => {self.check_sat(); Ok(())},
+            Rule::getmodel => {self.get_model(); Ok(())},
             Rule::assert => {
-                let node = parse_fapp(pair.into_inner().next().unwrap(), q)?;
-                q.assert(node);
+                let node = self.parse_fapp(pair.into_inner().next().unwrap())?;
+                self.assert(node);
                 Ok(())
             },
-            Rule::push => {q.push(); Ok(())},
-            Rule::pop => {q.pop(); Ok(())},
+            Rule::push => {self.push(); Ok(())},
+            Rule::pop => {self.pop(); Ok(())},
             Rule::sat => Ok(()),
             Rule::unsat => Ok(()),
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
@@ -98,14 +94,16 @@ pub fn parse_synth_file(file: &str) -> Result<Context, Error<Rule>> {
         }
     }
 
-    let mut empty = false;
-    for r in syntax {
-        parse_query(r, &mut q)?;
-        empty = true
-    };
-    
-    assert!(empty, "problem with grammar: query is empty!");
-    Ok(q)
+    pub fn parse_file(&mut self, file: &str) -> Result<(), Error<Rule>> {
+        let syntax = SynthParser::parse(Rule::query, file).expect("failed to read!");    
+        let mut empty = false;
+        for r in syntax {
+            self.parse_query(r)?;
+            empty = true
+        };
+        assert!(empty, "problem with grammar: query is empty!");
+        Ok(())
+    }
 }
 
 #[test]
@@ -120,7 +118,8 @@ fn test_read() {
 fn test_parse_query() {
     use std::fs;
     let unparsed_file = fs::read_to_string("examples/qfuflia.smt2").expect("cannot read file");
-    let q = parse_synth_file(&unparsed_file).unwrap();
+    let mut q = Context::new();
+    q.parse_file(&unparsed_file).unwrap();
     assert_eq!(unparsed_file, format!("{}", q));
 }
 
@@ -128,7 +127,8 @@ fn test_parse_query() {
 fn test_parse_answer() {
     use std::fs;
     let unparsed_file = fs::read_to_string("examples/qfuflia_result.smt2").expect("cannot read file");
-    let q = parse_synth_file(&unparsed_file).unwrap();
+    let mut q = Context::new();
+    q.parse_file(&unparsed_file).unwrap();
     let answer = "(define-fun x () Int 8)
 (define-fun f ((_ufmt_1 Int) (_ufmt_2 Int)) Int (- 1))";
     assert_eq!(answer, format!("{}", q));
