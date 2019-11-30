@@ -8,13 +8,18 @@ fn command_to_string(c : &Command, q: &Query) -> String {
     match c {
         Command::SetLogic(l) => format!("(set-logic {})", l),
         Command::Declare(name) => {
-            let (asorts, rsort) = q.get_signature(&name);
+            let (asorts, rsort) = q.get_decl(&name);
             let args : Vec<String> = asorts.into_iter().map(|s| s.to_string()).collect();
             if args.len() > 0 {
                 format!("(declare-fun {} ({}) {})", name, args.join(" "), rsort.to_string())
             } else {
                 format!("(declare-const {} {})", name, rsort.to_string())
             }
+        },
+        Command::Define(name) => {
+            let (params, rsort, body) = q.get_defn(&name);
+            let args : Vec<String> = params.into_iter().map(|(n, s)| format!("({} {})", n, s)).collect();
+            format!("(define-fun {} ({}) {} {})", name, args.join(" "), rsort.to_string(), subtree_to_string(q, body))
         },
         Command::Assert(a) => format!("(assert {})", subtree_to_string(q, a)),
         Command::CheckSat => "(check-sat)".to_string(),

@@ -8,10 +8,12 @@ pub mod input;
 pub mod output;
 
 pub type ASTNode = NodeIndex;
+pub type Solution = HashMap<String, (Vec<(String, String)>, String, ASTNode)>;
 
 pub enum Command {
     SetLogic(String),
     Declare(String),
+    Define(String),
     Assert(ASTNode),
     CheckSat,
     GetModel,
@@ -22,6 +24,7 @@ pub enum Command {
 pub struct Query {
     ast:    Graph<String, usize>,
     utable: HashMap<String, (Vec<String>, String)>,
+    itable: Solution,
     script: Vec<Command>,
 }
 
@@ -30,13 +33,18 @@ impl Query {
         let solver = Query {
             ast   : Graph::new(),
             utable: HashMap::new(),
+            itable: HashMap::new(),
             script: vec![],
         };
         solver
     }
 
-    pub fn get_signature(&self, name: &String) -> &(Vec<String>, String) {
-        self.utable.get(name).expect("unknown symbol!")
+    pub fn get_decl(&self, name: &String) -> &(Vec<String>, String) {
+        self.utable.get(name).expect("can't find declaration!")
+    }
+
+    pub fn get_defn(&self, name: &String) -> &(Vec<(String, String)>, String, ASTNode) {
+        self.itable.get(name).expect("can't find definition!")
     }
 
     pub fn get_args(&self, node: &ASTNode) -> Vec<ASTNode> {
@@ -49,14 +57,6 @@ impl Query {
         &self.ast[*node]
     }
 
-    pub fn get_script_len(&self) -> usize {
-        self.script.len()
-    }
-
-    pub fn get_command(&self, n: usize) -> &Command {
-        &self.script[n]
-    }
-
     pub fn set_logic(&mut self, logic: String) {
         self.script.push(Command::SetLogic(logic));
     }
@@ -67,6 +67,14 @@ impl Query {
         let decl = Command::Declare(name.to_string());
         self.script.push(decl);
         self.utable.insert(name.to_string(), (asorts, rsort));
+    }
+
+    pub fn define_fun(&mut self, name: &str, params: Vec<(String, String)>, rsort: String, body: ASTNode) {
+        assert!(!self.itable.contains_key(name), "can't define a function twice!");
+        debug!("defining {}", name);
+        let defn = Command::Define(name.to_string());
+        self.script.push(defn);
+        self.itable.insert(name.to_string(), (params, rsort, body));
     }
 
     pub fn apply(&mut self, name: &str, args: Vec<ASTNode>) -> ASTNode {

@@ -1,5 +1,6 @@
 (set-logic QF_UFLIA)
 (declare-const x Int)
 (declare-fun f (Int Int) Int)
-(assert (and (= (f x 7) x) (> x 7)))
+(define-fun g ((z Int)) Int (- 1))
+(assert (and (= (f x 7) (g x)) (> x 7)))
 (check-sat)
