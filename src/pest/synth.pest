@@ -15,9 +15,10 @@ push     = {"(push)" | "(push 1)"}
 pop      = {"(pop)"  | "(pop 1)"}
 
 setlogic = {"(set-logic" ~ logic ~ ")"}
-logic    = {"QF_LIA" 
-           |"QF_UFLIA"
-           |"QF_BV"}
+logic    = {"QF_UFLIA"
+		   |"QF_LIA" 
+           |"QF_BV"
+           |"QF_UF"}
 
 declare  = {"(declare-fun" ~ name ~ "("~ sort* ~")" ~ sort ~ ")" 
            |"(declare-const" ~ name ~ sort ~ ")"}

@@ -1,20 +1,18 @@
-use petgraph::graph::{Graph, NodeIndex, EdgeReference};
-use petgraph::EdgeDirection;
-use petgraph::visit::EdgeRef;
 use std::collections::{HashMap};
 use core::slice::{self};
 
 pub mod input;
 pub mod output;
 
-pub type ASTNode = NodeIndex;
-pub type Solution = HashMap<String, (Vec<(String, String)>, String, ASTNode)>;
+use crate::term::{Term, TermManager};
+
+pub type Solution = HashMap<String, (Vec<(String, String)>, String, Term)>;
 
 pub enum Command {
     SetLogic(String),
     Declare(String),
     Define(String),
-    Assert(ASTNode),
+    Assert(Term),
     CheckSat,
     GetModel,
     Push,
@@ -22,48 +20,34 @@ pub enum Command {
 }
 
 pub struct Context {
-    ast:    Graph<String, usize>,
-    utable: HashMap<String, (Vec<String>, String)>,
-    itable: Solution,
-    script: Vec<Command>,
+    pub tm:    TermManager,
+    decls:     HashMap<String, (Vec<String>, String)>,
+    pub defns: Solution,
+    script:    Vec<Command>,
 }
 
 impl Context {
     pub fn new() -> Context {
-        let solver = Context {
-            ast:    Graph::new(),
-            utable: HashMap::new(),
-            itable: HashMap::new(),
+        let context = Context {
+            tm:     TermManager::new(),
+            decls:  HashMap::new(),
+            defns:  Solution::new(),
             script: vec![],
         };
-        solver
+        context
     }
 
-    pub fn get_decl(&self, name: &String) -> &(Vec<String>, String) {
-        self.utable.get(name).expect("can't find declaration!")
+    pub fn get_declaration(&self, name: &String) -> &(Vec<String>, String) {
+        self.decls.get(name).expect("can't find declaration!")
     }
 
-    pub fn get_defn(&self, name: &String) -> &(Vec<(String, String)>, String, ASTNode) {
-        self.itable.get(name).expect("can't find definition!")
+    pub fn get_definition(&self, name: &String) -> &(Vec<(String, String)>, String, Term) {
+        self.defns.get(name).expect("can't find definition!")
     }
 
-    pub fn get_args(&self, node: &ASTNode) -> Vec<ASTNode> {
-        let mut children : Vec<EdgeReference<usize>> = self.ast.edges_directed(*node, EdgeDirection::Outgoing).collect();
-        children.sort_by(|x, y| x.weight().cmp(y.weight()));
-        children.into_iter().map(|c : EdgeReference<usize> | c.target()).collect()
-    }
-
-    fn clone_ast(&self) -> Graph<String, usize> {
-        self.ast.clone()
-    }
-
-    fn set_ast(&mut self, ast: Graph<String, usize>) {
-        self.ast = ast;
-    }
-
-    pub fn get_name(&self, node: &ASTNode) -> &String {
-        debug!("looking for {}", node.index());
-        &self.ast[*node]
+    pub fn get_sort(&self, t: &Term) -> &String {
+        let (_, s) = self.get_declaration(self.tm.get_name(t));
+        s
     }
 
     pub fn set_logic(&mut self, logic: String) {
@@ -71,33 +55,22 @@ impl Context {
     }
 
     pub fn declare_fun(&mut self, name: &str, asorts: Vec<String>, rsort: String) {
-        assert!(!self.utable.contains_key(name), "can't declare a function twice!");
+        assert!(!self.decls.contains_key(name), "can't declare a function twice!");
         debug!("declaring {}", name);
         let decl = Command::Declare(name.to_string());
         self.script.push(decl);
-        self.utable.insert(name.to_string(), (asorts, rsort));
+        self.decls.insert(name.to_string(), (asorts, rsort));
     }
 
-    pub fn define_fun(&mut self, name: &str, params: Vec<(String, String)>, rsort: String, body: ASTNode) {
-        assert!(!self.itable.contains_key(name), "can't define a function twice!");
+    pub fn define_fun(&mut self, name: &str, params: Vec<(String, String)>, rsort: String, body: Term) {
+        assert!(!self.defns.contains_key(name), "can't define a function twice!");
         debug!("defining {}", name);
         let defn = Command::Define(name.to_string());
         self.script.push(defn);
-        self.itable.insert(name.to_string(), (params, rsort, body));
+        self.defns.insert(name.to_string(), (params, rsort, body));
     }
 
-    pub fn apply(&mut self, name: &str, args: Vec<ASTNode>) -> ASTNode {
-        let parent = self.ast.add_node(name.to_string());
-        debug!("creating node with label {} at {}", name, parent.index());
-        let mut count = 0;
-        for child in args {
-            self.ast.add_edge(parent, child, count);
-            count += 1;
-        }
-        parent
-    }
-
-    pub fn assert(&mut self, node: ASTNode) {
+    pub fn assert(&mut self, node: Term) {
         self.script.push(Command::Assert(node));
     }
 
@@ -117,9 +90,6 @@ impl Context {
         self.script.push(Command::GetModel);
     }
 
-    pub fn get_interpretation(&self) -> &Solution {
-        &self.itable
-    }
 }
 
 impl<'a> IntoIterator for &'a Context {
@@ -132,18 +102,19 @@ impl<'a> IntoIterator for &'a Context {
 }
 
 impl Clone for Context {
+    //TODO: there must be a better way to do this
     fn clone(&self) -> Context {
         let mut output = Context::new();
-        output.set_ast(self.clone_ast());
+        output.tm = self.tm.clone();
         for command in self {
             match command {
                 Command::SetLogic(l) => output.set_logic(l.clone()),
                 Command::Declare(name) => {
-                    let (asorts, rsort) = self.get_decl(&name);
+                    let (asorts, rsort) = self.get_declaration(&name);
                     output.declare_fun(name, asorts.clone(), rsort.clone())
                 },
                 Command::Define(name) => {
-                    let (params, rsort, body) = self.get_defn(&name);
+                    let (params, rsort, body) = self.get_definition(&name);
                     output.define_fun(name, params.clone(), rsort.clone(), body.clone())
                 },
                 Command::Assert(a) => {

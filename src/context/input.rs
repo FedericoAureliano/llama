@@ -3,23 +3,23 @@ use pest::error::Error;
 use pest::iterators::Pair;
 
 use crate::context::Context;
-use crate::context::ASTNode;
+use crate::term::Term;
 
 #[derive(Parser)]
 #[grammar = "pest/synth.pest"]
 struct SynthParser;
 
 impl Context {
-    fn parse_fapp(&mut self, pair: Pair<Rule>) -> Result<ASTNode, Error<Rule>> {
+    fn parse_fapp(&mut self, pair: Pair<Rule>) -> Result<Term, Error<Rule>> {
         match pair.as_rule() {
             Rule::fapp => {
                 let mut inner = pair.into_inner();
                 let func = inner.next().unwrap().as_span().as_str();
-                let mut args : Vec<ASTNode> = vec! [];
+                let mut args : Vec<Term> = vec! [];
                 for i in inner {
                     args.push(self.parse_fapp(i)?)
                 }
-                Ok(self.apply(func, args))
+                Ok(self.tm.apply(func, args))
             },
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
                         message: "expecting function application!".to_owned(),
