@@ -34,9 +34,8 @@ bitvec   = {"(_ BitVec" ~ width ~ ")"}
 width    = @{ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*}
 
 assert   = {"(assert" ~ fapp ~ ")"}
-fapp     = {"(" ~ function ~ fapp+ ~ ")" | constant}
-constant = @{ASCII_ALPHANUMERIC+}
-function = @{ MATH+ | ASCII_ALPHANUMERIC+ | "-"}
+fapp     = {"(" ~ function ~ fapp+ ~ ")" | name}
+function = @{(MATH|ASCII_ALPHANUMERIC|"-")+}
 
 checksat = {"(check-sat)"}
 getmodel = {"(get-model)"}

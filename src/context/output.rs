@@ -42,14 +42,15 @@ impl fmt::Display for Context {
 #[cfg(test)]
 mod test {
     use super::Context;
-    use crate::term::apply;
+    use crate::term::integer::{mk_ge, mk_le, mk_sub};
+    use crate::term::{mk_const, mk_app};
 
     #[test]
     fn test_multiple_asserts(){
         let mut q = Context::new();
         q.declare_fun("x", vec! [], "Int".to_owned());
-        let a1 = apply(">=", vec! [apply("x", vec! []),  apply("7", vec! [])]);
-        let a2 = apply("<=", vec! [apply("x", vec! []),  apply("7", vec! [])]);
+        let a1 = mk_ge(vec! [mk_const("x"),  mk_const("7")]);
+        let a2 = mk_le(vec! [mk_const("x"),  mk_const("7")]);
         q.assert(a1);
         q.assert(a2);
         q.check_sat();
@@ -66,15 +67,15 @@ mod test {
         let mut q = Context::new();
         q.set_logic("QF_LIA".to_owned());
         q.declare_fun("f", vec! ["Int".to_owned(), "Int".to_owned()], "Bool".to_owned());
-        let node_n1 = apply("-1", vec! []);
-        let node_1 = apply("1", vec! []);
-        let a1 = apply("f", vec! [node_n1, node_1]);
+        let node_n1 = mk_const("1");
+        let node_1 = mk_const("1");
+        let a1 = mk_app("f", vec! [mk_sub(vec![node_n1]), node_1]);
         q.assert(a1);
         q.check_sat();
         q.get_model();
         assert_eq!("(set-logic QF_LIA)
 (declare-fun f (Int Int) Bool)
-(assert (f -1 1))
+(assert (f (- 1) 1))
 (check-sat)
 (get-model)", format!("{}", q));
     }

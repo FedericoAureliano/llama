@@ -1,5 +1,8 @@
 use std::fmt;
 
+pub mod boolean;
+pub mod integer;
+
 pub struct Term {
     name: String,
     args: Vec<Box<Term>>,
@@ -33,22 +36,31 @@ impl fmt::Debug for Term {
     }
 }
 
-pub fn apply(name: &str, args: Vec<Term>) -> Term {
+pub fn mk_app(name: &str, args: Vec<Term>) -> Term {
     Term { 
         name: name.to_owned(), 
         args: args.into_iter().map(|t| Box::new(t)).collect(),
     }
 }
 
+#[allow(dead_code)]
+pub fn mk_const(name: &str) -> Term {
+    Term { 
+        name: name.to_owned(), 
+        args: vec![],
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use super::apply;
+    use super::{mk_const};
+    use crate::term::integer::mk_add;
 
     #[test]
     fn simple_expr() {
-        let x = apply("x", vec![]);
-        let y = apply("y", vec![]);
-        let plus = apply("+", vec![x, y]);
+        let x = mk_const("x");
+        let y = mk_const("y");
+        let plus = mk_add(vec![x, y]);
         assert_eq!("(+ x y)", format!("{}", plus));
     }
 }

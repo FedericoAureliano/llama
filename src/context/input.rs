@@ -3,7 +3,7 @@ use pest::error::Error;
 use pest::iterators::Pair;
 
 use crate::context::{Context, Solution};
-use crate::term::{Term, apply};
+use crate::term::{Term, mk_app};
 
 #[derive(Parser)]
 #[grammar = "pest/synth.pest"]
@@ -19,7 +19,7 @@ impl Context {
                 for i in inner {
                     args.push(self.parse_fapp(i)?)
                 }
-                Ok(apply(func, args))
+                Ok(mk_app(func, args))
             },
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
                         message: "expecting function application!".to_owned(),

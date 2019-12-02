@@ -62,7 +62,6 @@ impl Context {
 
     pub fn declare_fun(&mut self, name: &str, asorts: Vec<String>, rsort: String) {
         assert!(!self.decls.contains_key(name), "can't declare a function twice!");
-        debug!("declaring {}", name);
         let decl = Command::Declare(name.to_string());
         self.script.push(decl);
         self.decls.insert(name.to_string(), (asorts, rsort));
@@ -70,7 +69,6 @@ impl Context {
 
     pub fn define_fun(&mut self, name: &str, params: Vec<(String, String)>, rsort: String, body: Term) {
         assert!(!self.defns.contains_key(name), "can't define a function twice!");
-        debug!("defining {}", name);
         let defn = Command::Define(name.to_string());
         self.script.push(defn);
         self.defns.insert(name.to_string(), (params, rsort, body));

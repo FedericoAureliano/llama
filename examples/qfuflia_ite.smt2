@@ -1,0 +1,12 @@
+(set-logic QF_UFLIA)
+(declare-fun x (Int) Int)
+(declare-fun y (Int) Int)
+(declare-fun t (Int) Int)
+(assert (=i (t 0) (x 0)))
+(assert (=i (y 1) (t 0)))
+(assert (=i (x 1) (y 1)))
+(assert (not 
+  (and (=i (x 1) (y 0)) 
+       (=i (y 1) (x 0)))))
+(check-sat)
+(get-model)

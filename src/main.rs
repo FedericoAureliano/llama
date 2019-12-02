@@ -28,5 +28,5 @@ fn main() {
     let unparsed_answer = fs::read_to_string(g).expect("cannot read file");
     let sol = query.parse_answer(&unparsed_answer).expect("cannot parse file");
     println!("{}", query);
-    println!("evaluates to {}", query.eval(&sol));
+    println!("\nwith model {:?}\nevaluates to {}", sol, query.eval(&sol));
 }
