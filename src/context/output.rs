@@ -45,7 +45,7 @@ mod test {
     use crate::term::apply;
 
     #[test]
-    fn test_to_smtlib(){
+    fn test_multiple_asserts(){
         let mut q = Context::new();
         q.declare_fun("x", vec! [], "Int".to_owned());
         let a1 = apply(">=", vec! [apply("x", vec! []),  apply("7", vec! [])]);
@@ -54,11 +54,15 @@ mod test {
         q.assert(a2);
         q.check_sat();
         q.get_model();
-        println!("{}", q);
+        assert_eq!("(declare-const x Int)
+(assert (>= x 7))
+(assert (<= x 7))
+(check-sat)
+(get-model)", format!("{}", q));
     }
 
     #[test]
-    fn test_uf() {
+    fn test_uf_and_set_logic() {
         let mut q = Context::new();
         q.set_logic("QF_LIA".to_owned());
         q.declare_fun("f", vec! ["Int".to_owned(), "Int".to_owned()], "Bool".to_owned());
@@ -68,6 +72,10 @@ mod test {
         q.assert(a1);
         q.check_sat();
         q.get_model();
-        println!("{}", q);
+        assert_eq!("(set-logic QF_LIA)
+(declare-fun f (Int Int) Bool)
+(assert (f -1 1))
+(check-sat)
+(get-model)", format!("{}", q));
     }
 }
