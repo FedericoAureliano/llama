@@ -4,7 +4,7 @@ use core::slice::{self};
 pub mod input;
 pub mod output;
 
-use crate::term::{Term, TermManager};
+use crate::term::Term;
 
 pub type Solution = HashMap<String, (Vec<(String, String)>, String, Term)>;
 
@@ -20,16 +20,14 @@ pub enum Command {
 }
 
 pub struct Context {
-    pub tm:    TermManager,
-    decls:     HashMap<String, (Vec<String>, String)>,
-    pub defns: Solution,
-    script:    Vec<Command>,
+    decls: HashMap<String, (Vec<String>, String)>,
+    defns: Solution,
+    script: Vec<Command>,
 }
 
 impl Context {
     pub fn new() -> Context {
         let context = Context {
-            tm:     TermManager::new(),
             decls:  HashMap::new(),
             defns:  Solution::new(),
             script: vec![],
@@ -37,16 +35,24 @@ impl Context {
         context
     }
 
-    pub fn get_declaration(&self, name: &String) -> &(Vec<String>, String) {
+    pub fn has_decl(&self, name: &String) -> bool {
+        self.decls.contains_key(name)
+    }
+
+    pub fn get_decl(&self, name: &String) -> &(Vec<String>, String) {
         self.decls.get(name).expect("can't find declaration!")
     }
 
-    pub fn get_definition(&self, name: &String) -> &(Vec<(String, String)>, String, Term) {
+    pub fn has_defn(&self, name: &String) -> bool {
+        self.defns.contains_key(name)
+    }
+
+    pub fn get_defn(&self, name: &String) -> &(Vec<(String, String)>, String, Term) {
         self.defns.get(name).expect("can't find definition!")
     }
 
     pub fn get_sort(&self, t: &Term) -> &String {
-        let (_, s) = self.get_declaration(self.tm.get_name(t));
+        let (_, s) = self.get_decl(t.peek_name());
         s
     }
 
@@ -98,34 +104,5 @@ impl<'a> IntoIterator for &'a Context {
 
     fn into_iter(self) -> slice::Iter<'a, Command> {
         self.script.iter()
-    }
-}
-
-impl Clone for Context {
-    //TODO: there must be a better way to do this
-    fn clone(&self) -> Context {
-        let mut output = Context::new();
-        output.tm = self.tm.clone();
-        for command in self {
-            match command {
-                Command::SetLogic(l) => output.set_logic(l.clone()),
-                Command::Declare(name) => {
-                    let (asorts, rsort) = self.get_declaration(&name);
-                    output.declare_fun(name, asorts.clone(), rsort.clone())
-                },
-                Command::Define(name) => {
-                    let (params, rsort, body) = self.get_definition(&name);
-                    output.define_fun(name, params.clone(), rsort.clone(), body.clone())
-                },
-                Command::Assert(a) => {
-                    output.assert(a.clone())
-                },
-                Command::CheckSat => output.check_sat(),
-                Command::GetModel => output.get_model(),
-                Command::Push => output.push(),
-                Command::Pop => output.pop(),
-            }
-        }
-        output
     }
 }

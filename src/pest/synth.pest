@@ -40,8 +40,8 @@ function = @{ MATH+ | ASCII_ALPHANUMERIC+ | "-"}
 
 checksat = {"(check-sat)"}
 getmodel = {"(get-model)"}
-sat      = {"sat"}
-unsat    = {"unsat"}
+sat      = _{"sat"}
+unsat    = _{"unsat"}
 
 model    = _{"(model" ~ define* ~ ")"}
 

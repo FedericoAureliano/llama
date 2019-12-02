@@ -6,7 +6,6 @@ license = "MIT"
 edition = "2018"
 
 [dependencies]
-petgraph = "0.4.13"
 pest = "2.1.2"
 pest_derive = "2.1.0"
 log = "0.4"
