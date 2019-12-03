@@ -2,6 +2,6 @@
 (declare-const p Bool)
 (declare-const q Bool)
 (declare-const r Bool)
-(assert (not (=b (and p q) r)))
+(assert (not (= (and p q) r)))
 (check-sat)
 (get-model)

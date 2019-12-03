@@ -2,28 +2,33 @@ use crate::context::{Context, Solution};
 use crate::term::{Term};
 
 impl Context {
-
+    // TODO: need to deal with overflow at some point
     pub fn eval_int(&self, t: &Term, s: &Solution) -> i64 {
         match t.peek_name().as_str() {
             "+" => t.peek_args().iter().fold(0, |r, a| r + self.eval_int(&*a, s)),
             "-" => t.peek_args().iter().fold(0, |r, a| r - self.eval_int(&*a, s)),
             "*" => t.peek_args().iter().fold(1, |r, a| r * self.eval_int(&*a, s)),
-            "itei" => if self.eval_bool(&*t.peek_args()[0], s) {self.eval_int(&*t.peek_args()[1], s)} else {self.eval_int(&*t.peek_args()[2], s)},
+            // polymorphic
+            "ite" => {
+                if self.eval_bool(&*t.peek_args()[0], s) {self.eval_int(&*t.peek_args()[1], s)} else {self.eval_int(&*t.peek_args()[2], s)}
+            }
             name => {
-                if self.has_defn(t.peek_name()) {
-                    let (params, _, body) = self.get_defn(t.peek_name());
-                    let args = t.peek_args();
-                    let sol = self.build_solution(params, args, s);
-                    self.eval_int(body, &sol)
-                    
-                } else if s.contains_key(name) {
-                    let (params, _, body) = s.get(&name.to_owned()).expect("can't find definition in solution");
-                    let args = t.peek_args();
-                    let sol = self.build_solution(params, args, s);
-                    self.eval_int(body, &sol)
-
-                } else {
-                    name.parse::<i64>().expect(format!("unknown symbol {}", name).as_str())
+                match self.get_defn(t.peek_name()) {
+                    Some((params, _, body)) => {
+                        let args = t.peek_args();
+                        let sol = self.build_solution(params, args, s);
+                        self.eval_int(body, &sol)
+                    },
+                    None => {
+                        match s.get(&name.to_owned()) {
+                            Some((params, _, body)) => {
+                                let args = t.peek_args();
+                                let sol = self.build_solution(params, args, s);
+                                self.eval_int(body, &sol)
+                            },
+                            None => name.parse::<i64>().expect(format!("unknown symbol {}", name).as_str())
+                        }
+                    }
                 }
             }
         }

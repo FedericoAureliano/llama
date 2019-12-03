@@ -3,10 +3,12 @@ use core::slice::{self};
 
 pub mod input;
 pub mod output;
+pub mod form;
 
 use crate::term::Term;
 
 pub type Solution = HashMap<String, (Vec<(String, String)>, String, Term)>;
+pub type TypeTable = HashMap<String, (Vec<String>, String)>;
 
 pub enum Command {
     SetLogic(String),
@@ -20,9 +22,10 @@ pub enum Command {
 }
 
 pub struct Context {
-    decls: HashMap<String, (Vec<String>, String)>,
+    decls: TypeTable,
     defns: Solution,
     script: Vec<Command>,
+    logic: Option<String>,
 }
 
 impl Context {
@@ -31,47 +34,55 @@ impl Context {
             decls:  HashMap::new(),
             defns:  Solution::new(),
             script: vec![],
+            logic: None,
         };
         context
     }
 
-    pub fn has_decl(&self, name: &String) -> bool {
-        self.decls.contains_key(name)
+    pub fn get_decl(&self, name: &String) -> Option<&(Vec<String>, String)> {
+        self.decls.get(name)
     }
 
-    pub fn get_decl(&self, name: &String) -> &(Vec<String>, String) {
-        self.decls.get(name).expect("can't find declaration!")
+    pub fn get_defn(&self, name: &String) -> Option<&(Vec<(String, String)>, String, Term)> {
+        self.defns.get(name)
     }
 
-    pub fn has_defn(&self, name: &String) -> bool {
-        self.defns.contains_key(name)
+    // TODO: don't create a new table
+    pub fn get_symbol_table(&self) -> TypeTable {
+        let mut tbl = TypeTable::new();
+        for (f, (params, rsort, _)) in &self.defns {
+            tbl.insert(f.clone(), (params.into_iter().map(|(_, s)| s.clone()).collect(), rsort.clone()));
+        }
+        for (f, (asorts, rsort)) in &self.decls {
+            tbl.insert(f.clone(), (asorts.clone(), rsort.clone()));
+        }
+        tbl
     }
 
-    pub fn get_defn(&self, name: &String) -> &(Vec<(String, String)>, String, Term) {
-        self.defns.get(name).expect("can't find definition!")
+    pub fn get_sort(&self, t: &Term) -> Option<&String> {
+        match self.get_decl(t.peek_name()) {
+            Some((_, s)) => Some(s),
+            None => None,
+        }
     }
 
-    pub fn get_sort(&self, t: &Term) -> &String {
-        let (_, s) = self.get_decl(t.peek_name());
-        s
+    pub fn set_logic(&mut self, logic: &str) {
+        self.logic = Some(logic.to_owned());
+        self.script.push(Command::SetLogic(logic.to_owned()));
     }
 
-    pub fn set_logic(&mut self, logic: String) {
-        self.script.push(Command::SetLogic(logic));
-    }
-
-    pub fn declare_fun(&mut self, name: &str, asorts: Vec<String>, rsort: String) {
+    pub fn declare_fun(&mut self, name: &str, asorts: Vec<&str>, rsort: &str) {
         assert!(!self.decls.contains_key(name), "can't declare a function twice!");
-        let decl = Command::Declare(name.to_string());
+        let decl = Command::Declare(name.to_owned());
         self.script.push(decl);
-        self.decls.insert(name.to_string(), (asorts, rsort));
+        self.decls.insert(name.to_owned(), (asorts.into_iter().map(|s| s.to_owned()).collect(), rsort.to_owned()));
     }
 
-    pub fn define_fun(&mut self, name: &str, params: Vec<(String, String)>, rsort: String, body: Term) {
+    pub fn define_fun(&mut self, name: &str, params: Vec<(&str, &str)>, rsort: &str, body: Term) {
         assert!(!self.defns.contains_key(name), "can't define a function twice!");
-        let defn = Command::Define(name.to_string());
+        let defn = Command::Define(name.to_owned());
         self.script.push(defn);
-        self.defns.insert(name.to_string(), (params, rsort, body));
+        self.defns.insert(name.to_owned(), (params.into_iter().map(|(n, s)| (n.to_owned(), s.to_owned())).collect(), rsort.to_owned(), body));
     }
 
     pub fn assert(&mut self, node: Term) {

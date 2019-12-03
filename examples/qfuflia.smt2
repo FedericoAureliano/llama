@@ -2,6 +2,6 @@
 (declare-const x Int)
 (declare-fun f (Int Int) Int)
 (define-fun g ((z Int)) Int (- 1))
-(assert (and (=i (f x 7) (g x)) (> x 7)))
+(assert (and (= (f x 7) (g x)) (> x 7)))
 (check-sat)
 (get-model)

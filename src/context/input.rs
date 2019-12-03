@@ -27,35 +27,21 @@ impl Context {
         }
     }
 
-    fn parse_param(&self, pair: Pair<Rule>) -> Result<((String, String)), Error<Rule>> {
-        match pair.as_rule() {
-            Rule::param => {
-                let mut inner = pair.into_inner();
-                let name = inner.next().unwrap().as_span().as_str().to_owned();
-                let sort = inner.next().unwrap().as_span().as_str().to_owned();
-                Ok((name, sort))
-            },
-            _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
-                        message: "expecting function application!".to_owned(),
-                    }, pair.as_span())),
-        }
-    }
-
     fn parse_command(&mut self, pair: Pair<Rule>) -> Result<(), Error<Rule>> {
         match pair.as_rule() {
             Rule::setlogic => {
                 let mut inner = pair.into_inner();
-                let name = inner.next().unwrap().as_span().as_str().to_owned();
-                self.set_logic(name);
+                let name = inner.next().unwrap().as_span().as_str();
+                self.set_logic(&name);
                 Ok(())
             }
             Rule::declare => { 
                 let mut inner = pair.into_inner();
-                let name = inner.next().unwrap().as_span().as_str().to_owned();
+                let name = inner.next().unwrap().as_span().as_str();
 
                 let mut sorts = vec! []; 
                 for s in inner {
-                    sorts.push(s.as_span().as_str().to_owned());
+                    sorts.push(s.as_span().as_str());
                 }
 
                 let rsort = sorts.pop().unwrap();
@@ -64,7 +50,7 @@ impl Context {
             }
             Rule::define => { 
                 let mut inner = pair.into_inner();
-                let name = inner.next().unwrap().as_span().as_str().to_owned();
+                let name = inner.next().unwrap().as_span().as_str();
 
                 let mut defn = vec! []; 
                 for s in inner {
@@ -72,8 +58,16 @@ impl Context {
                 }
 
                 let body = self.parse_fapp(defn.pop().unwrap())?;
-                let rsort = defn.pop().unwrap().as_span().as_str().to_owned();
-                let params = defn.into_iter().map(|r| self.parse_param(r).expect("something wrong with parameter pair")).collect();
+                let rsort = defn.pop().unwrap().as_span().as_str();
+                let params = defn.into_iter().map(|r| match r.as_rule() {
+                    Rule::param => {
+                        let mut inner = r.into_inner();
+                        let name = inner.next().unwrap().as_span().as_str();
+                        let sort = inner.next().unwrap().as_span().as_str();
+                        (name, sort)
+                    },
+                    _ => panic!("must be a param rule!")
+                }).collect();
                 self.define_fun(&name, params, rsort, body);
                 Ok(())
             }
@@ -94,6 +88,9 @@ impl Context {
 
     fn parse_model(&self, pair: Pair<Rule>) -> Result<(String, (Vec<(String, String)>, String, Term)), Error<Rule>> {
         match pair.as_rule() {
+            // this is slightly different from command parsing above
+            // - we do not define
+            // - we produce String rather than &str
             Rule::define => { 
                 let mut inner = pair.into_inner();
                 let name = inner.next().unwrap().as_span().as_str().to_owned();
@@ -105,7 +102,15 @@ impl Context {
 
                 let body = self.parse_fapp(defn.pop().unwrap())?;
                 let rsort = defn.pop().unwrap().as_span().as_str().to_owned();
-                let params = defn.into_iter().map(|r| self.parse_param(r).expect("something wrong with parameter pair")).collect();
+                let params = defn.into_iter().map(|r| match r.as_rule() {
+                    Rule::param => {
+                        let mut inner = r.into_inner();
+                        let name = inner.next().unwrap().as_span().as_str().to_owned();
+                        let sort = inner.next().unwrap().as_span().as_str().to_owned();
+                        (name, sort)
+                    },
+                    _ => panic!("must be a param rule!")
+                }).collect();
                 Ok((name, (params, rsort, body)))
             }
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
@@ -121,6 +126,7 @@ impl Context {
             self.parse_command(r)?;
             empty = true
         };
+        self.well_formed();
         assert!(empty, "problem with grammar: query is empty!");
         Ok(())
     }

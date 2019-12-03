@@ -8,7 +8,7 @@ impl Context {
         match c {
             Command::SetLogic(l) => format!("(set-logic {})", l),
             Command::Declare(name) => {
-                let (asorts, rsort) = self.get_decl(&name);
+                let (asorts, rsort) = self.get_decl(&name).expect("declaration not found!");
                 let args : Vec<String> = asorts.into_iter().map(|s| s.to_string()).collect();
                 if args.len() > 0 {
                     format!("(declare-fun {} ({}) {})", name, args.join(" "), rsort.to_string())
@@ -17,7 +17,7 @@ impl Context {
                 }
             },
             Command::Define(name) => {
-                let (params, rsort, body) = self.get_defn(&name);
+                let (params, rsort, body) = self.get_defn(&name).expect("definition not found!");
                 let args : Vec<String> = params.into_iter().map(|(n, s)| format!("({} {})", n, s)).collect();
                 format!("(define-fun {} ({}) {} {})", name, args.join(" "), rsort.to_string(), body)
             },
@@ -48,7 +48,7 @@ mod test {
     #[test]
     fn test_multiple_asserts(){
         let mut q = Context::new();
-        q.declare_fun("x", vec! [], "Int".to_owned());
+        q.declare_fun("x", vec! [], "Int");
         let a1 = mk_ge(vec! [mk_const("x"),  mk_const("7")]);
         let a2 = mk_le(vec! [mk_const("x"),  mk_const("7")]);
         q.assert(a1);
@@ -65,8 +65,8 @@ mod test {
     #[test]
     fn test_uf_and_set_logic() {
         let mut q = Context::new();
-        q.set_logic("QF_LIA".to_owned());
-        q.declare_fun("f", vec! ["Int".to_owned(), "Int".to_owned()], "Bool".to_owned());
+        q.set_logic("QF_LIA");
+        q.declare_fun("f", vec! ["Int", "Int"], "Bool");
         let node_n1 = mk_const("1");
         let node_1 = mk_const("1");
         let a1 = mk_app("f", vec! [mk_sub(vec![node_n1]), node_1]);
