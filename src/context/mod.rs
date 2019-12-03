@@ -1,117 +1,145 @@
-use std::collections::{HashMap};
-use core::slice::{self};
+pub mod logic;
+pub mod sort;
 
-pub mod input;
-pub mod output;
-pub mod form;
+use std::collections::{HashMap};
+use multimap::MultiMap;
 
 use crate::term::Term;
+use crate::context::sort::Sort;
+use crate::context::logic::Logic;
 
-pub type Solution = HashMap<String, (Vec<(String, String)>, String, Term)>;
-pub type TypeTable = HashMap<String, (Vec<String>, String)>;
 
-pub enum Command {
-    SetLogic(String),
-    Declare(String),
-    Define(String),
-    Assert(Term),
-    CheckSat,
-    GetModel,
-    Push,
-    Pop,
-}
+pub type Sig = (Vec<(String, Sort)>, Sort);
 
 pub struct Context {
-    decls: TypeTable,
-    defns: Solution,
-    script: Vec<Command>,
-    logic: Option<String>,
+    symbol_tbl: MultiMap<String, Sig>,
+    body_tbl: HashMap<String, Term>,
+    logic: Logic,
 }
 
 impl Context {
     pub fn new() -> Context {
-        let context = Context {
-            decls:  HashMap::new(),
-            defns:  Solution::new(),
-            script: vec![],
-            logic: None,
+        let mut ctx = Context {
+            symbol_tbl: MultiMap::new(),
+            body_tbl: HashMap::new(),
+            logic: Logic::new(),
         };
-        context
+        ctx.add_booleans();
+        ctx
     }
 
-    pub fn get_decl(&self, name: &String) -> Option<&(Vec<String>, String)> {
-        self.decls.get(name)
+    pub fn get_decl(&self, name: &str) -> Option<&Vec<Sig>> {
+        // some interpreted functions are polymorphic (e.g. =)
+        self.symbol_tbl.get_vec(name)
     }
 
-    pub fn get_defn(&self, name: &String) -> Option<&(Vec<(String, String)>, String, Term)> {
-        self.defns.get(name)
+    pub fn add_decl(&mut self, name: &str, params: Vec<(String, Sort)>, rsort: Sort) {
+        // can declare each function exactly once
+        assert!(!self.symbol_tbl.contains_key(name));
+        assert!(self.logic.uf || params.len() == 0);
+        self.symbol_tbl.insert(name.to_owned(), (params, rsort));
+    }
+    
+    pub fn get_body(&self, name: &str) -> Option<&Term> {
+        self.body_tbl.get(name)
+    }
+    
+    pub fn add_body(&mut self, name: &str, body: Term) {
+        // the new body has to be associated to exactly one function
+        assert_eq!(self.symbol_tbl.get_vec(name).unwrap().len(), 1);
+        self.body_tbl.insert(name.to_owned(), body);
     }
 
-    // TODO: don't create a new table
-    pub fn get_symbol_table(&self) -> TypeTable {
-        let mut tbl = TypeTable::new();
-        for (f, (params, rsort, _)) in &self.defns {
-            tbl.insert(f.clone(), (params.into_iter().map(|(_, s)| s.clone()).collect(), rsort.clone()));
+    pub fn set_logic(&mut self, l: &Logic) {
+        if l.q {
+            panic!("quantifiers not supported yet");
         }
-        for (f, (asorts, rsort)) in &self.decls {
-            tbl.insert(f.clone(), (asorts.clone(), rsort.clone()));
+        if l.lia {
+            self.logic.lia = true;
+            self.add_integers();
         }
-        tbl
+        if l.uf {
+            self.logic.uf = true;
+        }
     }
 
-    pub fn get_sort(&self, t: &Term) -> Option<&String> {
+    pub fn get_logic(&self) -> &Logic {
+        &self.logic
+    }
+
+    pub fn get_sort(&self, t: &Term) -> Option<&Sort> {
+    let arg_sorts: Vec<&Sort> = t.peek_args()
+        .into_iter()
+        .inspect(|x| debug!("checking {}", x))
+        .map(|a| self.get_sort(a)
+        .expect("term not well-formed!"))
+        .collect();
+
         match self.get_decl(t.peek_name()) {
-            Some((_, s)) => Some(s),
-            None => None,
+            Some(v) => {
+                for (params, rsort) in v {
+                    let exp_sorts: Vec<&Sort> = params.into_iter().map(|(_, s)| s).collect();
+                    if exp_sorts.len() != arg_sorts.len() {
+                        continue
+                    };
+                    let mut result = true;
+                    for i in 0..arg_sorts.len() {
+                        result = result && exp_sorts[i] == arg_sorts[i];
+                    }
+                    if result {
+                        debug!("name: {} rsort: {}", t.peek_name(), rsort);
+                        return Some(rsort)
+                    }  
+                }
+                None
+            }
+            None => match t.peek_name().parse::<i64>() {
+                Ok(_) => {
+                    debug!("symbol: {} Int", t.peek_name()); 
+                    Some(&Sort::Int)
+                }
+                Err(_) => None
+            }
         }
+
     }
 
-    pub fn set_logic(&mut self, logic: &str) {
-        self.logic = Some(logic.to_owned());
-        self.script.push(Command::SetLogic(logic.to_owned()));
+    fn add_booleans(&mut self) {
+        // only support upto 4-ary
+        for op in vec! ["and", "or", "="] {
+            for names in vec! [vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+                let params = names.into_iter().map(|n| (n.to_owned(), Sort::Bool)).collect();
+                self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
+            }
+        }
+        self.symbol_tbl.insert("not".to_owned(), (vec![("a".to_owned(), Sort::Bool)], Sort::Bool));
+        self.symbol_tbl.insert("=>".to_owned(), (vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Bool)], Sort::Bool));
+        self.symbol_tbl.insert("ite".to_owned(), (vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Bool), ("c".to_owned(), Sort::Bool)], Sort::Bool));
     }
 
-    pub fn declare_fun(&mut self, name: &str, asorts: Vec<&str>, rsort: &str) {
-        assert!(!self.decls.contains_key(name), "can't declare a function twice!");
-        let decl = Command::Declare(name.to_owned());
-        self.script.push(decl);
-        self.decls.insert(name.to_owned(), (asorts.into_iter().map(|s| s.to_owned()).collect(), rsort.to_owned()));
-    }
-
-    pub fn define_fun(&mut self, name: &str, params: Vec<(&str, &str)>, rsort: &str, body: Term) {
-        assert!(!self.defns.contains_key(name), "can't define a function twice!");
-        let defn = Command::Define(name.to_owned());
-        self.script.push(defn);
-        self.defns.insert(name.to_owned(), (params.into_iter().map(|(n, s)| (n.to_owned(), s.to_owned())).collect(), rsort.to_owned(), body));
-    }
-
-    pub fn assert(&mut self, node: Term) {
-        self.script.push(Command::Assert(node));
-    }
-
-    pub fn push(&mut self) {
-        self.script.push(Command::Push);
-    }
-
-    pub fn pop(&mut self) {
-        self.script.push(Command::Pop);
-    }
-
-    pub fn check_sat(&mut self) {
-        self.script.push(Command::CheckSat);
-    }
-
-    pub fn get_model(&mut self) {
-        self.script.push(Command::GetModel);
-    }
-
-}
-
-impl<'a> IntoIterator for &'a Context {
-    type Item = &'a Command;
-    type IntoIter = slice::Iter<'a, Command>;
-
-    fn into_iter(self) -> slice::Iter<'a, Command> {
-        self.script.iter()
+    fn add_integers(&mut self) {
+        // only support upto 4-ary
+        for op in vec! ["="] {
+            for names in vec! [vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+                let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
+                self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
+            }
+        }
+        // binary
+        for op in vec! ["<", "<=", ">", ">="] {
+            for names in vec! [vec! ["a", "b"]] {
+                let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
+                self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
+            }
+        }
+        // only support upto 4-ary
+        for op in vec! ["+", "*", "-"] {
+            for names in vec! [vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+                let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
+                self.symbol_tbl.insert(op.to_owned(), (params, Sort::Int));
+            }
+        }
+        self.symbol_tbl.insert("-".to_owned(), (vec![("a".to_owned(), Sort::Int)], Sort::Int));
+        self.symbol_tbl.insert("ite".to_owned(), (vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Int), ("c".to_owned(), Sort::Int)], Sort::Int));
     }
 }

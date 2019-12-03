@@ -2,14 +2,16 @@ use pest::Parser;
 use pest::error::Error;
 use pest::iterators::Pair;
 
-use crate::context::{Context, Solution};
+use crate::query::{Query};
+use crate::context::{Context};
+use crate::context::sort::{Sort, to_sort};
 use crate::term::{Term, mk_app};
 
 #[derive(Parser)]
 #[grammar = "pest/synth.pest"]
 struct SynthParser;
 
-impl Context {
+impl Query {
     fn parse_fapp(&self, pair: Pair<Rule>) -> Result<Term, Error<Rule>> {
         match pair.as_rule() {
             Rule::fapp => {
@@ -78,15 +80,13 @@ impl Context {
                 self.assert(node);
                 Ok(())
             },
-            Rule::push => {self.push(); Ok(())},
-            Rule::pop => {self.pop(); Ok(())},
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
                         message: "command not supported!".to_owned(),
                     }, pair.as_span())),
         }
     }
 
-    fn parse_model(&self, pair: Pair<Rule>) -> Result<(String, (Vec<(String, String)>, String, Term)), Error<Rule>> {
+    fn parse_model(&self, pair: Pair<Rule>) -> Result<(String, (Vec<(String, Sort)>, Sort, Term)), Error<Rule>> {
         match pair.as_rule() {
             // this is slightly different from command parsing above
             // - we do not define
@@ -101,17 +101,17 @@ impl Context {
                 }
 
                 let body = self.parse_fapp(defn.pop().unwrap())?;
-                let rsort = defn.pop().unwrap().as_span().as_str().to_owned();
+                let rsort = defn.pop().unwrap().as_span().as_str();
                 let params = defn.into_iter().map(|r| match r.as_rule() {
                     Rule::param => {
                         let mut inner = r.into_inner();
                         let name = inner.next().unwrap().as_span().as_str().to_owned();
-                        let sort = inner.next().unwrap().as_span().as_str().to_owned();
+                        let sort = to_sort(inner.next().unwrap().as_span().as_str());
                         (name, sort)
                     },
                     _ => panic!("must be a param rule!")
                 }).collect();
-                Ok((name, (params, rsort, body)))
+                Ok((name, (params, to_sort(rsort), body)))
             }
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
                         message: "command not supported!".to_owned(),
@@ -126,17 +126,19 @@ impl Context {
             self.parse_command(r)?;
             empty = true
         };
-        self.well_formed();
+        // self.well_formed();
         assert!(empty, "problem with grammar: query is empty!");
         Ok(())
     }
 
-    pub fn parse_answer(&self, file: &str) -> Result<Solution, Error<Rule>> {
+    pub fn parse_answer(&self, file: &str) -> Result<Context, Error<Rule>> {
         let syntax = SynthParser::parse(Rule::query, file).expect("failed to read!");    
-        let mut sol = Solution::new();
+        let mut sol = Context::new();
+        sol.set_logic(self.ctx.get_logic());
         for r in syntax {
-            let (name, entry) = self.parse_model(r)?;
-            sol.insert(name, entry);
+            let (name, (params, rsort, body)) = self.parse_model(r)?;
+            sol.add_decl(name.as_str(), params, rsort);
+            sol.add_body(name.as_str(), body);
         };
         Ok(sol)
     }
@@ -144,26 +146,37 @@ impl Context {
 
 #[cfg(test)]
 mod test {
-    use super::Context;
+    use super::Query;
 
     #[test]
     fn test_parse_query() {
         use std::fs;
         let unparsed_file = fs::read_to_string("examples/qfuflia.smt2").expect("cannot read file");
-        let mut q = Context::new();
+        let mut q = Query::new();
         q.parse_query(&unparsed_file).unwrap();
         assert_eq!(unparsed_file, format!("{}", q));
     }
 
     #[test]
-    fn test_parse_answer() {
+    #[should_panic]
+    fn test_parse_answer_without_setting_logic() {
         use std::fs;
         let unparsed_file = fs::read_to_string("examples/qfuflia_result.smt2").expect("cannot read file");
-        let q = Context::new();
+        let q = Query::new();
+        q.parse_answer(&unparsed_file).unwrap();
+    }
+
+    #[test]
+    fn test_parse_answer() {
+        use std::fs;
+        let unparsed_file = fs::read_to_string("examples/qfuflia.smt2").expect("cannot read file");
+        let mut q = Query::new();
+        q.parse_query(&unparsed_file).unwrap();
+        let unparsed_file = fs::read_to_string("examples/qfuflia_result.smt2").expect("cannot read file");
         let sol = q.parse_answer(&unparsed_file).unwrap();
-        let (_, _, x_term) = sol.get("x").expect("couldn't find x");
+        let x_term = sol.get_body("x").expect("couldn't find x");
         assert_eq!("8", format!("{}", x_term));
-        let (_, _, f_term) = sol.get("f").expect("couldn't find f");
+        let f_term = sol.get_body("f").expect("couldn't find f");
         assert_eq!("(- 1)", format!("{}", f_term));
     }
 }
