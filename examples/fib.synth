@@ -1,0 +1,17 @@
+(synth-blocking-fun h ((x Int) (y Int)) Bool)
+
+(declare-fun initial_b () Int)
+(declare-fun initial_a () Int)
+(declare-fun new_a () Int)
+(declare-fun new_b () Int)
+
+(assert 
+(or 
+    (not (h 0 1))
+    (and 
+        (and (<= initial_a initial_b) (h initial_a initial_b))
+        (= new_a initial_b)
+        (= new_b (+ initial_a initial_b))
+        (not (and (<= new_a new_b) (h new_a new_b))))))
+
+(check-sat)

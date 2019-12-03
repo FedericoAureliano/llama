@@ -14,10 +14,11 @@ extern crate enum_display_derive;
 
 extern crate multimap;
 
-mod context;
-mod eval;
-mod term;
-mod query;
+mod ast;
+mod ctx;
+mod evl;
+mod qry;
+mod rwr;
 
 fn main() {
     env_logger::init();
@@ -28,7 +29,7 @@ fn main() {
     let g = args.get(2).expect("no result file given!");
 
     let unparsed_query = fs::read_to_string(f).expect("cannot read file");
-    let mut query = query::Query::new();
+    let mut query = qry::Query::new();
     query.parse_query(&unparsed_query).expect("cannot parse file");
     
     let unparsed_answer = fs::read_to_string(g).expect("cannot read file");

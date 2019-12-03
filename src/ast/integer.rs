@@ -1,4 +1,4 @@
-use crate::term::Term;
+use crate::ast::Term;
 
 #[allow(dead_code)]
 pub fn mk_eq(args: Vec<Term>) -> Term {

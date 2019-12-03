@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::query::{Query, Command};
+use crate::qry::{Query, Command};
 
 impl Query {
     fn command_to_string(&self, c : &Command) -> String {
@@ -42,8 +42,8 @@ impl fmt::Display for Query {
 #[cfg(test)]
 mod test {
     use super::Query;
-    use crate::term::integer::{mk_ge, mk_le, mk_sub};
-    use crate::term::{mk_const, mk_app};
+    use crate::ast::integer::{mk_ge, mk_le, mk_sub};
+    use crate::ast::{mk_const, mk_app};
 
     #[test]
     fn test_multiple_asserts(){

@@ -1,6 +1,6 @@
-use crate::context::{Context};
-use crate::context::sort::{Sort};
-use crate::query::{Query, Command};
+use crate::ctx::{Context};
+use crate::ctx::sort::{Sort};
+use crate::qry::{Query, Command};
 
 impl Query {
     pub fn well_formed(&self) -> bool {
@@ -12,7 +12,7 @@ impl Query {
                 let sigs = self.ctx.get_decl(n.as_str()).expect("definition must have unique declaration");
                 for (params, rsort) in sigs {
                     let mut ctx = Context::new();
-                    ctx.set_logic(self.ctx.get_logic());
+                    ctx.update_logic(self.ctx.get_logic());
                     for (n, s) in params {
                         ctx.add_decl(n.as_str(), vec![], *s);
                     }
@@ -33,8 +33,8 @@ impl Query {
 #[cfg(test)]
 mod test {
     use super::Query;
-    use crate::term::integer::{mk_sub};
-    use crate::term::{mk_const, mk_app};
+    use crate::ast::integer::{mk_sub};
+    use crate::ast::{mk_const, mk_app};
 
     #[test]
     fn test_well_formed() {

@@ -1,7 +1,7 @@
-use std::fmt;
-
 pub mod boolean;
 pub mod integer;
+
+use std::fmt;
 
 pub struct Term {
     name: String,
@@ -9,8 +9,20 @@ pub struct Term {
 }
 
 impl Term {
+    pub fn new(n: String, als: Vec<Box<Term>>) -> Term {
+        let t = Term {
+            name: n,
+            args: als,
+        };
+        t
+    }
+
     pub fn peek_args(&self) -> &Vec<Box<Term>> {
         self.args.as_ref()
+    }
+
+    pub fn get_args(self) -> Vec<Box<Term>> {
+        self.args
     }
 
     pub fn peek_name(&self) -> &String {
@@ -54,7 +66,7 @@ pub fn mk_const(name: &str) -> Term {
 #[cfg(test)]
 mod test {
     use super::{mk_const};
-    use crate::term::integer::mk_add;
+    use crate::ast::integer::mk_add;
 
     #[test]
     fn simple_expr() {

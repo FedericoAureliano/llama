@@ -1,14 +1,17 @@
+use std::collections::{HashMap};
+
 use pest::Parser;
 use pest::error::Error;
 use pest::iterators::Pair;
 
-use crate::query::{Query};
-use crate::context::{Context};
-use crate::context::sort::{Sort, to_sort};
-use crate::term::{Term, mk_app};
+use crate::ast::{Term, mk_app};
+use crate::ctx::{Solution};
+use crate::ctx::sort::{Sort, to_sort};
+use crate::qry::{Query};
+use crate::rwr::rename;
 
 #[derive(Parser)]
-#[grammar = "pest/synth.pest"]
+#[grammar = "pst/synth.pest"]
 struct SynthParser;
 
 impl Query {
@@ -131,14 +134,26 @@ impl Query {
         Ok(())
     }
 
-    pub fn parse_answer(&self, file: &str) -> Result<Context, Error<Rule>> {
-        let syntax = SynthParser::parse(Rule::query, file).expect("failed to read!");    
-        let mut sol = Context::new();
-        sol.set_logic(self.ctx.get_logic());
+    pub fn parse_answer(&self, file: &str) -> Result<Solution, Error<Rule>> {
+        let syntax = SynthParser::parse(Rule::query, file).expect("failed to read!");
+        let mut sol = Solution::new();
         for r in syntax {
             let (name, (params, rsort, body)) = self.parse_model(r)?;
-            sol.add_decl(name.as_str(), params, rsort);
-            sol.add_body(name.as_str(), body);
+            
+            let (exp_params, exp_rsort) = self.peek_ctx()
+                .get_decl(name.as_str())
+                .expect("definition must have been declared!")
+                .first().expect("unreachable");
+
+            assert!(exp_rsort == &rsort, "expected return sorts must be the same");
+            assert!(exp_params.len() == params.len(), "paramaters must match in length");
+            let mut rewrite: HashMap<String, String> = HashMap::new();
+            for i in 0..params.len() {
+                assert!(params[i].1 == exp_params[i].1, "paramater sorts must match");
+                rewrite.insert(params[i].0.clone(), exp_params[i].0.clone());
+            }
+            let nbody = rename(&rewrite, body);
+            sol.insert(name, nbody);
         };
         Ok(sol)
     }
@@ -151,32 +166,23 @@ mod test {
     #[test]
     fn test_parse_query() {
         use std::fs;
-        let unparsed_file = fs::read_to_string("examples/qfuflia.smt2").expect("cannot read file");
+        let unparsed_file = fs::read_to_string("tests/data/qfuflia.smt2").expect("cannot read file");
         let mut q = Query::new();
         q.parse_query(&unparsed_file).unwrap();
         assert_eq!(unparsed_file, format!("{}", q));
     }
 
     #[test]
-    #[should_panic]
-    fn test_parse_answer_without_setting_logic() {
-        use std::fs;
-        let unparsed_file = fs::read_to_string("examples/qfuflia_result.smt2").expect("cannot read file");
-        let q = Query::new();
-        q.parse_answer(&unparsed_file).unwrap();
-    }
-
-    #[test]
     fn test_parse_answer() {
         use std::fs;
-        let unparsed_file = fs::read_to_string("examples/qfuflia.smt2").expect("cannot read file");
+        let unparsed_file = fs::read_to_string("tests/data/qfuflia.smt2").expect("cannot read file");
         let mut q = Query::new();
         q.parse_query(&unparsed_file).unwrap();
-        let unparsed_file = fs::read_to_string("examples/qfuflia_result.smt2").expect("cannot read file");
+        let unparsed_file = fs::read_to_string("tests/data/qfuflia_result.smt2").expect("cannot read file");
         let sol = q.parse_answer(&unparsed_file).unwrap();
-        let x_term = sol.get_body("x").expect("couldn't find x");
+        let x_term = sol.get("x").expect("couldn't find x");
         assert_eq!("8", format!("{}", x_term));
-        let f_term = sol.get_body("f").expect("couldn't find f");
+        let f_term = sol.get("f").expect("couldn't find f");
         assert_eq!("(- 1)", format!("{}", f_term));
     }
 }

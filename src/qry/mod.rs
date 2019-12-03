@@ -1,9 +1,9 @@
 use core::slice::{self};
 
-use crate::term::Term;
-use crate::context::Context;
-use crate::context::logic::Logic;
-use crate::context::sort::{Sort, to_sort};
+use crate::ast::Term;
+use crate::ctx::Context;
+use crate::ctx::logic::Logic;
+use crate::ctx::sort::{Sort, to_sort};
 
 pub mod input;
 pub mod output;
@@ -40,14 +40,15 @@ impl Query {
 
     pub fn set_logic(&mut self, logic: &str) {
         let l = Logic::to_logic(logic);
-        self.ctx.set_logic(&l);
+        self.ctx.update_logic(&l);
         self.script.push(Command::SetLogic);
     }
 
     pub fn declare_fun(&mut self, name: &str, asorts: Vec<&str>, rsort: &str) {
+        let mut labels = "abcd".chars();
         let params: Vec<(String, Sort)> = asorts
             .into_iter()
-            .map(|s| ("_".to_owned(), to_sort(s)))
+            .map(|s| (labels.next().expect("max 4 arguments").to_string(), to_sort(s)))
             .collect();
         self.ctx.add_decl(name, params, to_sort(rsort));
         self.script.push(Command::Declare(name.to_owned()));

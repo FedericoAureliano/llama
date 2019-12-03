@@ -4,16 +4,17 @@ pub mod sort;
 use std::collections::{HashMap};
 use multimap::MultiMap;
 
-use crate::term::Term;
-use crate::context::sort::Sort;
-use crate::context::logic::Logic;
+use crate::ast::Term;
+use crate::ctx::sort::Sort;
+use crate::ctx::logic::Logic;
 
 
-pub type Sig = (Vec<(String, Sort)>, Sort);
+pub type Signature = (Vec<(String, Sort)>, Sort);
+pub type Solution = HashMap<String, Term>;
 
 pub struct Context {
-    symbol_tbl: MultiMap<String, Sig>,
-    body_tbl: HashMap<String, Term>,
+    symbol_tbl: MultiMap<String, Signature>,
+    body_tbl: Solution,
     logic: Logic,
 }
 
@@ -28,14 +29,14 @@ impl Context {
         ctx
     }
 
-    pub fn get_decl(&self, name: &str) -> Option<&Vec<Sig>> {
+    pub fn get_decl(&self, name: &str) -> Option<&Vec<Signature>> {
         // some interpreted functions are polymorphic (e.g. =)
         self.symbol_tbl.get_vec(name)
     }
 
     pub fn add_decl(&mut self, name: &str, params: Vec<(String, Sort)>, rsort: Sort) {
         // can declare each function exactly once
-        assert!(!self.symbol_tbl.contains_key(name));
+        assert!(!self.symbol_tbl.contains_key(name), "{} already in symbol table", name);
         assert!(self.logic.uf || params.len() == 0);
         self.symbol_tbl.insert(name.to_owned(), (params, rsort));
     }
@@ -50,7 +51,7 @@ impl Context {
         self.body_tbl.insert(name.to_owned(), body);
     }
 
-    pub fn set_logic(&mut self, l: &Logic) {
+    pub fn update_logic(&mut self, l: &Logic) {
         if l.q {
             panic!("quantifiers not supported yet");
         }
@@ -68,12 +69,12 @@ impl Context {
     }
 
     pub fn get_sort(&self, t: &Term) -> Option<&Sort> {
-    let arg_sorts: Vec<&Sort> = t.peek_args()
-        .into_iter()
-        .inspect(|x| debug!("checking {}", x))
-        .map(|a| self.get_sort(a)
-        .expect("term not well-formed!"))
-        .collect();
+        let arg_sorts: Vec<&Sort> = t.peek_args()
+            .into_iter()
+            .inspect(|x| debug!("checking {}", x))
+            .map(|a| self.get_sort(a)
+            .expect("term not well-formed!"))
+            .collect();
 
         match self.get_decl(t.peek_name()) {
             Some(v) => {
