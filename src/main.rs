@@ -47,7 +47,7 @@ fn main() {
 
     let sol_cvc4 = query.parse_answer(&cvc4_answer).expect("cannot parse file");
     let sol_z3 = query.parse_answer(&z3_answer).expect("cannot parse file");
-    println!("{}", query);
-    println!("cvc4 evaluates to {}", query.eval(&sol_cvc4));
-    println!("z3 evaluates to {}", query.eval(&sol_z3));
+    println!("{}\n", query);
+    println!("cvc4 model check: {}", query.eval(&sol_cvc4));
+    println!("z3 model check: {}", query.eval(&sol_z3));
 }
