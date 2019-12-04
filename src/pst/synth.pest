@@ -22,7 +22,7 @@ logic    = {"QF_UFLIA"
 
 declare  = {"(declare-fun" ~ name ~ "("~ sort* ~")" ~ sort ~ ")" 
            |"(declare-const" ~ name ~ sort ~ ")"}
-name     = @{(ASCII_ALPHANUMERIC|"_")+}
+name     = @{(ASCII_ALPHANUMERIC|"_"|"!")+}
 
 define   = {"(define-fun" ~ name ~ "("~ param* ~")" ~ sort ~ fapp ~ ")"}
 param    = {"("~ name ~ sort ~")"} 
