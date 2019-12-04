@@ -2,3 +2,5 @@
 **/*.rs.bk
 
 *.dot*
+
+.z3-trace

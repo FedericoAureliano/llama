@@ -38,7 +38,6 @@ impl fmt::Display for Query {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::Query;

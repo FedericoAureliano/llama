@@ -19,6 +19,11 @@ mod ctx;
 mod evl;
 mod qry;
 mod rwr;
+mod smt;
+
+use crate::smt::Solver;
+use crate::smt::cvc4::CVC4;
+use crate::smt::z3::Z3;
 
 fn main() {
     env_logger::init();
@@ -26,14 +31,23 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let f = args.get(1).expect("no query file given!");
-    let g = args.get(2).expect("no result file given!");
 
     let unparsed_query = fs::read_to_string(f).expect("cannot read file");
     let mut query = qry::Query::new();
     query.parse_query(&unparsed_query).expect("cannot parse file");
     
-    let unparsed_answer = fs::read_to_string(g).expect("cannot read file");
-    let sol = query.parse_answer(&unparsed_answer).expect("cannot parse file");
+    let cvc4 = CVC4::new();
+    let z3 = Z3::new();
+
+    let cvc4_answer = cvc4.solve(&query);
+    let z3_answer = z3.solve(&query);
+
+    debug!("cvc4_answer: {}", cvc4_answer);
+    debug!("z3_answer: {}", z3_answer);
+
+    let sol_cvc4 = query.parse_answer(&cvc4_answer).expect("cannot parse file");
+    let sol_z3 = query.parse_answer(&z3_answer).expect("cannot parse file");
     println!("{}", query);
-    println!("evaluates to {}", query.eval(&sol));
+    println!("cvc4 evaluates to {}", query.eval(&sol_cvc4));
+    println!("z3 evaluates to {}", query.eval(&sol_z3));
 }
