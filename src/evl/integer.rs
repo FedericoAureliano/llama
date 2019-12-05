@@ -1,16 +1,23 @@
 use crate::ctx::{Context, Solution};
 use crate::ctx::sort::Sort;
-use crate::ast::{Term, mk_app};
+use crate::ast::{Term};
+use crate::api::{mk_const};
 
 impl Context {
     // TODO: need to deal with overflow at some point
     pub fn eval_int(&self, s: &Solution, t: &Term) -> i64 {
-        match t.peek_name().as_str() {
-            "+" => t.peek_args().iter().fold(0, |r, a| r + self.eval_int(s, &*a)),
-            "-" => t.peek_args().iter().fold(0, |r, a| r - self.eval_int(s, &*a)),
-            "*" => t.peek_args().iter().fold(1, |r, a| r * self.eval_int(s, &*a)),
+        let mut args = t.get_args();
+        match t.get_symbol().as_str() {
+            "+" => args.fold(0, |r, a| r + self.eval_int(s, a)),
+            "-" => args.fold(0, |r, a| r - self.eval_int(s, a)),
+            "*" => args.fold(1, |r, a| r * self.eval_int(s, a)),
             "ite" => {
-                if self.eval_bool(s, &*t.peek_args()[0]) {self.eval_int(s, &*t.peek_args()[1])} else {self.eval_int(s, &*t.peek_args()[2])}
+                if self.eval_bool(s, args.next().expect("must have first argument")) {
+                    self.eval_int(s, args.next().expect("must have second argument"))
+                } else {
+                    args.next().expect("must have second argument");
+                    self.eval_int(s, args.next().expect("must have third argument"))
+                }
             }
             name => {
                 if name.parse::<i64>().is_ok() {
@@ -25,13 +32,14 @@ impl Context {
                         assert!(entries.len() == 1);
                         let (params, rsort) = entries.first().expect("unreachable");
                         assert!(rsort == &Sort::Int);
+                        let mut args = t.get_args();
                         for i in 0..params.len() {
                             let a = match params[i].1 {
-                                Sort::Bool => self.eval_bool(s, &*t.peek_args()[i]).to_string(),
-                                Sort::Int => self.eval_int(s, &*t.peek_args()[i]).to_string()
+                                Sort::Bool => self.eval_bool(s, args.next().expect("more params than arguments")).to_string(),
+                                Sort::Int => self.eval_int(s, args.next().expect("more params than arguments")).to_string()
                             };
                             tmp_sol.add_decl(params[i].0.as_str(), vec![], params[i].1);
-                            tmp_sol.add_body(params[i].0.as_str(), mk_app(a.as_str(), vec![]));
+                            tmp_sol.add_body(params[i].0.as_str(), mk_const(a.as_str()));
                         }
                     }
 

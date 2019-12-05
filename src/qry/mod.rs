@@ -1,7 +1,7 @@
 use core::slice::{self};
 
 use crate::ast::Term;
-use crate::ctx::Context;
+use crate::ctx::{Context, Signature};
 use crate::ctx::logic::Logic;
 use crate::ctx::sort::{Sort, to_sort};
 
@@ -13,6 +13,7 @@ pub enum Command {
     SetLogic,
     Declare(String),
     Define(String),
+    Synth(String),
     Assert(Term),
     CheckSat,
     GetModel,
@@ -23,6 +24,7 @@ pub enum Command {
 pub struct Query {
     script: Vec<Command>,
     ctx: Context,
+    synth: Option<String>,
 }
 
 impl Query {
@@ -30,6 +32,7 @@ impl Query {
         let query = Query {
             script: vec![],
             ctx: Context::new(),
+            synth: None,
         };
         query
     }
@@ -52,6 +55,32 @@ impl Query {
             .collect();
         self.ctx.add_decl(name, params, to_sort(rsort));
         self.script.push(Command::Declare(name.to_owned()));
+    }
+
+    pub fn define_synth(&mut self, name: &str, params: Vec<(&str, &str)>, rsort: &str) {
+        assert!(self.synth.is_none());
+        let params: Vec<(String, Sort)> = params
+            .into_iter()
+            .map(|(n, s)| (n.to_owned(), to_sort(s)))
+            .collect();
+        self.ctx.add_synth(name, params, to_sort(rsort));
+        self.script.push(Command::Synth(name.to_owned()));
+        self.synth = Some(name.to_owned());
+    }
+
+    pub fn get_synth(&self) -> Option<&Signature> {
+        match &self.synth {
+            Some(f) => {
+                match self.ctx.get_decl(f.as_str()) {
+                    Some(sigs) => {
+                        assert_eq!(sigs.len(), 1);
+                        sigs.first()
+                    }
+                    None => None
+                }
+            }
+            None => None
+        }
     }
 
     pub fn define_fun(&mut self, name: &str, params: Vec<(&str, &str)>, rsort: &str, body: Term) {

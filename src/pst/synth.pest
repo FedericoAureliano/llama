@@ -1,7 +1,8 @@
 query    = _{command*}
 command  = _{setlogic 
             |declare 
-            |define 
+            |define
+            |synth 
             |push 
             |pop 
             |assert 
@@ -26,6 +27,8 @@ name     = @{(ASCII_ALPHANUMERIC|"_"|"!")+}
 
 define   = {"(define-fun" ~ name ~ "("~ param* ~")" ~ sort ~ fapp ~ ")"}
 param    = {"("~ name ~ sort ~")"} 
+
+synth    = {"(synth-blocking-fun" ~ name ~ "("~ param* ~")" ~ sort ~ ")"}
 
 sort     = {"Int"
            |"Bool" 

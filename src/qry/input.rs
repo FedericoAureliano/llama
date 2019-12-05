@@ -4,7 +4,8 @@ use pest::Parser;
 use pest::error::Error;
 use pest::iterators::Pair;
 
-use crate::ast::{Term, mk_app};
+use crate::ast::{Term};
+use crate::api::{mk_app};
 use crate::ctx::{Solution};
 use crate::ctx::sort::{Sort, to_sort};
 use crate::qry::{Query};
@@ -51,6 +52,28 @@ impl Query {
 
                 let rsort = sorts.pop().unwrap();
                 self.declare_fun(&name, sorts, rsort);
+                Ok(())
+            }
+            Rule::synth => { 
+                let mut inner = pair.into_inner();
+                let name = inner.next().unwrap().as_span().as_str();
+
+                let mut defn = vec! []; 
+                for s in inner {
+                    defn.push(s);
+                }
+                
+                let rsort = defn.pop().unwrap().as_span().as_str();
+                let params = defn.into_iter().map(|r| match r.as_rule() {
+                    Rule::param => {
+                        let mut inner = r.into_inner();
+                        let name = inner.next().unwrap().as_span().as_str();
+                        let sort = inner.next().unwrap().as_span().as_str();
+                        (name, sort)
+                    },
+                    _ => panic!("must be a param rule!")
+                }).collect();
+                self.define_synth(&name, params, rsort);
                 Ok(())
             }
             Rule::define => { 
@@ -152,7 +175,7 @@ impl Query {
                 assert!(params[i].1 == exp_params[i].1, "paramater sorts must match");
                 rewrite.insert(params[i].0.clone(), exp_params[i].0.clone());
             }
-            let nbody = rename(&rewrite, body);
+            let nbody = rename(&rewrite, &body);
             sol.insert(name, nbody);
         };
         Ok(sol)
@@ -167,6 +190,15 @@ mod test {
     fn test_parse_query() {
         use std::fs;
         let unparsed_file = fs::read_to_string("tests/data/qfuflia.smt2").expect("cannot read file");
+        let mut q = Query::new();
+        q.parse_query(&unparsed_file).unwrap();
+        assert_eq!(unparsed_file, format!("{}", q));
+    }
+
+    #[test]
+    fn test_parse_query_synth() {
+        use std::fs;
+        let unparsed_file = fs::read_to_string("tests/data/simple.synth").expect("cannot read file");
         let mut q = Query::new();
         q.parse_query(&unparsed_file).unwrap();
         assert_eq!(unparsed_file, format!("{}", q));

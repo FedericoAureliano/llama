@@ -14,16 +14,14 @@ extern crate enum_display_derive;
 
 extern crate multimap;
 
+mod api;
 mod ast;
 mod ctx;
 mod evl;
 mod qry;
 mod rwr;
 mod smt;
-
-use crate::smt::Solver;
-use crate::smt::cvc4::CVC4;
-use crate::smt::z3::Z3;
+mod syn;
 
 fn main() {
     env_logger::init();
@@ -36,18 +34,5 @@ fn main() {
     let mut query = qry::Query::new();
     query.parse_query(&unparsed_query).expect("cannot parse file");
     
-    let cvc4 = CVC4::new();
-    let z3 = Z3::new();
-
-    let cvc4_answer = cvc4.solve(&query);
-    let z3_answer = z3.solve(&query);
-
-    debug!("cvc4_answer: {}", cvc4_answer);
-    debug!("z3_answer: {}", z3_answer);
-
-    let sol_cvc4 = query.parse_answer(&cvc4_answer).expect("cannot parse file");
-    let sol_z3 = query.parse_answer(&z3_answer).expect("cannot parse file");
     println!("{}\n", query);
-    println!("cvc4 model check: {}", query.eval(&sol_cvc4));
-    println!("z3 model check: {}", query.eval(&sol_z3));
 }

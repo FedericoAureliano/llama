@@ -1,78 +1,56 @@
-pub mod boolean;
-pub mod integer;
-
 use std::fmt;
+use std::rc::Rc;
 
-pub struct Term {
-    name: String,
-    args: Vec<Box<Term>>,
+pub struct Node {
+    symbol: String,
+    args: Vec<Term>,
 }
 
-impl Term {
-    pub fn new(n: String, als: Vec<Box<Term>>) -> Term {
-        let t = Term {
-            name: n,
-            args: als,
-        };
-        t
+pub type Term = Rc<Node>;
+
+impl Node {
+    pub fn new(symbol: String, args: Vec<Term>) -> Node {
+        Node {
+            symbol: symbol,
+            args: args
+        }
     }
 
-    pub fn peek_args(&self) -> &Vec<Box<Term>> {
-        self.args.as_ref()
+    pub fn get_args(&self) -> std::slice::Iter<Term> {
+        self.args.iter()
     }
 
-    pub fn get_args(self) -> Vec<Box<Term>> {
-        self.args
-    }
-
-    pub fn peek_name(&self) -> &String {
-        &self.name
+    pub fn get_symbol(&self) -> &String {
+        &self.symbol
     }
 }
 
-impl fmt::Display for Term {
+impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let children = self.peek_args();
-        let args : Vec<String> = children.into_iter().map(|s| format!("{}", s)).collect();
+        let args : Vec<String> = self.get_args().map(|s| format!("{}", s)).collect();
         if args.len() > 0 {
-            write!(f, "({} {})", self.peek_name(), args.join(" "))
+            write!(f, "({} {})", self.get_symbol(), args.join(" "))
         } else {
-            write!(f, "{}", self.peek_name())
+            write!(f, "{}", self.get_symbol())
         }
     }
 }
 
-impl fmt::Debug for Term {
+impl fmt::Debug for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-pub fn mk_app(name: &str, args: Vec<Term>) -> Term {
-    Term { 
-        name: name.to_owned(), 
-        args: args.into_iter().map(|t| Box::new(t)).collect(),
-    }
-}
-
-#[allow(dead_code)]
-pub fn mk_const(name: &str) -> Term {
-    Term { 
-        name: name.to_owned(), 
-        args: vec![],
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use super::{mk_const};
-    use crate::ast::integer::mk_add;
+    use crate::api::{mk_const, mk_add};
 
     #[test]
     fn simple_expr() {
         let x = mk_const("x");
         let y = mk_const("y");
-        let plus = mk_add(vec![x, y]);
+        let plus = mk_add(x, y);
         assert_eq!("(+ x y)", format!("{}", plus));
     }
 }

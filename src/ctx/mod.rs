@@ -38,9 +38,19 @@ impl Context {
         // can declare each function exactly once
         assert!(!self.symbol_tbl.contains_key(name), "{} already in symbol table", name);
         assert!(self.logic.uf || params.len() == 0);
+        assert!(! (rsort == Sort::Int) || self.logic.lia);
+        for (_, s) in params.iter() {
+            assert!(! (s == &Sort::Int) || self.logic.lia);
+        }
         self.symbol_tbl.insert(name.to_owned(), (params, rsort));
     }
-    
+
+    pub fn add_synth(&mut self, name: &str, params: Vec<(String, Sort)>, rsort: Sort) {
+        // can declare each function exactly once
+        assert!(!self.symbol_tbl.contains_key(name), "{} already in symbol table", name);
+        self.symbol_tbl.insert(name.to_owned(), (params, rsort));
+    }
+
     pub fn get_body(&self, name: &str) -> Option<&Term> {
         self.body_tbl.get(name)
     }
@@ -68,15 +78,51 @@ impl Context {
         &self.logic
     }
 
-    pub fn get_sort(&self, t: &Term) -> Option<&Sort> {
-        let arg_sorts: Vec<&Sort> = t.peek_args()
-            .into_iter()
+    // shallow version of check_sort
+    pub fn get_sort(&self, t: &Term) -> Option<Sort> {
+        match self.get_decl(t.get_symbol()) {
+            Some(v) => {
+                if v.len() == 1 {
+                    let (_, rsort) = v[0];
+                    Some(rsort)
+                } else {
+                    // we have to figure out which version of the polymorphic operator we're dealing with
+                    let args: Vec<&Term> = t.get_args().collect();
+                    for (params, rsort) in v {
+                        if args.len() == params.len() {
+                            let mut matches = true;
+                            for i in 0..params.len() {
+                                matches = matches && match self.get_sort(args[i]) {
+                                    Some(r) => r == params[i].1,
+                                    None => false
+                                }
+                            }
+                            if matches {
+                                return Some(*rsort)
+                            }
+                        }
+                    }
+                    None
+                }
+            }
+            None => match t.get_symbol().parse::<i64>() {
+                Ok(_) => {
+                    debug!("symbol: {} Int", t.get_symbol()); 
+                    Some(Sort::Int)
+                }
+                Err(_) => None
+            }
+        }
+    }
+
+    pub fn check_sort(&self, t: &Term) -> Option<&Sort> {
+        let arg_sorts: Vec<&Sort> = t.get_args()
             .inspect(|x| debug!("checking {}", x))
-            .map(|a| self.get_sort(a)
+            .map(|a| self.check_sort(a)
             .expect("term not well-formed!"))
             .collect();
 
-        match self.get_decl(t.peek_name()) {
+        match self.get_decl(t.get_symbol()) {
             Some(v) => {
                 for (params, rsort) in v {
                     let exp_sorts: Vec<&Sort> = params.into_iter().map(|(_, s)| s).collect();
@@ -88,15 +134,15 @@ impl Context {
                         result = result && exp_sorts[i] == arg_sorts[i];
                     }
                     if result {
-                        debug!("name: {} rsort: {}", t.peek_name(), rsort);
+                        debug!("name: {} rsort: {}", t.get_symbol(), rsort);
                         return Some(rsort)
                     }  
                 }
                 None
             }
-            None => match t.peek_name().parse::<i64>() {
+            None => match t.get_symbol().parse::<i64>() {
                 Ok(_) => {
-                    debug!("symbol: {} Int", t.peek_name()); 
+                    debug!("symbol: {} Int", t.get_symbol()); 
                     Some(&Sort::Int)
                 }
                 Err(_) => None

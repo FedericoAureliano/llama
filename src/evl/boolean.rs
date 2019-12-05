@@ -1,30 +1,42 @@
 use crate::ctx::{Context, Solution};
 use crate::ctx::sort::Sort;
-use crate::ast::{Term, mk_app};
+use crate::ast::{Term};
+use crate::api::mk_const;
 
 impl Context {
     pub fn eval_bool(&self, s: &Solution, t: &Term) -> bool {
-        match t.peek_name().as_str() {
+        let mut args = t.get_args();
+        match t.get_symbol().as_str() {
             "true" => true,
             "false" => false,
-            "not" => !self.eval_bool(s, &*t.peek_args()[0]),
-            "or" => t.peek_args().iter().fold(false, |r, a| r || self.eval_bool(s, &*a)),
-            "and" => t.peek_args().iter().fold(true, |r, a| r && self.eval_bool(s, &*a)),
-            "=>" => !self.eval_bool(s, &*t.peek_args()[0]) || self.eval_bool(s, &*t.peek_args()[1]),
-            ">" => self.eval_int(s, &*t.peek_args()[0]) > self.eval_int(s, &*t.peek_args()[1]),
-            "<" => self.eval_int(s, &*t.peek_args()[0]) < self.eval_int(s, &*t.peek_args()[1]),
-            ">=" => self.eval_int(s, &*t.peek_args()[0]) >= self.eval_int(s, &*t.peek_args()[1]),
-            "<=" => self.eval_int(s, &*t.peek_args()[0]) <= self.eval_int(s, &*t.peek_args()[1]),
+            "not" => !self.eval_bool(s, args.next().expect("must have first argument")),
+            "or" => args.fold(false, |r, a| r || self.eval_bool(s, a)),
+            "and" => args.fold(true, |r, a| r && self.eval_bool(s, a)),
+            "=>" => !self.eval_bool(s, args.next().expect("must have first argument")) 
+                    || self.eval_bool(s, args.next().expect("must have second argument")),
+            ">" => self.eval_int(s, args.next().expect("must have first argument")) 
+                    > self.eval_int(s, args.next().expect("must have second argument")),
+            "<" => self.eval_int(s, args.next().expect("must have first argument")) 
+                    < self.eval_int(s, args.next().expect("must have second argument")),
+            ">=" => self.eval_int(s, args.next().expect("must have first argument")) 
+                    >= self.eval_int(s, args.next().expect("must have second argument")),
+            "<=" => self.eval_int(s, args.next().expect("must have first argument")) 
+                    <= self.eval_int(s, args.next().expect("must have second argument")),
             // polymorphic
             "ite" => {
-                if self.eval_bool(s, &*t.peek_args()[0]) {self.eval_bool(s, &*t.peek_args()[1])} else {self.eval_bool(s, &*t.peek_args()[2])}
+                if self.eval_bool(s,  args.next().expect("must have first argument")) {
+                    self.eval_bool(s, args.next().expect("must have second argument"))
+                } else {
+                    args.next().expect("must have second argument");
+                    self.eval_bool(s, args.next().expect("must have third argument"))
+                }
             }
             "=" => {
-                assert!(t.peek_args().len() >= 2);
-                let args: Vec<String> = match self.get_sort(&*t.peek_args()[0]) {
-                    Some(Sort::Bool) => t.peek_args().into_iter().map(|a| self.eval_bool(s, a).to_string()).collect(),
-                    Some(Sort::Int) => t.peek_args().into_iter().map(|a| self.eval_int(s, a).to_string()).collect(),
-                    None => panic!("{} failed type check", &*t.peek_args()[0])
+                let first = args.next().expect("must have first argument");
+                let args: Vec<String> = match self.get_sort(&first) {
+                    Some(Sort::Bool) => t.get_args().map(|a| self.eval_bool(s, a).to_string()).collect(),
+                    Some(Sort::Int) => t.get_args().map(|a| self.eval_int(s, a).to_string()).collect(),
+                    None => panic!("{} failed type check", first)
                 }; 
                 let mut result = true;
                 for i in 1..args.len() {
@@ -46,13 +58,14 @@ impl Context {
                     assert!(entries.len() == 1);
                     let (params, rsort) = entries.first().expect("unreachable");
                     assert!(rsort == &Sort::Bool);
+                    let mut args = t.get_args();
                     for i in 0..params.len() {
                         let a = match params[i].1 {
-                            Sort::Bool => self.eval_bool(s, &*t.peek_args()[i]).to_string(),
-                            Sort::Int => self.eval_int(s, &*t.peek_args()[i]).to_string()
+                            Sort::Bool => self.eval_bool(s, args.next().expect("more params than arguments")).to_string(),
+                            Sort::Int => self.eval_int(s, args.next().expect("more params than arguments")).to_string()
                         };
                         tmp_sol.add_decl(name, params.clone(), rsort.clone());
-                        tmp_sol.add_body(name,mk_app(a.as_str(), vec![]));
+                        tmp_sol.add_body(name, mk_const(a.as_str()));
                     }
                 }
 

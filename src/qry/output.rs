@@ -21,6 +21,19 @@ impl Query {
                 let args : Vec<String> = params.into_iter().map(|(n, s)| format!("({} {})", n, s)).collect();
                 format!("(define-fun {} ({}) {} {})", name, args.join(" "), rsort.to_string(), body)
             },
+            Command::Synth(name) => {
+                let (params, rsort) = self.ctx.get_decl(&name).expect("declaration not found!").first().expect("ureachable");
+                match self.ctx.get_body(&name) {
+                    Some(b) => {
+                        let args : Vec<String> = params.into_iter().map(|(n, s)| format!("({} {})", n, s)).collect();
+                        format!("(define-fun {} ({}) {} {})", name, args.join(" "), rsort.to_string(), b)
+                    },
+                    None => {
+                        let args : Vec<String> = params.into_iter().map(|(n, s)| format!("({} {})", n, s)).collect();
+                        format!("(synth-blocking-fun {} ({}) {})", name, args.join(" "), rsort.to_string())    
+                    }
+                }
+            },
             Command::Assert(a) => format!("(assert {})", a),
             Command::CheckSat => "(check-sat)".to_string(),
             Command::GetModel => "(get-model)".to_string(),
@@ -40,21 +53,25 @@ impl fmt::Display for Query {
 
 #[cfg(test)]
 mod test {
+    use std::rc::Rc;
     use super::Query;
-    use crate::ast::integer::{mk_ge, mk_le, mk_sub};
-    use crate::ast::{mk_const, mk_app};
+    use crate::api::{mk_ge, mk_le, mk_neg, mk_const, mk_app};
 
     #[test]
     fn test_multiple_asserts(){
         let mut q = Query::new();
+        q.set_logic("QF_LIA");
         q.declare_fun("x", vec! [], "Int");
-        let a1 = mk_ge(vec! [mk_const("x"),  mk_const("7")]);
-        let a2 = mk_le(vec! [mk_const("x"),  mk_const("7")]);
+        let node_x = mk_const("x");
+        let node_7 = mk_const("7");
+        let a1 = mk_ge(Rc::clone(&node_x), Rc::clone(&node_7));
+        let a2 = mk_le(Rc::clone(&node_x), Rc::clone(&node_7));
         q.assert(a1);
         q.assert(a2);
         q.check_sat();
         q.get_model();
-        assert_eq!("(declare-const x Int)
+        assert_eq!("(set-logic QF_LIA)
+(declare-const x Int)
 (assert (>= x 7))
 (assert (<= x 7))
 (check-sat)
@@ -67,8 +84,8 @@ mod test {
         q.set_logic("QF_UFLIA");
         q.declare_fun("f", vec! ["Int", "Int"], "Bool");
         let node_n1 = mk_const("1");
-        let node_1 = mk_const("1");
-        let a1 = mk_app("f", vec! [mk_sub(vec![node_n1]), node_1]);
+        let node_sub = mk_neg(Rc::clone(&node_n1));
+        let a1 = mk_app("f", vec! [node_sub, Rc::clone(&node_n1)]);
         q.assert(a1);
         q.check_sat();
         q.get_model();
@@ -84,6 +101,14 @@ mod test {
     fn test_bad_uf() {
         let mut q = Query::new();
         q.set_logic("QF_LIA");
+        q.declare_fun("f", vec! ["Int", "Int"], "Bool");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_bad_ints() {
+        let mut q = Query::new();
+        q.set_logic("QF_UF");
         q.declare_fun("f", vec! ["Int", "Int"], "Bool");
     }
 }
