@@ -1,0 +1,12 @@
+- ast: Abstract-Syntax Tree 
+    - A _Term_ is a _Symbol_ and a vector of counted references to Terms.
+- ctx: Context
+    - A _Context_ contains all the information needed for type checking
+- evl: Evaluation
+    - The method _eval_ use the operational semantics of interpreted symbols
+- qry: Query
+    - A _Query_ is a context and a list of commands, think of it like an smt-lib script
+- rwr: Rewrite
+    - A set of functions for rewriting terms
+- smt: Satisfiability Modulo Theory Solvers
+    - Interfaces to smt solvers

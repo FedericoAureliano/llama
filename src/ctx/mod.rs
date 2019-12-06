@@ -1,15 +1,12 @@
-pub mod logic;
-pub mod sort;
-
 use std::collections::{HashMap};
 use multimap::MultiMap;
+use std::fmt;
+use std::rc::Rc;
 
 use crate::ast::{Term, Symbol};
-use crate::ctx::sort::Sort;
-use crate::ctx::logic::Logic;
 
 pub type Signature = (Vec<(String, Sort)>, Sort);
-pub type Solution = HashMap<String, Term>;
+pub type Solution = HashMap<String, Rc<Term>>;
 
 pub struct Context {
     symbol_tbl: MultiMap<String, Signature>,
@@ -51,11 +48,11 @@ impl Context {
         self.symbol_tbl.insert(name.to_owned(), (params, rsort));
     }
 
-    pub fn get_body(&self, name: &str) -> Option<&Term> {
+    pub fn get_body(&self, name: &str) -> Option<&Rc<Term>> {
         self.body_tbl.get(name)
     }
     
-    pub fn add_body(&mut self, name: &str, body: Term) {
+    pub fn add_body(&mut self, name: &str, body: Rc<Term>) {
         // the new body has to be associated to exactly one function
         assert_eq!(self.symbol_tbl.get_vec(name).unwrap().len(), 1);
         self.body_tbl.insert(name.to_owned(), body);
@@ -79,9 +76,9 @@ impl Context {
     }
 
     // shallow version of check_sort
-    pub fn get_sort(&self, t: &Term) -> Option<Sort> {
+    pub fn get_sort(&self, t: &Rc<Term>) -> Option<Sort> {
         match t.get_symbol() {
-            Symbol::Name(s) => {
+            Symbol::Func(s) => {
                 match self.get_decl(s) {
                     Some(v) => {
                         if v.len() == 1 {
@@ -89,7 +86,7 @@ impl Context {
                             Some(rsort)
                         } else {
                             // we have to figure out which version of the polymorphic operator we're dealing with
-                            let args: Vec<&Term> = t.get_args().collect();
+                            let args: Vec<&Rc<Term>> = t.get_args().collect();
                             for (params, rsort) in v {
                                 if args.len() == params.len() {
                                     let mut matches = true;
@@ -110,22 +107,21 @@ impl Context {
                     None => None                    
                 }
             },
-            Symbol::BoolLit(_)
-            | Symbol::BoolNT(_) => Some(Sort::Bool),
-            Symbol::IntLit(_) 
-            | Symbol::IntNT(_) => Some(Sort::Int)
+            Symbol::BoolLit(_) => Some(Sort::Bool),
+            Symbol::IntLit(_) => Some(Sort::Int),
+            Symbol::NonTerm(s, _) => Some(*s),
         }
     }
 
-    pub fn check_sort(&self, t: &Term) -> Option<&Sort> {
-        let arg_sorts: Vec<&Sort> = t.get_args()
+    pub fn check_sort(&self, t: &Rc<Term>) -> Option<Sort> {
+        let arg_sorts: Vec<Sort> = t.get_args()
             .inspect(|x| debug!("checking {}", x))
             .map(|a| self.check_sort(a)
             .expect("term not well-formed!"))
             .collect();
 
         match t.get_symbol() {
-            Symbol::Name(s) => {
+            Symbol::Func(s) => {
                 match self.get_decl(s) {
                     Some(v) => {
                         for (params, rsort) in v {
@@ -135,11 +131,11 @@ impl Context {
                             };
                             let mut result = true;
                             for i in 0..arg_sorts.len() {
-                                result = result && exp_sorts[i] == arg_sorts[i];
+                                result = result && exp_sorts[i] == &arg_sorts[i];
                             }
                             if result {
                                 debug!("name: {} rsort: {}", t.get_symbol(), rsort);
-                                return Some(rsort)
+                                return Some(*rsort)
                             }  
                         }
                         None
@@ -147,10 +143,9 @@ impl Context {
                     None => None                    
                 }
             },
-            Symbol::BoolLit(_)
-            | Symbol::BoolNT(_) => Some(&Sort::Bool),
-            Symbol::IntLit(_) 
-            | Symbol::IntNT(_) => Some(&Sort::Int)
+            Symbol::BoolLit(_) => Some(Sort::Bool),
+            Symbol::IntLit(_) => Some(Sort::Int),
+            Symbol::NonTerm(s, _) => Some(*s),
         }
     }
 
@@ -191,5 +186,78 @@ impl Context {
         }
         self.symbol_tbl.insert("-".to_owned(), (vec![("a".to_owned(), Sort::Int)], Sort::Int));
         self.symbol_tbl.insert("ite".to_owned(), (vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Int), ("c".to_owned(), Sort::Int)], Sort::Int));
+    }
+}
+
+#[derive(PartialEq, Eq, Copy, Clone)]
+pub enum Sort {
+    Bool,
+    Int,
+}
+
+impl Sort {
+    pub fn new(s: &str) -> Sort {
+        match s {
+            "Bool" => Sort::Bool,
+            "Int" => Sort::Int,
+            _ => panic!(format!("sort {} not supported", s))
+        }
+    }
+}
+
+impl fmt::Display for Sort {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match *self {
+            Sort::Bool => "Bool",
+            Sort::Int => "Int",
+        };
+        write!(f, "{}", printable)
+    }
+}
+
+
+pub struct Logic {
+    pub q: bool,
+    pub lia: bool,
+    pub uf: bool,
+}
+
+impl Logic {
+    pub fn new() -> Logic {
+        let l = Logic {
+            q: false,
+            lia: false,
+            uf: false,
+        };
+        l
+    }
+    pub fn to_logic(s: &str) -> Logic {
+        match s {
+            "QF_UF" => Logic {
+                q: false,
+                lia: false,
+                uf: true,
+            },
+            "QF_LIA" => Logic {
+                q: false,
+                lia: true,
+                uf: false,
+            },
+            "QF_UFLIA" => Logic {
+                q: false,
+                lia: true,
+                uf: true,
+            },
+            _ => panic!(format!("logic {} not supported", s))
+        }
+    }
+}
+
+impl fmt::Display for Logic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let q = if self.q {panic!("quantified variables not supported yet")} else {"QF_"};
+        let uf = if self.uf {"UF"} else {""};
+        let lia = if self.lia {"LIA"} else {""};
+        write!(f, "{}{}{}", q, uf, lia)
     }
 }

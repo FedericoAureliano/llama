@@ -1,20 +1,20 @@
 use std::collections::{HashMap};
+use std::rc::Rc;
 
-use crate::ast::{Term, Symbol, mk_app_from_symbol};
+use crate::ast::{Term, Symbol};
 
-pub fn rename(rules: &HashMap<String, String>, t: &Term) -> Term {
+pub fn rename(rules: &HashMap<String, String>, t: &Rc<Term>) -> Rc<Term> {
     let args = t.get_args().map(|a| rename(&rules, a)).collect();
     let symbol = match t.get_symbol() {
-        Symbol::Name(n) => if rules.contains_key(n) {
-            Symbol::Name(rules.get(n).unwrap().clone())
+        Symbol::Func(n) => if rules.contains_key(n) {
+            Symbol::Func(rules.get(n).unwrap().clone())
         } else {
-            Symbol::Name(n.clone())
+            Symbol::Func(n.clone())
         }
         Symbol::BoolLit(b) => Symbol::BoolLit(*b),
-        Symbol::BoolNT(b) => Symbol::BoolNT(b.clone()),
         Symbol::IntLit(b) => Symbol::IntLit(*b),
-        Symbol::IntNT(b) => Symbol::IntNT(b.clone()), 
+        Symbol::NonTerm(s, n) => Symbol::NonTerm(*s, n.clone()),
 
     };
-    mk_app_from_symbol(symbol, args)
+    Term::mk_app(symbol, args)
 }

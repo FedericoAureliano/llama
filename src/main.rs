@@ -19,8 +19,7 @@ mod rwr;
 mod smt;
 mod syn;
 
-use crate::smt::cvc4::CVC4;
-use crate::smt::Solver;
+use crate::smt::{CVC4};
 
 fn main() {
     env_logger::init();
@@ -39,5 +38,5 @@ fn main() {
 
     let sol_cvc4 = query.parse_answer(&cvc4_answer).expect("cannot parse file");
     debug!("cvc4 answer: {:?}", sol_cvc4);
-    println!("cvc4 model check: {}", query.eval(&sol_cvc4));
+    println!("cvc4 model check: {:?}", query.eval(&sol_cvc4));
 }
