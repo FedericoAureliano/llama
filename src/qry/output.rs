@@ -55,17 +55,16 @@ impl fmt::Display for Query {
 mod test {
     use std::rc::Rc;
     use super::Query;
-    use crate::api::{mk_ge, mk_le, mk_neg, mk_const, mk_app};
 
     #[test]
     fn test_multiple_asserts(){
         let mut q = Query::new();
         q.set_logic("QF_LIA");
         q.declare_fun("x", vec! [], "Int");
-        let node_x = mk_const("x");
-        let node_7 = mk_const("7");
-        let a1 = mk_ge(Rc::clone(&node_x), Rc::clone(&node_7));
-        let a2 = mk_le(Rc::clone(&node_x), Rc::clone(&node_7));
+        let node_x = q.mk_const("x");
+        let node_7 = q.mk_const("7");
+        let a1 = q.mk_ge(Rc::clone(&node_x), Rc::clone(&node_7));
+        let a2 = q.mk_le(Rc::clone(&node_x), Rc::clone(&node_7));
         q.assert(a1);
         q.assert(a2);
         q.check_sat();
@@ -83,9 +82,9 @@ mod test {
         let mut q = Query::new();
         q.set_logic("QF_UFLIA");
         q.declare_fun("f", vec! ["Int", "Int"], "Bool");
-        let node_n1 = mk_const("1");
-        let node_sub = mk_neg(Rc::clone(&node_n1));
-        let a1 = mk_app("f", vec! [node_sub, Rc::clone(&node_n1)]);
+        let node_n1 = q.mk_const("1");
+        let node_sub = q.mk_neg(Rc::clone(&node_n1));
+        let a1 = q.mk_app("f", vec! [node_sub, Rc::clone(&node_n1)]);
         q.assert(a1);
         q.check_sat();
         q.get_model();

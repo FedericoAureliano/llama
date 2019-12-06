@@ -5,7 +5,6 @@ use pest::error::Error;
 use pest::iterators::Pair;
 
 use crate::ast::{Term};
-use crate::api::{mk_app};
 use crate::ctx::{Solution};
 use crate::ctx::sort::{Sort, to_sort};
 use crate::qry::{Query};
@@ -25,7 +24,7 @@ impl Query {
                 for i in inner {
                     args.push(self.parse_fapp(i)?)
                 }
-                Ok(mk_app(func, args))
+                Ok(self.mk_app(func, args))
             },
             _ => Err(Error::new_from_span(pest::error::ErrorVariant::CustomError{
                         message: "expecting function application!".to_owned(),

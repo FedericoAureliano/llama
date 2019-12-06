@@ -8,6 +8,7 @@ use crate::ctx::sort::{Sort, to_sort};
 pub mod input;
 pub mod output;
 pub mod form;
+pub mod api;
 
 pub enum Command {
     SetLogic,
@@ -48,13 +49,18 @@ impl Query {
     }
 
     pub fn declare_fun(&mut self, name: &str, asorts: Vec<&str>, rsort: &str) {
+        debug!("declaring {}", name);
         let mut labels = "abcd".chars();
         let params: Vec<(String, Sort)> = asorts
             .into_iter()
-            .map(|s| (labels.next().expect("max 4 arguments").to_string(), to_sort(s)))
+            .map(|s| (format!{"!{}!", labels.next().expect("max 4 arguments")}, to_sort(s)))
             .collect();
         self.ctx.add_decl(name, params, to_sort(rsort));
         self.script.push(Command::Declare(name.to_owned()));
+    }
+
+    pub fn declare_const(&mut self, name: &str, rsort: &str) {
+        self.declare_fun(name, vec![], rsort)
     }
 
     pub fn define_synth(&mut self, name: &str, params: Vec<(&str, &str)>, rsort: &str) {

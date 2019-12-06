@@ -30,6 +30,7 @@ impl Solver for Z3 {
 mod test {
     use super::{Z3, Solver};
     use crate::qry::Query;
+    use crate::ast::Symbol;
 
     #[test]
     fn test_z3_qfuflia() {
@@ -42,7 +43,7 @@ mod test {
         let z3_answer = z3.solve(&q);
 
         let sol_z3 = q.parse_answer(&z3_answer).expect("cannot parse file");
-        assert!(q.eval(&sol_z3));
+        assert_eq!(q.eval(&sol_z3), Symbol::BoolLit(true));
     }
 
 }

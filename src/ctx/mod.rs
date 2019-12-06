@@ -4,10 +4,9 @@ pub mod sort;
 use std::collections::{HashMap};
 use multimap::MultiMap;
 
-use crate::ast::Term;
+use crate::ast::{Term, Symbol};
 use crate::ctx::sort::Sort;
 use crate::ctx::logic::Logic;
-
 
 pub type Signature = (Vec<(String, Sort)>, Sort);
 pub type Solution = HashMap<String, Term>;
@@ -36,6 +35,7 @@ impl Context {
 
     pub fn add_decl(&mut self, name: &str, params: Vec<(String, Sort)>, rsort: Sort) {
         // can declare each function exactly once
+        debug!("ctx declaring {}", name);
         assert!(!self.symbol_tbl.contains_key(name), "{} already in symbol table", name);
         assert!(self.logic.uf || params.len() == 0);
         assert!(! (rsort == Sort::Int) || self.logic.lia);
@@ -80,38 +80,40 @@ impl Context {
 
     // shallow version of check_sort
     pub fn get_sort(&self, t: &Term) -> Option<Sort> {
-        match self.get_decl(t.get_symbol()) {
-            Some(v) => {
-                if v.len() == 1 {
-                    let (_, rsort) = v[0];
-                    Some(rsort)
-                } else {
-                    // we have to figure out which version of the polymorphic operator we're dealing with
-                    let args: Vec<&Term> = t.get_args().collect();
-                    for (params, rsort) in v {
-                        if args.len() == params.len() {
-                            let mut matches = true;
-                            for i in 0..params.len() {
-                                matches = matches && match self.get_sort(args[i]) {
-                                    Some(r) => r == params[i].1,
-                                    None => false
+        match t.get_symbol() {
+            Symbol::Name(s) => {
+                match self.get_decl(s) {
+                    Some(v) => {
+                        if v.len() == 1 {
+                            let (_, rsort) = v[0];
+                            Some(rsort)
+                        } else {
+                            // we have to figure out which version of the polymorphic operator we're dealing with
+                            let args: Vec<&Term> = t.get_args().collect();
+                            for (params, rsort) in v {
+                                if args.len() == params.len() {
+                                    let mut matches = true;
+                                    for i in 0..params.len() {
+                                        matches = matches && match self.get_sort(args[i]) {
+                                            Some(r) => r == params[i].1,
+                                            None => false
+                                        }
+                                    }
+                                    if matches {
+                                        return Some(*rsort)
+                                    }
                                 }
                             }
-                            if matches {
-                                return Some(*rsort)
-                            }
+                            None
                         }
                     }
-                    None
+                    None => None                    
                 }
-            }
-            None => match t.get_symbol().parse::<i64>() {
-                Ok(_) => {
-                    debug!("symbol: {} Int", t.get_symbol()); 
-                    Some(Sort::Int)
-                }
-                Err(_) => None
-            }
+            },
+            Symbol::BoolLit(_)
+            | Symbol::BoolNT(_) => Some(Sort::Bool),
+            Symbol::IntLit(_) 
+            | Symbol::IntNT(_) => Some(Sort::Int)
         }
     }
 
@@ -122,33 +124,34 @@ impl Context {
             .expect("term not well-formed!"))
             .collect();
 
-        match self.get_decl(t.get_symbol()) {
-            Some(v) => {
-                for (params, rsort) in v {
-                    let exp_sorts: Vec<&Sort> = params.into_iter().map(|(_, s)| s).collect();
-                    if exp_sorts.len() != arg_sorts.len() {
-                        continue
-                    };
-                    let mut result = true;
-                    for i in 0..arg_sorts.len() {
-                        result = result && exp_sorts[i] == arg_sorts[i];
+        match t.get_symbol() {
+            Symbol::Name(s) => {
+                match self.get_decl(s) {
+                    Some(v) => {
+                        for (params, rsort) in v {
+                            let exp_sorts: Vec<&Sort> = params.into_iter().map(|(_, s)| s).collect();
+                            if exp_sorts.len() != arg_sorts.len() {
+                                continue
+                            };
+                            let mut result = true;
+                            for i in 0..arg_sorts.len() {
+                                result = result && exp_sorts[i] == arg_sorts[i];
+                            }
+                            if result {
+                                debug!("name: {} rsort: {}", t.get_symbol(), rsort);
+                                return Some(rsort)
+                            }  
+                        }
+                        None
                     }
-                    if result {
-                        debug!("name: {} rsort: {}", t.get_symbol(), rsort);
-                        return Some(rsort)
-                    }  
+                    None => None                    
                 }
-                None
-            }
-            None => match t.get_symbol().parse::<i64>() {
-                Ok(_) => {
-                    debug!("symbol: {} Int", t.get_symbol()); 
-                    Some(&Sort::Int)
-                }
-                Err(_) => None
-            }
+            },
+            Symbol::BoolLit(_)
+            | Symbol::BoolNT(_) => Some(&Sort::Bool),
+            Symbol::IntLit(_) 
+            | Symbol::IntNT(_) => Some(&Sort::Int)
         }
-
     }
 
     fn add_booleans(&mut self) {

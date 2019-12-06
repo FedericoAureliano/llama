@@ -9,12 +9,8 @@ extern crate pest;
 extern crate log;
 extern crate env_logger;
 
-#[macro_use]
-extern crate enum_display_derive;
-
 extern crate multimap;
 
-mod api;
 mod ast;
 mod ctx;
 mod evl;
@@ -22,6 +18,9 @@ mod qry;
 mod rwr;
 mod smt;
 mod syn;
+
+use crate::smt::cvc4::CVC4;
+use crate::smt::Solver;
 
 fn main() {
     env_logger::init();
@@ -35,4 +34,10 @@ fn main() {
     query.parse_query(&unparsed_query).expect("cannot parse file");
     
     println!("{}\n", query);
+    let cvc4 = CVC4::new();
+    let cvc4_answer = cvc4.solve(&query);
+
+    let sol_cvc4 = query.parse_answer(&cvc4_answer).expect("cannot parse file");
+    debug!("cvc4 answer: {:?}", sol_cvc4);
+    println!("cvc4 model check: {}", query.eval(&sol_cvc4));
 }

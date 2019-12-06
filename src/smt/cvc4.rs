@@ -33,6 +33,7 @@ impl Solver for CVC4 {
 mod test {
     use super::{CVC4, Solver};
     use crate::qry::Query;
+    use crate::ast::Symbol;
 
     #[test]
     fn test_cvc4_qfuflia() {
@@ -45,7 +46,7 @@ mod test {
         let cvc4_answer = cvc4.solve(&q);
 
         let sol_cvc4 = q.parse_answer(&cvc4_answer).expect("cannot parse file");
-        assert!(q.eval(&sol_cvc4));
+        assert_eq!(q.eval(&sol_cvc4), Symbol::BoolLit(true));
     }
 
 }

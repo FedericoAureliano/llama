@@ -49,16 +49,15 @@ impl Query {
 mod test {
     use std::rc::Rc;
     use super::Query;
-    use crate::api::{mk_sub, mk_const, mk_app};
 
     #[test]
     fn test_well_formed() {
         let mut q = Query::new();
         q.set_logic("QF_UFLIA");
         q.declare_fun("f", vec! ["Int", "Int"], "Bool");
-        let node_n1 = mk_const("1");
-        let node_sub = mk_sub(Rc::clone(&node_n1), Rc::clone(&node_n1));
-        let a1 = mk_app("f", vec! [node_sub, node_n1]);
+        let node_n1 = q.mk_const("1");
+        let node_sub = q.mk_sub(Rc::clone(&node_n1), Rc::clone(&node_n1));
+        let a1 = q.mk_app("f", vec! [node_sub, node_n1]);
         q.assert(a1);
         println!("{}", q.well_formed());
         assert!(q.well_formed())
