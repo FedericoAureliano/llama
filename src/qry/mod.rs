@@ -8,7 +8,7 @@ use pest::error::Error;
 use pest::iterators::Pair;
 
 use crate::ast::{Term, Symbol};
-use crate::ctx::{Context, Signature, Logic, Sort, Solution};
+use crate::ctx::{Context, Logic, Sort, Solution};
 use crate::rwr::rename;
 
 
@@ -76,21 +76,6 @@ impl Query {
         self.synth = Some(name.to_owned());
     }
 
-    pub fn get_synth(&self) -> Option<&Signature> {
-        match &self.synth {
-            Some(f) => {
-                match self.ctx.get_decl(f.as_str()) {
-                    Some(sigs) => {
-                        assert_eq!(sigs.len(), 1);
-                        sigs.first()
-                    }
-                    None => None
-                }
-            }
-            None => None
-        }
-    }
-
     pub fn define_fun(&mut self, name: &str, params: Vec<(&str, &str)>, rsort: &str, body: Rc<Term>) {
         let params: Vec<(String, Sort)> = params
             .into_iter()
@@ -111,6 +96,10 @@ impl Query {
 
     pub fn get_model(&mut self) {
         self.script.push(Command::GetModel);
+    }
+
+    pub fn get_synth(&self) -> &Option<String> {
+        &self.synth
     }
 
 }

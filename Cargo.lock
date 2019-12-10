@@ -103,7 +103,7 @@ version = "0.2.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "llama-synth"
+name = "llama"
 version = "0.1.0"
 dependencies = [
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",

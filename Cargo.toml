@@ -1,5 +1,5 @@
 [package]
-name = "llama-synth"
+name = "llama"
 version = "0.1.0"
 authors = ["Federico Mora <fmorarocha@gmail.com>"]
 license = "MIT"

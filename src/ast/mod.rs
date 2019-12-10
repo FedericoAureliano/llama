@@ -70,6 +70,13 @@ impl Term {
     pub fn get_symbol(&self) -> &Symbol {
         &self.symbol
     }
+
+    pub fn is_terminated(&self) -> bool {
+        match self.symbol {
+            Symbol::NonTerm(_, _) => false,
+            _ => self.args.iter().fold(true, |acc, a| acc && a.is_terminated())
+        }
+    }
 }
 
 impl fmt::Display for Term {

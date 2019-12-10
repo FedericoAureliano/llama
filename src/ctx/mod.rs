@@ -30,6 +30,10 @@ impl Context {
         self.symbol_tbl.get_vec(name)
     }
 
+    pub fn get_decls(&self) -> multimap::Iter<String, Signature> {
+        self.symbol_tbl.iter()
+    }
+
     pub fn add_decl(&mut self, name: &str, params: Vec<(String, Sort)>, rsort: Sort) {
         // can declare each function exactly once
         debug!("ctx declaring {}", name);
@@ -152,7 +156,7 @@ impl Context {
     fn add_booleans(&mut self) {
         // only support upto 4-ary
         for op in vec! ["and", "or", "="] {
-            for names in vec! [vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+            for names in vec! [vec! ["a", "b"]] { //[vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Bool)).collect();
                 self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
             }
@@ -165,7 +169,7 @@ impl Context {
     fn add_integers(&mut self) {
         // only support upto 4-ary
         for op in vec! ["="] {
-            for names in vec! [vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+            for names in vec! [vec! ["a", "b"]] { //[vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
                 self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
             }
@@ -179,7 +183,7 @@ impl Context {
         }
         // only support upto 4-ary
         for op in vec! ["+", "*", "-"] {
-            for names in vec! [vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+            for names in vec! [vec! ["a", "b"]] {//[vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
                 self.symbol_tbl.insert(op.to_owned(), (params, Sort::Int));
             }
