@@ -70,7 +70,7 @@ impl Context {
 
     pub fn update_logic(&mut self, l: &Logic) {
         if l.q {
-            panic!("quantifiers not supported yet");
+            self.logic.q = true;
         }
         if l.lia {
             self.logic.lia = true;
@@ -258,6 +258,11 @@ impl Logic {
                 lia: true,
                 uf: true,
             },
+            "ALL" => Logic {
+                q: true,
+                lia: true,
+                uf: true,
+            },
             _ => panic!(format!("logic {} not supported", s))
         }
     }
@@ -265,7 +270,7 @@ impl Logic {
 
 impl fmt::Display for Logic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let q = if self.q {panic!("quantified variables not supported yet")} else {"QF_"};
+        let q = if self.q {""} else {"QF_"};
         let uf = if self.uf {"UF"} else {""};
         let lia = if self.lia {"LIA"} else {""};
         write!(f, "{}{}{}", q, uf, lia)

@@ -21,7 +21,8 @@ setlogic = {"(set-logic" ~ logic ~ ")"}
 logic    = {"QF_UFLIA"
 		   |"QF_LIA" 
            |"QF_BV"
-           |"QF_UF"}
+           |"QF_UF"
+           |"ALL"}
 
 declare  = {"(declare-fun" ~ name ~ "("~ sort* ~")" ~ sort ~ ")" 
            |"(declare-const" ~ name ~ sort ~ ")"}
@@ -40,7 +41,7 @@ width    = @{ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*}
 
 assert   = {"(assert" ~ fapp ~ ")"}
 fapp     = {"(" ~ function ~ fapp+ ~ ")" | name}
-function = @{(MATH|ASCII_ALPHANUMERIC|"-")+}
+function = @{(MATH|ASCII_ALPHANUMERIC|"_"|"-")+}
 
 checksat = {"(check-sat)"}
 getmodel = {"(get-model)"}
