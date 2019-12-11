@@ -276,7 +276,7 @@ impl Query {
         for r in syntax {
             let (name, (params, rsort, body)) = self.parse_model(r)?;
             
-            let ((exp_params, exp_rsort), _) = self.peek_ctx()
+            let (exp_params, exp_rsort) = self.peek_ctx()
                 .get_decl(name.as_str())
                 .expect("definition must have been declared!")
                 .first().expect("unreachable");
@@ -300,7 +300,7 @@ impl Query {
         match c {
             Command::SetLogic => format!("(set-logic {})", self.ctx.get_logic()),
             Command::Declare(name) => {
-                let ((params, rsort), _) = self.ctx.get_decl(&name).expect("declaration not found!").first().expect("ureachable");
+                let (params, rsort) = self.ctx.get_decl(&name).expect("declaration not found!").first().expect("ureachable");
                 let args : Vec<String> = params.into_iter().map(|(_, s)| s.to_string()).collect();
                 if args.len() > 0 {
                     format!("(declare-fun {} ({}) {})", name, args.join(" "), rsort.to_string())
@@ -309,13 +309,13 @@ impl Query {
                 }
             },
             Command::Define(name) => {
-                let ((params, rsort), _) = self.ctx.get_decl(&name).expect("declaration not found!").first().expect("ureachable");
+                let (params, rsort) = self.ctx.get_decl(&name).expect("declaration not found!").first().expect("ureachable");
                 let body = self.ctx.get_body(&name).expect("definition body not found");
                 let args : Vec<String> = params.into_iter().map(|(n, s)| format!("({} {})", n, s)).collect();
                 format!("(define-fun {} ({}) {} {})", name, args.join(" "), rsort.to_string(), body)
             },
             Command::Synth(name) => {
-                let ((params, rsort), _) = self.ctx.get_decl(&name).expect("declaration not found!").first().expect("ureachable");
+                let (params, rsort) = self.ctx.get_decl(&name).expect("declaration not found!").first().expect("ureachable");
                 match self.ctx.get_body(&name) {
                     Some(b) => {
                         let args : Vec<String> = params.into_iter().map(|(n, s)| format!("({} {})", n, s)).collect();
@@ -353,7 +353,7 @@ impl Query {
             Command::Define(n) => {
                 let sigs = self.ctx.get_decl(n.as_str()).expect("definition must have unique declaration");
                 assert!(sigs.len() == 1);
-                let ((params, rsort), _) = sigs.first().expect("must have one definition");
+                let (params, rsort) = sigs.first().expect("must have one definition");
                 let mut ctx = Context::new();
                 ctx.update_logic(self.ctx.get_logic());
                 for (n, s) in params {
@@ -365,7 +365,7 @@ impl Query {
             Command::Synth(n) => {
                 let sigs = self.ctx.get_decl(n.as_str()).expect("definition must have unique declaration");
                 assert!(sigs.len() == 1);
-                let ((params, rsort), _) = sigs.first().expect("must have one definition");
+                let (params, rsort) = sigs.first().expect("must have one definition");
                 let mut ctx = Context::new();
                 match self.ctx.get_body(n) {
                     Some(body) => {

@@ -11,7 +11,7 @@ impl Query {
                         Symbol::BoolLit(true) => (),
                         Symbol::BoolLit(false) => return Some(false),
                         Symbol::NonTerm(Sort::Bool, _) => return None,
-                        _ => panic!("expected bool!")
+                        other => panic!("expected bool, got {}", other)
                     }
                 },
                 _ => (),
@@ -36,7 +36,7 @@ impl Context {
                             match self.eval(s, a) {
                                 Symbol::IntLit(b) => result = result + b,
                                 Symbol::NonTerm(Sort::Int, n) => return Symbol::NonTerm(Sort::Int, n),
-                                _ => panic!("expecting Int!")
+                                other => panic!("expecting Int, got {}", other)
                             }
                         }
                         Symbol::IntLit(result)
@@ -47,7 +47,7 @@ impl Context {
                             match self.eval(s, a) {
                                 Symbol::IntLit(b) => result = result - b,
                                 Symbol::NonTerm(Sort::Int, n) => return Symbol::NonTerm(Sort::Int, n),
-                                _ => panic!("expecting Int!")
+                                other => panic!("expecting Int, got {}", other)
                             }
                         }
                         Symbol::IntLit(result)
@@ -58,7 +58,7 @@ impl Context {
                             match self.eval(s, a) {
                                 Symbol::IntLit(b) => result = result * b,
                                 Symbol::NonTerm(Sort::Int, n) => return Symbol::NonTerm(Sort::Int, n),
-                                _ => panic!("expecting Int!")
+                                other => panic!("expecting Int, got {}", other)
                             }
                         }
                         Symbol::IntLit(result)
@@ -66,7 +66,7 @@ impl Context {
                     "not" => match self.eval(s, args.next().expect("must have first argument")) {
                         Symbol::BoolLit(b) => Symbol::BoolLit(!b),
                         Symbol::NonTerm(Sort::Bool, n) => Symbol::NonTerm(Sort::Bool, n),
-                        _ => panic!("expecting bool!")
+                        other => panic!("expecting bool, got {}", other)
                     },
                     "or" => {
                         let mut result = false;
@@ -74,7 +74,7 @@ impl Context {
                             match self.eval(s, a) {
                                 Symbol::BoolLit(b) => result = result || b,
                                 Symbol::NonTerm(Sort::Bool, n) => return Symbol::NonTerm(Sort::Bool, n),
-                                _ => panic!("expecting bool!")
+                                other => panic!("expecting bool, got {}", other)
                             }
                         }
                         Symbol::BoolLit(result)
@@ -85,7 +85,7 @@ impl Context {
                             match self.eval(s, a) {
                                 Symbol::BoolLit(b) => result = result && b,
                                 Symbol::NonTerm(Sort::Bool, n) => return Symbol::NonTerm(Sort::Bool, n),
-                                _ => panic!("expecting bool!")
+                                other => panic!("expecting bool, got {}", other)
                             }
                         }
                         Symbol::BoolLit(result)
@@ -96,24 +96,26 @@ impl Context {
                                 match self.eval(s, args.next().expect("must have second argument")) {
                                     Symbol::BoolLit(b2) => Symbol::BoolLit(!b1 || b2,),
                                     Symbol::NonTerm(Sort::Bool, n) => Symbol::NonTerm(Sort::Bool, n),
-                                    _ => panic!("expecting bool!")
+                                    other => panic!("expecting bool, got {}", other)
                                 }
                             }
                             Symbol::NonTerm(Sort::Bool, n) => Symbol::NonTerm(Sort::Bool, n),
-                            _ => panic!("expecting bool!")
+                            other => panic!("expecting bool, got {}", other)
                         }
                     },
                     ">" => {
                         match self.eval(s, args.next().expect("must have first argument")) {
                             Symbol::IntLit(i1) => {
-                                match self.eval(s, args.next().expect("must have second argument")) {
+                                let l = args.next().expect("must have second argument");
+                                debug!("here: {}", l);
+                                match self.eval(s, l){
                                     Symbol::IntLit(i2) => Symbol::BoolLit(i1 > i2,),
                                     Symbol::NonTerm(Sort::Int, n) => Symbol::NonTerm(Sort::Bool, n),
-                                    _ => panic!("expecting int!")
+                                    other => panic!("expecting int, got {}", other)
                                 }
                             }
                             Symbol::NonTerm(Sort::Int, n) => Symbol::NonTerm(Sort::Bool, n),
-                            _ => panic!("expecting int!")
+                            other => panic!("expecting int, got {}", other)
                         }
                     },
                     "<" => {
@@ -122,11 +124,11 @@ impl Context {
                                 match self.eval(s, args.next().expect("must have second argument")) {
                                     Symbol::IntLit(i2) => Symbol::BoolLit(i1 < i2,),
                                     Symbol::NonTerm(Sort::Int, n) => Symbol::NonTerm(Sort::Bool, n),
-                                    _ => panic!("expecting int!")
+                                    other => panic!("expecting int, got {}", other)
                                 }
                             }
                             Symbol::NonTerm(Sort::Int, n) => Symbol::NonTerm(Sort::Bool, n),
-                            _ => panic!("expecting int!")
+                            other => panic!("expecting int, got {}", other)
                         }
                     },
                     ">=" => {
@@ -135,11 +137,11 @@ impl Context {
                                 match self.eval(s, args.next().expect("must have second argument")) {
                                     Symbol::IntLit(i2) => Symbol::BoolLit(i1 >= i2,),
                                     Symbol::NonTerm(Sort::Int, n) => Symbol::NonTerm(Sort::Bool, n),
-                                    _ => panic!("expecting int!")
+                                    other => panic!("expecting int, got {}", other)
                                 }
                             }
                             Symbol::NonTerm(Sort::Int, n) => Symbol::NonTerm(Sort::Bool, n),
-                            _ => panic!("expecting int!")
+                            other => panic!("expecting int, got {}", other)
                         }
                     },
                     "<=" => {
@@ -148,11 +150,11 @@ impl Context {
                                 match self.eval(s, args.next().expect("must have second argument")) {
                                     Symbol::IntLit(i2) => Symbol::BoolLit(i1 <= i2,),
                                     Symbol::NonTerm(Sort::Int, n) => Symbol::NonTerm(Sort::Bool, n),
-                                    _ => panic!("expecting int!")
+                                    other => panic!("expecting int, got {}", other)
                                 }
                             }
                             Symbol::NonTerm(Sort::Int, n) => Symbol::NonTerm(Sort::Bool, n),
-                            _ => panic!("expecting int!")
+                            other => panic!("expecting int, got {}", other)
                         }
                     },
                     // polymorphic
@@ -173,8 +175,11 @@ impl Context {
                                     }
                                 }
                             }
-                            Symbol::NonTerm(Sort::Bool, n) => Symbol::NonTerm(Sort::Bool, n),
-                            _ => panic!("expecting bool!")
+                            Symbol::NonTerm(Sort::Bool, n) => {
+                                let s = self.get_sort(args.next().expect("must have second argument")).expect("must have sort");
+                                Symbol::NonTerm(s, n)
+                            } 
+                            other => panic!("expecting bool, got {}", other)
                         }
                     },
                     "=" => {
@@ -194,7 +199,7 @@ impl Context {
         
                         let entries = self.get_decl(name).expect("unreachable");
                         assert!(entries.len() == 1, "too many candidates for {}", name);
-                        let ((params, _), _) = entries.first().expect("unreachable");
+                        let (params, _) = entries.first().expect("unreachable");
 
                         // create a temporary context for evaluating the body
                         let mut tmp_sol = Context::new();

@@ -1,0 +1,16 @@
+(set-logic QF_LIA)
+
+(synth-blocking-fun max ((x Int) (y Int)) Int)
+
+(declare-fun a () Int)
+(declare-fun b () Int)
+
+(assert 
+(or 
+    (< (max a b) a)
+    (< (max a b) b)
+    (and 
+        (not (= (max a b) a)) 
+        (not (= (max a b) b)))))
+
+(check-sat)

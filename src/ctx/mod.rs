@@ -9,7 +9,7 @@ pub type Signature = (Vec<(String, Sort)>, Sort);
 pub type Solution = HashMap<String, Rc<Term>>;
 
 pub struct Context {
-    symbol_tbl: MultiMap<String, (Signature, bool)>,
+    symbol_tbl: MultiMap<String, Signature>,
     body_tbl: Solution,
     logic: Logic,
 }
@@ -25,12 +25,12 @@ impl Context {
         ctx
     }
 
-    pub fn get_decl(&self, name: &str) -> Option<&Vec<(Signature, bool)>> {
+    pub fn get_decl(&self, name: &str) -> Option<&Vec<Signature>> {
         // some interpreted functions are polymorphic (e.g. =)
         self.symbol_tbl.get_vec(name)
     }
 
-    pub fn get_decls(&self) -> multimap::Iter<String, (Signature, bool)> {
+    pub fn get_decls(&self) -> multimap::Iter<String, Signature> {
         self.symbol_tbl.iter()
     }
 
@@ -43,13 +43,13 @@ impl Context {
         for (_, s) in params.iter() {
             assert!(! (s == &Sort::Int) || self.logic.lia);
         }
-        self.symbol_tbl.insert(name.to_owned(), ((params, rsort), false));
+        self.symbol_tbl.insert(name.to_owned(), (params, rsort));
     }
 
     pub fn add_synth(&mut self, name: &str, params: Vec<(String, Sort)>, rsort: Sort) {
         // can declare each function exactly once
         assert!(!self.symbol_tbl.contains_key(name), "{} already in symbol table", name);
-        self.symbol_tbl.insert(name.to_owned(), ((params, rsort), false));
+        self.symbol_tbl.insert(name.to_owned(), (params, rsort));
     }
 
     pub fn get_body(&self, name: &str) -> Option<&Rc<Term>> {
@@ -92,12 +92,12 @@ impl Context {
                 match self.get_decl(s) {
                     Some(v) => {
                         if v.len() == 1 {
-                            let ((_, rsort), _) = v[0];
+                            let (_, rsort) = v[0];
                             Some(rsort)
                         } else {
                             // we have to figure out which version of the polymorphic operator we're dealing with
                             let args: Vec<&Rc<Term>> = t.get_args().collect();
-                            for ((params, rsort), _) in v {
+                            for (params, rsort) in v {
                                 if args.len() == params.len() {
                                     let mut matches = true;
                                     for i in 0..params.len() {
@@ -134,7 +134,7 @@ impl Context {
             Symbol::Func(s) => {
                 match self.get_decl(s) {
                     Some(v) => {
-                        for ((params, rsort), _) in v {
+                        for (params, rsort) in v {
                             let exp_sorts: Vec<&Sort> = params.into_iter().map(|(_, s)| s).collect();
                             if exp_sorts.len() != arg_sorts.len() {
                                 continue
@@ -162,46 +162,40 @@ impl Context {
     fn add_booleans(&mut self) {
         // only support upto 4-ary
         for op in vec! ["and", "or", "="] {
-            for names in vec! [vec! ["a", "b"]] { //[vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+            for names in vec! [vec! ["a", "b"], vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Bool)).collect();
-                self.symbol_tbl.insert(op.to_owned(), ((params, Sort::Bool), true));
+                self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
             }
         }
-        self.symbol_tbl.insert("not".to_owned(), ((vec![("a".to_owned(), Sort::Bool)], Sort::Bool), true));
-        self.symbol_tbl.insert("=>".to_owned(), ((vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Bool)], Sort::Bool), true));
-        self.symbol_tbl.insert("ite".to_owned(), ((vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Bool), ("c".to_owned(), Sort::Bool)], Sort::Bool), true));
-
-        // self.symbol_tbl.insert("false".to_owned(), ((vec![], Sort::Bool), true));
-        // self.symbol_tbl.insert("true".to_owned(), ((vec![], Sort::Bool), true));
+        self.symbol_tbl.insert("not".to_owned(), (vec![("a".to_owned(), Sort::Bool)], Sort::Bool));
+        self.symbol_tbl.insert("=>".to_owned(), (vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Bool)], Sort::Bool));
+        self.symbol_tbl.insert("ite".to_owned(), (vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Bool), ("c".to_owned(), Sort::Bool)], Sort::Bool));
     }
 
     fn add_integers(&mut self) {
         // only support upto 4-ary
         for op in vec! ["="] {
-            for names in vec! [vec! ["a", "b"]] { //[vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+            for names in vec! [vec! ["a", "b"], vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
-                self.symbol_tbl.insert(op.to_owned(), ((params, Sort::Bool), true));
+                self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
             }
         }
         // binary
         for op in vec! ["<", "<=", ">", ">="] {
             for names in vec! [vec! ["a", "b"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
-                self.symbol_tbl.insert(op.to_owned(), ((params, Sort::Bool), true));
+                self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
             }
         }
         // only support upto 4-ary
         for op in vec! ["+", "*", "-"] {
-            for names in vec! [vec! ["a", "b"]] {//[vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+            for names in vec! [vec! ["a", "b"], vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
-                self.symbol_tbl.insert(op.to_owned(), ((params, Sort::Int), true));
+                self.symbol_tbl.insert(op.to_owned(), (params, Sort::Int));
             }
         }
-        self.symbol_tbl.insert("-".to_owned(), ((vec![("a".to_owned(), Sort::Int)], Sort::Int), true));
-        self.symbol_tbl.insert("ite".to_owned(), ((vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Int), ("c".to_owned(), Sort::Int)], Sort::Int), true));
-
-        self.symbol_tbl.insert("0".to_owned(), ((vec![], Sort::Int), true));
-        self.symbol_tbl.insert("1".to_owned(), ((vec![], Sort::Int), true));
+        self.symbol_tbl.insert("-".to_owned(), (vec![("a".to_owned(), Sort::Int)], Sort::Int));
+        self.symbol_tbl.insert("ite".to_owned(), (vec![("a".to_owned(), Sort::Bool), ("b".to_owned(), Sort::Int), ("c".to_owned(), Sort::Int)], Sort::Int));
     }
 }
 
