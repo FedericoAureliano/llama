@@ -160,9 +160,9 @@ impl Context {
     }
 
     fn add_booleans(&mut self) {
-        // only support upto 4-ary
+        // only support upto 5-ary
         for op in vec! ["and", "or", "="] {
-            for names in vec! [vec! ["a", "b"], vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+            for names in vec! [vec! ["a", "b"], vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"], vec! ["a", "b", "c", "d", "e"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Bool)).collect();
                 self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
             }
@@ -173,9 +173,9 @@ impl Context {
     }
 
     fn add_integers(&mut self) {
-        // only support upto 4-ary
+        // only support upto 5-ary
         for op in vec! ["="] {
-            for names in vec! [vec! ["a", "b"], vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+            for names in vec! [vec! ["a", "b"], vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"], vec! ["a", "b", "c", "d", "e"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
                 self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
             }
@@ -187,9 +187,9 @@ impl Context {
                 self.symbol_tbl.insert(op.to_owned(), (params, Sort::Bool));
             }
         }
-        // only support upto 4-ary
+        // only support upto 5-ary
         for op in vec! ["+", "*", "-"] {
-            for names in vec! [vec! ["a", "b"], vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"]] {
+            for names in vec! [vec! ["a", "b"], vec! ["a", "b"], vec! ["a", "b", "c"], vec! ["a", "b", "c", "d"], vec! ["a", "b", "c", "d", "e"]] {
                 let params = names.into_iter().map(|n| (n.to_owned(), Sort::Int)).collect();
                 self.symbol_tbl.insert(op.to_owned(), (params, Sort::Int));
             }
