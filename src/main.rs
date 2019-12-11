@@ -30,6 +30,6 @@ fn main() {
     let mut query = qry::Query::new();
     query.parse_query(&unparsed_query).expect("cannot parse file");
     
-    println!("{}\n", query);
-    println!("solution: {}", query.solve().expect("failed to synthesize"));
+    println!("Query\n---------\n{}\n\n", query);
+    println!("Solution\n---------\n{}", query.solve().expect("failed to synthesize"));
 }
