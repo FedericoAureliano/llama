@@ -8,6 +8,7 @@ use crate::ctx::Solution;
 
 impl Query {
     fn write_to_tmp(&self) -> String {
+        debug!("writing {}", self);
         let mut dir = env::temp_dir();
         dir.push("tmp.smt2");
 
@@ -19,30 +20,40 @@ impl Query {
         path_name
     }
 
-    pub fn check_cvc4(&self) -> Solution {
+    pub fn check_cvc4(&self) -> Result<Solution, String> {
         let path_name = self.write_to_tmp();
         let output = Command::new("cvc4")
             .arg("--lang")
             .arg("smt")
             .arg("--produce-models")
+            .arg("--dump-models")
             .arg(path_name)
             .output()
             .expect("failed to execute process");
 
-        self.parse_answer(std::str::from_utf8(&output.stdout).expect("failed to read stdout"))
-            .expect("failed to parse answer")
+        let out = std::str::from_utf8(&output.stdout).expect("failed to read stdout");
+        debug!("cvc4 answer: {}", out);
+        match self.parse_answer(out) {
+            Ok(s) => Ok(s),
+            Err(e) => Err(e.to_string())
+        }
     }
 
     #[allow(dead_code)]
-    pub fn check_z3(&self) -> Solution {
+    pub fn check_z3(&self) -> Result<Solution, String> {
         let path_name = self.write_to_tmp();
         let output = Command::new("z3")
             .arg(path_name)
+            .arg("dump-models=true")
             .output()
             .expect("failed to execute process");
         
-        self.parse_answer(std::str::from_utf8(&output.stdout).expect("failed to read stdout"))
-            .expect("failed to parse answer")
+        let out = std::str::from_utf8(&output.stdout).expect("failed to read stdout");
+        debug!("z3 answer: {}", out);
+        match self.parse_answer(out) {
+            Ok(s) => Ok(s),
+            Err(e) => Err(e.to_string())
+        }
     }
 }
 
@@ -57,7 +68,7 @@ mod test {
         let mut q = Query::new();
         q.parse_query(&unparsed_file).unwrap();
 
-        let sol_cvc4 = q.check_cvc4();
+        let sol_cvc4 = q.check_cvc4().expect("could not parse");
         assert!(q.eval(&sol_cvc4).unwrap());
     }
 
@@ -68,7 +79,7 @@ mod test {
         let mut q = Query::new();
         q.parse_query(&unparsed_file).unwrap();
 
-        let sol_z3 = q.check_z3();
+        let sol_z3 = q.check_z3().expect("could not parse");
         assert!(q.eval(&sol_z3).unwrap());
     }
 

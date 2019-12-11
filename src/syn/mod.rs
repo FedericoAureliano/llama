@@ -12,7 +12,8 @@ impl Query {
         // These are the counter-examples we have accumulated
         let mut ctxs: Vec<Solution> = Vec::new();
 
-        let (_, rsort) = self.peek_ctx().get_decl(self.get_synth().as_ref().expect("there must be a function to synthesize").as_str())
+        let name = self.get_synth().expect("there must be a function to synthesize");
+        let ((_, rsort), _) = self.peek_ctx().get_decl(name.as_str())
             .expect("synth has to have decl")
             .first()
             .expect("synth has to have only one decl");
@@ -34,24 +35,28 @@ impl Query {
         loop {
             match expns.pop_front() {
                 Some(body) => {
+                    self.add_body(name.as_str(), Rc::clone(&body));
+
                     let mut failed = false;
-                    
                     for ctx in &ctxs {
                         if failed {
+                            debug!("{} failed test {:?}", body, ctx);
+                            self.remove_body(name.as_str());
                             break;
                         }
-                        let mut test = ctx.clone();
-                        test.insert(self.get_synth().as_ref().expect("there must be a function to synthesize").clone(), body.clone());
-                        failed =  failed || self.eval(&test) == Some(false);
+                        failed = self.eval(&ctx) == Some(true);
                     }
 
                     if failed {
+                            debug!("{} failed test", body);
+                        self.remove_body(name.as_str());
                         continue;
                     }
 
                     if body.is_terminated() {
                         // ask the oracle if it is correct
-                        let new_ctx = self.check_cvc4();
+                        let new_ctx = self.check_cvc4().expect("could not parse");
+                        self.remove_body(name.as_str());
                         if new_ctx.is_empty() {
                             return Some(body)
                         }
@@ -62,6 +67,8 @@ impl Query {
                     for expansion in self.expand_synth(body) {
                         expns.push_back(expansion);
                     }
+
+                    self.remove_body(name.as_str());
                 }
                 // If there is nothing to pop then we are done: no solution exists
                 None => return None
@@ -104,7 +111,7 @@ impl Query {
                 expansions
             }
             Symbol::NonTerm(rsort, _) => {
-                let (params, _) = self.peek_ctx().get_decl(self.get_synth().as_ref().expect("there must be a function to synthesize").as_str())
+                let ((params, _), _) = self.peek_ctx().get_decl(self.get_synth().as_ref().expect("there must be a function to synthesize").as_str())
                     .expect("synth has to have decl")
                     .first()
                     .expect("synth has to have only one decl");
@@ -112,9 +119,9 @@ impl Query {
 
                 let mut expansions : Vec<Rc<Term>> = vec![];
 
-                for (func, (params, fsort)) in self.peek_ctx().get_decls() {
-                    if fsort == rsort {
-                        let nonterms : Vec<Rc<Term>> = params.iter().map(|(_, s)| Term::new(Symbol::NonTerm(s.clone(), "start".to_owned()), vec![])).collect();
+                for (func, ((fparams, fsort), interp)) in self.peek_ctx().get_decls() {
+                    if fsort == rsort && *interp {
+                        let nonterms : Vec<Rc<Term>> = fparams.iter().map(|(_, s)| Term::new(Symbol::NonTerm(s.clone(), "start".to_owned()), vec![])).collect();
                         expansions.push(self.mk_app(func.as_str(), nonterms));
                     }
                 }
@@ -122,7 +129,7 @@ impl Query {
                 for (vname, vsort) in params {
                     if vsort == rsort {
                         expansions.push(self.mk_const(vname))
-                    } 
+                    }
                 }
 
                 expansions

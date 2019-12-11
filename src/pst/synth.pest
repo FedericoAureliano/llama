@@ -1,4 +1,4 @@
-query    = _{command*}
+query    = _{command+}
 command  = _{setlogic 
             |declare 
             |define
@@ -7,8 +7,10 @@ command  = _{setlogic
             |pop 
             |assert 
             |checksat 
-            |getmodel
-            |sat
+            |getmodel}
+
+result   = _{answer+}
+answer   = _{sat
             |unsat
             |model}
 

@@ -194,7 +194,7 @@ impl Context {
         
                         let entries = self.get_decl(name).expect("unreachable");
                         assert!(entries.len() == 1, "too many candidates for {}", name);
-                        let (params, _) = entries.first().expect("unreachable");
+                        let ((params, _), _) = entries.first().expect("unreachable");
 
                         // create a temporary context for evaluating the body
                         let mut tmp_sol = Context::new();
