@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 
 #[macro_use]
 extern crate pest_derive;
@@ -52,15 +52,11 @@ fn main() {
     query.parse_query(&raw_query).expect("cannot parse file");
     
     let result = query.solve().expect("failed to synthesize");
-    
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
 
     if matches.is_present("verbose") {
-        writeln!(handle, "Query\n---------\n{}\n\n", query).expect("failed to write query");
-        writeln!(handle, "Solution\n---------\n{}", result).expect("failed to write solution");
+        println!("Query\n---------\n{}\n\n", query);
+        println!("Solution\n---------\n{}", result);
     } else {
-        writeln!(handle, "{}", result).expect("failed to write solution");
+        println!("{}", result);
     }
-    std::process::exit(0);
 }
