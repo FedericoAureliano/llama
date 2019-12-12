@@ -1,5 +1,5 @@
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 
 #[macro_use]
 extern crate pest_derive;
@@ -31,7 +31,8 @@ fn main() {
                           .author("Federico Mora Rocha <fmorarocha@gmail.com>")
                           .about("smt-lib function synthesis engine")
                           .args_from_usage(
-                              "[input] 'Sets the input file to use, stdin otherwise'")
+                              "[input] 'sets the input file to use, stdin otherwise'
+                              -v, --verbose 'Verbose'")
                           .get_matches();
 
     let mut raw_query = String::new();
@@ -50,6 +51,16 @@ fn main() {
     let mut query = qry::Query::new();
     query.parse_query(&raw_query).expect("cannot parse file");
     
-    println!("Query\n---------\n{}\n\n", query);
-    println!("Solution\n---------\n{}", query.solve().expect("failed to synthesize"));
+    let result = query.solve().expect("failed to synthesize");
+    
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+
+    if matches.is_present("verbose") {
+        writeln!(handle, "Query\n---------\n{}\n\n", query).expect("failed to write query");
+        writeln!(handle, "Solution\n---------\n{}", result).expect("failed to write solution");
+    } else {
+        writeln!(handle, "{}", result).expect("failed to write solution");
+    }
+    std::process::exit(0);
 }
