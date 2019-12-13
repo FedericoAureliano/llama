@@ -1,18 +1,15 @@
-use std::fs;
-use std::io;
-
 #[macro_use]
 extern crate pest_derive;
 extern crate pest;
-
 #[macro_use] 
 extern crate log;
 extern crate env_logger;
-
 extern crate multimap;
-
 extern crate clap;
+extern crate bit_vec;
 
+use std::fs;
+use std::io;
 use clap::App;
 
 mod ast;
@@ -26,12 +23,12 @@ mod syn;
 fn main() {
     env_logger::init();
 
-    let matches = App::new("llama")
+    let matches = App::new("Llama")
                           .version("0.0")
                           .author("Federico Mora Rocha <fmorarocha@gmail.com>")
-                          .about("smt-lib function synthesis engine")
+                          .about("SMT-LIB Function Synthesis Engine")
                           .args_from_usage(
-                              "[input] 'sets the input file to use, stdin otherwise'
+                              "[input] 'Sets the input file to use, stdin otherwise'
                               -v, --verbose 'Verbose'")
                           .get_matches();
 
@@ -51,12 +48,15 @@ fn main() {
     let mut query = qry::Query::new();
     query.parse_query(&raw_query).expect("cannot parse file");
     
-    let result = query.solve().expect("failed to synthesize");
-
     if matches.is_present("verbose") {
         println!("Query\n---------\n{}\n\n", query);
-        println!("Solution\n---------\n{}", result);
-    } else {
-        println!("{}", result);
-    }
+        println!("Answer\n---------");
+    };
+
+    let result = query.solve();
+    if result.is_some() {
+        query.add_body(query.get_synth().expect("must have function to synthesize").as_str(), result.unwrap());
+    };
+    
+    println!("{}", query);
 }
