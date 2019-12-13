@@ -36,7 +36,7 @@ synth    = {"(synth-blocking-fun" ~ name ~ "("~ param* ~")" ~ sort ~ ")"}
 sort     = {"Int"
            |"Bool" 
            | bitvec}
-bitvec   = {"(_ BitVec" ~ width ~ ")"}
+bitvec   = {"(BitVec" ~ width ~ ")"}
 width    = @{ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*}
 
 assert   = {"(assert" ~ fapp ~ ")"}
