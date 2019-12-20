@@ -47,16 +47,20 @@ fn main() {
     }
     let mut query = qry::Query::new();
     query.parse_query(&raw_query).expect("cannot parse file");
-    
-    if matches.is_present("verbose") {
-        println!("Query\n---------\n{}\n\n", query);
-        println!("Answer\n---------");
-    };
 
     let result = query.solve();
     if result.is_some() {
-        query.add_body(query.get_synth().expect("must have function to synthesize").as_str(), result.unwrap());
+        if matches.is_present("verbose") {
+            query.add_body(query.get_synth().expect("must have function to synthesize").as_str(), result.unwrap());
+            println!("{}", query);
+        } else {
+            let name = query.get_synth().expect("must have function to synthesize");
+            let (params, rsort) = query.peek_ctx().get_decl(&name).expect("declaration not found!").first().expect("ureachable");
+            let args : Vec<String> = params.into_iter().map(|(n, s)| format!("({} {})", n, s)).collect();
+            println!("(define-fun {} ({}) {} {})", name, args.join(" "), rsort.to_string(), result.unwrap());
+        }
+    } else {
+        println!("(no-solution)");
     };
     
-    println!("{}", query);
 }
