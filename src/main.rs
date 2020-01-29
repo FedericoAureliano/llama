@@ -1,66 +1,140 @@
-#[macro_use]
-extern crate pest_derive;
-extern crate pest;
-#[macro_use] 
-extern crate log;
-extern crate env_logger;
-extern crate multimap;
-extern crate clap;
-extern crate bit_vec;
+pub mod error;
+pub mod parser;
+pub mod semck;
+pub mod sym;
+pub mod ty;
+pub mod utils;
+pub mod vm;
 
-use std::fs;
-use std::io;
-use clap::App;
+#[cfg(not(test))]
+use std::process::exit;
 
-mod ast;
-mod ctx;
-mod evl;
-mod qry;
-mod rwr;
-mod smt;
-mod syn;
+use std::path::Path;
 
-fn main() {
-    env_logger::init();
+use crate::vm::VM;
+use crate::parser::ast::{self, Ast};
+use crate::parser::lexer::reader::Reader;
+use crate::parser::parser::Parser;
 
-    let matches = App::new("Llama")
-                          .version("0.0")
-                          .author("Federico Mora Rocha <fmorarocha@gmail.com>")
-                          .about("SMT-LIB Function Synthesis Engine")
-                          .args_from_usage(
-                              "[input] 'Sets the input file to use, stdin otherwise'
-                              -v, --verbose 'Verbose'")
-                          .get_matches();
+use std::default::Default;
+use docopt::Docopt;
 
-    let mut raw_query = String::new();
+pub fn parse() -> Args {
+    Docopt::new(USAGE)
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit())
+}
 
-    if matches.is_present("input") {
-        let f = matches.value_of("input").expect("must give an input file");
-        raw_query = fs::read_to_string(f).expect("cannot read file");
-    } else {
-        while !raw_query.contains("(check-sat)") {
-            match io::stdin().read_line(&mut raw_query) {
-                Ok(n) => debug!("read: {}", n),
-                Err(error) => println!("error: {}", error),
-            }
+// Write the Docopt usage string.
+static USAGE: &'static str = "
+Usage: llama <file>
+       llama (--version | --help)
+
+Options:
+    -h, --help              Shows this text.
+    --version               Shows version.
+";
+
+#[derive(Debug, RustcDecodable)]
+pub struct Args {
+    pub arg_argument: Option<Vec<String>>,
+    pub arg_file: String,
+    pub flag_version: bool,
+}
+
+impl Default for Args {
+    fn default() -> Args {
+        Args {
+            arg_argument: None,
+            arg_file: "".into(),
+            flag_version: false,
         }
     }
-    let mut query = qry::Query::new();
-    query.parse_query(&raw_query).expect("cannot parse file");
+}
 
-    let result = query.solve();
-    if result.is_some() {
-        if matches.is_present("verbose") {
-            query.add_body(query.get_synth().expect("must have function to synthesize").as_str(), result.unwrap());
-            println!("{}", query);
-        } else {
-            let name = query.get_synth().expect("must have function to synthesize");
-            let (params, rsort) = query.peek_ctx().get_decl(&name).expect("declaration not found!").first().expect("ureachable");
-            let args : Vec<String> = params.into_iter().map(|(n, s)| format!("({} {})", n, s)).collect();
-            println!("(define-fun {} ({}) {} {})", name, args.join(" "), rsort.to_string(), result.unwrap());
+pub fn start() -> i32 {
+    let args = parse();
+
+    if args.flag_version {
+        println!("llama v0.01");
+        return 0;
+    }
+
+    let mut ast = Ast::new();
+    let empty = Ast::new();
+    let mut vm = VM::new(&empty);
+
+    let arg_file = args.arg_file.clone();
+    let path = Path::new(&arg_file);
+
+    let res = if path.is_file() {
+        parse_file(&arg_file, &mut vm, &mut ast)
+    } else {
+        println!("file `{}` does not exist.", &arg_file);
+        Err(1)
+    };
+
+    if let Err(code) = res {
+        return code;
+    }
+
+    vm.ast = &ast;
+    
+    ast::dump::dump(&vm.ast, &vm.interner);
+    0
+}
+
+
+fn parse_file(filename: &str, vm: &mut VM, ast: &mut Ast) -> Result<(), i32> {
+    let reader = if filename == "-" {
+        match Reader::from_input() {
+            Ok(reader) => reader,
+
+            Err(_) => {
+                println!("unable to read from stdin.");
+                return Err(1);
+            }
         }
     } else {
-        println!("(no-solution)");
+        match Reader::from_file(filename) {
+            Ok(reader) => reader,
+
+            Err(_) => {
+                println!("unable to read file `{}`", filename);
+                return Err(1);
+            }
+        }
     };
-    
+
+    parse_reader(reader, vm, ast)
+}
+
+fn parse_reader(reader: Reader, vm: &mut VM, ast: &mut Ast) -> Result<(), i32> {
+    let filename: String = reader.path().into();
+    let parser = Parser::new(reader, &vm.id_generator, ast, &mut vm.interner);
+
+    match parser.parse() {
+        Ok(file) => {
+            vm.files.push(file);
+            assert_eq!(ast.files.len(), vm.files.len());
+            Ok(())
+        }
+
+        Err(error) => {
+            println!(
+                "error in {} at {}: {}",
+                filename,
+                error.pos,
+                error.error.message()
+            );
+            println!("error during parsing.");
+
+            Err(1)
+        }
+    }
+}
+
+#[cfg(not(test))]
+fn main() {
+    exit(start());
 }

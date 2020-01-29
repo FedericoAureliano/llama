@@ -11,5 +11,5 @@ sudo apt install cvc4
 cargo build --release
 
 # Run llama on a .synth file by running
-./target/release/llama examples/fib.synth
+./target/release/llama examples/fib.ucl
 ```

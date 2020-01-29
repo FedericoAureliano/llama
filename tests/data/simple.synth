@@ -1,8 +1,0 @@
-(set-logic QF_LIA)
-(synth-blocking-fun h ((x Int) (y Int)) Bool)
-(declare-const initial_b Int)
-(declare-const initial_a Int)
-(declare-const new_a Int)
-(declare-const new_b Int)
-(assert (or (not (h 0 1)) (and (and (<= initial_a initial_b) (h initial_a initial_b)) (= new_a initial_b) (= new_b (+ initial_a initial_b)) (not (and (<= new_a new_b) (h new_a new_b))))))
-(check-sat)

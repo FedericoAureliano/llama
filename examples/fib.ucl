@@ -1,0 +1,26 @@
+module main {  
+  // Part 1: system description
+  var a : integer;
+  var b : integer;
+
+  init {
+    a = 0;
+    b = 1;
+  }
+
+  next {
+    a = b;
+    b = a + b;
+  }
+
+  synthesis function h(x : integer, y : integer) : boolean;
+
+  // Part 2: system specification.
+  invariant a_le_b: a <= b && h(a, b);
+
+  // Part 3: proof script.
+  control {
+    induction;
+    check;
+  }
+}
