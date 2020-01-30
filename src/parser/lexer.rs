@@ -1014,10 +1014,10 @@ mod tests {
         assert_tok(&mut reader, TokenKind::Continue, 1, 12);
         assert_tok(&mut reader, TokenKind::Return, 1, 21);
 
-        let mut reader = Lexer::from_str("type struct enum alias trait const");
+        let mut reader = Lexer::from_str("type enum const");
         assert_tok(&mut reader, TokenKind::Type, 1, 1);
-        assert_tok(&mut reader, TokenKind::Enum, 1, 13);
-        assert_tok(&mut reader, TokenKind::Const, 1, 30);
+        assert_tok(&mut reader, TokenKind::Enum, 1, 6);
+        assert_tok(&mut reader, TokenKind::Const, 1, 11);
 
         let mut reader = Lexer::from_str("for in impl Self");
         assert_tok(&mut reader, TokenKind::For, 1, 1);
@@ -1055,14 +1055,6 @@ mod tests {
 
         let mut reader = Lexer::from_str("->");
         assert_tok(&mut reader, TokenKind::Arrow, 1, 1);
-
-        let mut reader = Lexer::from_str("try!try?1");
-        assert_tok(
-            &mut reader,
-            TokenKind::LitInt("1".into(), IntBase::Dec, IntSuffix::Int),
-            1,
-            9,
-        );
 
         let mut reader = Lexer::from_str(">><<>>>_::");
         assert_tok(&mut reader, TokenKind::GtGt, 1, 1);
