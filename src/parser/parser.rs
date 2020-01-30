@@ -4,7 +4,6 @@ use std::mem;
 use crate::parser::ast;
 use crate::parser::ast::Elem::*;
 use crate::parser::ast::*;
-use crate::parser::builder::Builder;
 use crate::parser::error::{ParseError, ParseErrorAndPos};
 
 use crate::parser::interner::*;
@@ -96,74 +95,10 @@ impl<'a> Parser<'a> {
         let modifiers = self.parse_annotations()?;
 
         match self.token.kind {
-            TokenKind::Procedure => {
-                self.restrict_modifiers(
-                    &modifiers,
-                    &[
-                        Modifier::Internal,
-                        Modifier::Optimize,
-                        Modifier::OptimizeImmediately,
-                        Modifier::Test,
-                        Modifier::Cannon,
-                    ],
-                )?;
-                let fct = self.parse_procedure(&modifiers)?;
-                elements.push(ElemProcedure(fct));
-            }
-
-            TokenKind::Class => {
-                self.restrict_modifiers(
-                    &modifiers,
-                    &[
-                        Modifier::Abstract,
-                        Modifier::Open,
-                        Modifier::Internal,
-                        Modifier::Cannon,
-                    ],
-                )?;
-                let class = self.parse_class(&modifiers)?;
-                elements.push(ElemClass(class));
-            }
-
-            TokenKind::Struct => {
-                self.ban_modifiers(&modifiers)?;
-                let struc = self.parse_struct()?;
-                elements.push(ElemStruct(struc))
-            }
-
-            TokenKind::Trait => {
-                self.ban_modifiers(&modifiers)?;
-                let xtrait = self.parse_trait()?;
-                elements.push(ElemTrait(xtrait));
-            }
-
-            TokenKind::Impl => {
-                self.ban_modifiers(&modifiers)?;
-                let ximpl = self.parse_impl()?;
-                elements.push(ElemImpl(ximpl));
-            }
-
             TokenKind::Module => {
                 self.ban_modifiers(&modifiers)?;
                 let module = self.parse_module()?;
                 elements.push(ElemModule(module));
-            }
-
-            TokenKind::Input | TokenKind::Var => {
-                self.ban_modifiers(&modifiers)?;
-                self.parse_global(elements)?;
-            }
-
-            TokenKind::Const => {
-                self.ban_modifiers(&modifiers)?;
-                let xconst = self.parse_const()?;
-                elements.push(ElemConst(xconst));
-            }
-
-            TokenKind::Enum => {
-                self.ban_modifiers(&modifiers)?;
-                let xenum = self.parse_enum()?;
-                elements.push(ElemEnum(xenum));
             }
 
             _ => {
@@ -214,222 +149,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_impl(&mut self) -> Result<Impl, ParseErrorAndPos> {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Impl)?.position;
-        let type_params = self.parse_type_params()?;
-
-        let type_name = self.parse_type()?;
-
-        let (class_type, trait_type) = if self.token.is(TokenKind::For) {
-            self.advance_token()?;
-            let class_type = self.parse_type()?;
-
-            (class_type, Some(type_name))
-        } else {
-            (type_name, None)
-        };
-
-        self.expect_token(TokenKind::LBrace)?;
-
-        let mut methods = Vec::new();
-
-        while !self.token.is(TokenKind::RBrace) {
-            let modifiers = self.parse_annotations()?;
-            let mods = &[Modifier::Static, Modifier::Internal, Modifier::Cannon];
-            self.restrict_modifiers(&modifiers, mods)?;
-
-            methods.push(self.parse_procedure(&modifiers)?);
-        }
-
-        self.expect_token(TokenKind::RBrace)?;
-        let span = self.span_from(start);
-
-        Ok(Impl {
-            id: self.generate_id(),
-            pos,
-            span,
-            type_params,
-            trait_type,
-            class_type,
-            methods,
-        })
-    }
-
-    fn parse_global(&mut self, elements: &mut Vec<Elem>) -> Result<(), ParseErrorAndPos> {
-        let start = self.token.span.start();
-        let pos = self.token.position;
-        let reassignable = self.token.is(TokenKind::Var);
-
-        self.advance_token()?;
-        let name = self.expect_identifier()?;
-
-        self.expect_token(TokenKind::Colon)?;
-        let data_type = self.parse_type()?;
-
-        let expr = if self.token.is(TokenKind::Eq) {
-            self.advance_token()?;
-
-            Some(self.parse_expression()?)
-        } else {
-            None
-        };
-
-        self.expect_semicolon()?;
-        let span = self.span_from(start);
-
-        let global = Global {
-            id: self.generate_id(),
-            name,
-            pos,
-            span,
-            data_type,
-            reassignable,
-            expr,
-        };
-
-        elements.push(ElemGlobal(global));
-
-        Ok(())
-    }
-
-    fn parse_trait(&mut self) -> Result<Trait, ParseErrorAndPos> {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Trait)?.position;
-        let ident = self.expect_identifier()?;
-
-        self.expect_token(TokenKind::LBrace)?;
-
-        let mut methods = Vec::new();
-
-        while !self.token.is(TokenKind::RBrace) {
-            let modifiers = self.parse_annotations()?;
-            let mods = &[Modifier::Static];
-            self.restrict_modifiers(&modifiers, mods)?;
-
-            methods.push(self.parse_procedure(&modifiers)?);
-        }
-
-        self.expect_token(TokenKind::RBrace)?;
-        let span = self.span_from(start);
-
-        Ok(Trait {
-            id: self.generate_id(),
-            name: ident,
-            pos,
-            span,
-            methods,
-        })
-    }
-
-    fn parse_struct(&mut self) -> Result<Struct, ParseErrorAndPos> {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Struct)?.position;
-        let ident = self.expect_identifier()?;
-
-        self.expect_token(TokenKind::LBrace)?;
-        let fields = self.parse_comma_list(TokenKind::RBrace, |p| p.parse_struct_field())?;
-        let span = self.span_from(start);
-
-        Ok(Struct {
-            id: self.generate_id(),
-            name: ident,
-            pos,
-            span,
-            fields,
-        })
-    }
-
-    fn parse_struct_field(&mut self) -> Result<StructField, ParseErrorAndPos> {
-        let start = self.token.span.start();
-        let pos = self.token.position;
-        let ident = self.expect_identifier()?;
-
-        self.expect_token(TokenKind::Colon)?;
-        let ty = self.parse_type()?;
-        let span = self.span_from(start);
-
-        Ok(StructField {
-            id: self.generate_id(),
-            name: ident,
-            pos,
-            span,
-            data_type: ty,
-        })
-    }
-
-    fn parse_class(&mut self, modifiers: &Modifiers) -> Result<Class, ParseErrorAndPos> {
-        let start = self.token.span.start();
-        let has_open = modifiers.contains(Modifier::Open);
-        let internal = modifiers.contains(Modifier::Internal);
-        let is_abstract = modifiers.contains(Modifier::Abstract);
-
-        let pos = self.expect_token(TokenKind::Class)?.position;
-        let ident = self.expect_identifier()?;
-        let type_params = self.parse_type_params()?;
-
-        let mut cls = Class {
-            id: self.generate_id(),
-            name: ident,
-            pos,
-            span: Span::invalid(),
-            has_open,
-            internal,
-            is_abstract,
-            has_constructor: false,
-            parent_class: None,
-            constructor: None,
-            fields: Vec::new(),
-            methods: Vec::new(),
-            initializers: Vec::new(),
-            type_params,
-        };
-
-        self.in_class_or_module = true;
-        let ctor_params = self.parse_constructor(&mut cls)?;
-
-        let use_cannon = modifiers.contains(Modifier::Cannon);
-
-        cls.parent_class = self.parse_class_parent()?;
-
-        self.parse_class_body(&mut cls)?;
-        let span = self.span_from(start);
-
-        cls.constructor = Some(self.generate_constructor(&mut cls, ctor_params, use_cannon));
-        cls.span = span;
-        self.in_class_or_module = false;
-
-        Ok(cls)
-    }
-
-    fn parse_class_parent(&mut self) -> Result<Option<ParentClass>, ParseErrorAndPos> {
-        if self.token.is(TokenKind::Colon) {
-            self.advance_token()?;
-
-            let start = self.token.span.start();
-            let pos = self.token.position;
-            let name = self.expect_identifier()?;
-            let type_params = self.parse_class_parent_type_params()?;
-            let params = self.parse_parent_class_params()?;
-            let span = self.span_from(start);
-
-            Ok(Some(ParentClass::new(name, pos, span, type_params, params)))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn parse_class_parent_type_params(&mut self) -> Result<Vec<Type>, ParseErrorAndPos> {
-        let mut types = Vec::new();
-
-        if self.token.is(TokenKind::LBracket) {
-            self.advance_token()?;
-            types = self.parse_comma_list(TokenKind::RBracket, |p| p.parse_type())?;
-        }
-
-        Ok(types)
-    }
-
     fn parse_module(&mut self) -> Result<Module, ParseErrorAndPos> {
         let pos = self.expect_token(TokenKind::Module)?.position;
         let ident = self.expect_identifier()?;
@@ -439,6 +158,8 @@ impl<'a> Parser<'a> {
             pos: pos,
             inputs: Vec::new(),
             vars: Vec::new(),
+            consts: Vec::new(),
+            enums: Vec::new(),
             functions: Vec::new(),
             procedures: Vec::new(),
             invs: Vec::new(),
@@ -500,125 +221,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_parent_class_params(&mut self) -> Result<Vec<Box<Expr>>, ParseErrorAndPos> {
-        if !self.token.is(TokenKind::LParen) {
-            return Ok(Vec::new());
-        }
-
-        self.expect_token(TokenKind::LParen)?;
-
-        let params = self.parse_comma_list(TokenKind::RParen, |p| p.parse_expression())?;
-
-        Ok(params)
-    }
-
-    fn parse_constructor(
-        &mut self,
-        cls: &mut Class,
-    ) -> Result<Vec<ConstructorParam>, ParseErrorAndPos> {
-        if !self.token.is(TokenKind::LParen) {
-            return Ok(Vec::new());
-        }
-
-        self.expect_token(TokenKind::LParen)?;
-        cls.has_constructor = true;
-
-        let params =
-            self.parse_comma_list(TokenKind::RParen, |p| p.parse_constructor_param(cls))?;
-
-        Ok(params)
-    }
-
-    fn parse_constructor_param(
-        &mut self,
-        cls: &mut Class,
-    ) -> Result<ConstructorParam, ParseErrorAndPos> {
-        let start = self.token.span.start();
-        let field = self.token.is(TokenKind::Var) || self.token.is(TokenKind::Input);
-        let reassignable = self.token.is(TokenKind::Var);
-
-        // consume var and let
-        if field {
-            self.advance_token()?;
-        }
-
-        let pos = self.token.position;
-        let name = self.expect_identifier()?;
-
-        self.expect_token(TokenKind::Colon)?;
-        let data_type = self.parse_type()?;
-
-        let span = self.span_from(start);
-
-        if field {
-            cls.fields.push(Field {
-                id: self.generate_id(),
-                name,
-                pos,
-                span,
-                data_type: data_type.clone(),
-                primary_ctor: true,
-                expr: None,
-                reassignable,
-            })
-        }
-
-        Ok(ConstructorParam {
-            name,
-            pos,
-            span,
-            data_type,
-            field,
-            reassignable,
-        })
-    }
-
-    fn parse_class_body(&mut self, cls: &mut Class) -> Result<(), ParseErrorAndPos> {
-        if !self.token.is(TokenKind::LBrace) {
-            return Ok(());
-        }
-
-        self.advance_token()?;
-
-        while !self.token.is(TokenKind::RBrace) {
-            let modifiers = self.parse_annotations()?;
-
-            match self.token.kind {
-                TokenKind::Procedure => {
-                    let mods = &[
-                        Modifier::Abstract,
-                        Modifier::Internal,
-                        Modifier::Open,
-                        Modifier::Override,
-                        Modifier::Final,
-                        Modifier::Pub,
-                        Modifier::Static,
-                        Modifier::Cannon,
-                    ];
-                    self.restrict_modifiers(&modifiers, mods)?;
-
-                    let fct = self.parse_procedure(&modifiers)?;
-                    cls.methods.push(fct);
-                }
-
-                TokenKind::Var | TokenKind::Input => {
-                    self.ban_modifiers(&modifiers)?;
-
-                    let field = self.parse_field()?;
-                    cls.fields.push(field);
-                }
-
-                _ => {
-                    let initializer = self.parse_statement()?;
-                    cls.initializers.push(initializer);
-                }
-            }
-        }
-
-        self.advance_token()?;
-        Ok(())
-    }
-
     fn parse_module_body(&mut self, module: &mut Module) -> Result<(), ParseErrorAndPos> {
         if !self.token.is(TokenKind::LBrace) {
             return Ok(());
@@ -642,6 +244,18 @@ impl<'a> Parser<'a> {
 
                     let field = self.parse_field()?;
                     module.vars.push(field);
+                }
+
+                TokenKind::Const => {
+                    self.ban_modifiers(&modifiers)?;
+                    let xconst = self.parse_const()?;
+                    module.consts.push(xconst);
+                }
+    
+                TokenKind::Enum => {
+                    self.ban_modifiers(&modifiers)?;
+                    let xenum = self.parse_enum()?;
+                    module.enums.push(xenum);
                 }
 
                 TokenKind::Function => {
@@ -714,17 +328,6 @@ impl<'a> Parser<'a> {
             let ident = self.expect_identifier()?;
             let modifier = match self.interner.str(ident).as_str() {
                 "synthesis" => Modifier::Synthesis,
-                "abstract" => Modifier::Abstract,
-                "open" => Modifier::Open,
-                "override" => Modifier::Override,
-                "final" => Modifier::Final,
-                "internal" => Modifier::Internal,
-                "pub" => Modifier::Pub,
-                "static" => Modifier::Static,
-                "optimize" => Modifier::Optimize,
-                "test" => Modifier::Test,
-                "cannon" => Modifier::Cannon,
-                "optimize_immediately" => Modifier::OptimizeImmediately,
                 _ => {
                     return Err(ParseErrorAndPos::new(
                         self.token.position,
@@ -826,13 +429,12 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_procedure(&mut self, modifiers: &Modifiers) -> Result<Procedure, ParseErrorAndPos> {
+    fn parse_procedure(&mut self, _modifiers: &Modifiers) -> Result<Procedure, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Procedure)?.position;
         let ident = self.expect_identifier()?;
         let type_params = self.parse_type_params()?;
         let params = self.parse_procedure_params()?;
-        let throws = self.parse_throws()?;
         let return_type = self.parse_procedure_type()?;
         let block = self.parse_procedure_block()?;
         let span = self.span_from(start);
@@ -842,21 +444,7 @@ impl<'a> Parser<'a> {
             name: ident,
             pos,
             span,
-            method: self.in_class_or_module,
-            has_open: modifiers.contains(Modifier::Open),
-            has_override: modifiers.contains(Modifier::Override),
-            has_final: modifiers.contains(Modifier::Final),
-            has_optimize: modifiers.contains(Modifier::Optimize),
-            has_optimize_immediately: modifiers.contains(Modifier::OptimizeImmediately),
-            is_pub: modifiers.contains(Modifier::Pub),
-            is_static: modifiers.contains(Modifier::Static),
-            internal: modifiers.contains(Modifier::Internal),
-            is_abstract: modifiers.contains(Modifier::Abstract),
-            is_constructor: false,
-            is_test: modifiers.contains(Modifier::Test),
-            use_cannon: modifiers.contains(Modifier::Cannon),
             params,
-            throws,
             return_type,
             block,
             type_params,
@@ -925,16 +513,6 @@ impl<'a> Parser<'a> {
             span,
             block,
         })
-    }
-
-    fn parse_throws(&mut self) -> Result<bool, ParseErrorAndPos> {
-        if self.token.is(TokenKind::Throws) {
-            self.advance_token()?;
-
-            return Ok(true);
-        }
-
-        Ok(false)
     }
 
     fn parse_procedure_params(&mut self) -> Result<Vec<Param>, ParseErrorAndPos> {
@@ -1047,17 +625,6 @@ impl<'a> Parser<'a> {
         self.expect_token(TokenKind::Eq)?;
 
         match self.token.kind {
-            TokenKind::Throw => {
-                let stmt = self.parse_throw()?;
-                Ok(Box::new(ExprBlockType {
-                    id: self.generate_id(),
-                    pos: stmt.pos(),
-                    span: stmt.span(),
-                    stmts: vec![stmt],
-                    expr: None,
-                }))
-            }
-
             TokenKind::Return => {
                 let stmt = self.parse_return()?;
                 Ok(Box::new(ExprBlockType {
@@ -1085,13 +652,6 @@ impl<'a> Parser<'a> {
 
     fn parse_type(&mut self) -> Result<Type, ParseErrorAndPos> {
         match self.token.kind {
-            TokenKind::CapitalThis => {
-                let pos = self.token.position;
-                let span = self.token.span;
-                self.advance_token()?;
-                Ok(Type::create_self(self.generate_id(), pos, span))
-            }
-
             TokenKind::Identifier(_) => {
                 let pos = self.token.position;
                 let start = self.token.span.start();
@@ -1151,104 +711,6 @@ impl<'a> Parser<'a> {
                 ParseError::ExpectedType(self.token.name()),
             )),
         }
-    }
-
-    fn parse_statement(&mut self) -> StmtResult {
-        let stmt_or_expr = self.parse_statement_or_expression()?;
-
-        match stmt_or_expr {
-            StmtOrExpr::Stmt(stmt) => Ok(stmt),
-            StmtOrExpr::Expr(expr) => {
-                if expr.needs_semicolon() {
-                    Err(self.expect_semicolon().unwrap_err())
-                } else {
-                    Ok(Box::new(Stmt::create_expr(
-                        self.generate_id(),
-                        expr.pos(),
-                        expr.span(),
-                        expr,
-                    )))
-                }
-            }
-        }
-    }
-
-    fn parse_throw(&mut self) -> StmtResult {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Throw)?.position;
-        let expr = self.parse_expression()?;
-        self.expect_semicolon()?;
-        let span = self.span_from(start);
-
-        Ok(Box::new(Stmt::create_throw(
-            self.generate_id(),
-            pos,
-            span,
-            expr,
-        )))
-    }
-
-    fn parse_defer(&mut self) -> StmtResult {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Defer)?.position;
-        let expr = self.parse_expression()?;
-        self.expect_semicolon()?;
-        let span = self.span_from(start);
-
-        Ok(Box::new(Stmt::create_defer(
-            self.generate_id(),
-            pos,
-            span,
-            expr,
-        )))
-    }
-
-    fn parse_do(&mut self) -> StmtResult {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Do)?.position;
-        let try_block = self.parse_block_stmt()?;
-        let mut catch_blocks = Vec::new();
-
-        while self.token.is(TokenKind::Catch) {
-            catch_blocks.push(self.parse_catch()?);
-        }
-
-        let finally_block = if self.token.is(TokenKind::Finally) {
-            Some(self.parse_finally()?)
-        } else {
-            None
-        };
-
-        let span = self.span_from(start);
-
-        Ok(Box::new(Stmt::create_do(
-            self.generate_id(),
-            pos,
-            span,
-            try_block,
-            catch_blocks,
-            finally_block,
-        )))
-    }
-
-    fn parse_catch(&mut self) -> Result<CatchBlock, ParseErrorAndPos> {
-        let id = self.generate_id();
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Catch)?.position;
-        let name = self.expect_identifier()?;
-        self.expect_token(TokenKind::Colon)?;
-        let data_type = self.parse_type()?;
-        let block = self.parse_block_stmt()?;
-        let span = self.span_from(start);
-
-        Ok(CatchBlock::new(id, name, pos, span, data_type, block))
-    }
-
-    fn parse_finally(&mut self) -> Result<FinallyBlock, ParseErrorAndPos> {
-        self.expect_token(TokenKind::Finally)?;
-        let block = self.parse_block_stmt()?;
-
-        Ok(FinallyBlock::new(block))
     }
 
     fn parse_var(&mut self) -> StmtResult {
@@ -1364,9 +826,6 @@ impl<'a> Parser<'a> {
                 self.token.position,
                 ParseError::MisplacedElse,
             )),
-            TokenKind::Throw => Ok(StmtOrExpr::Stmt(self.parse_throw()?)),
-            TokenKind::Defer => Ok(StmtOrExpr::Stmt(self.parse_defer()?)),
-            TokenKind::Do => Ok(StmtOrExpr::Stmt(self.parse_do()?)),
             TokenKind::For => Ok(StmtOrExpr::Stmt(self.parse_for()?)),
             _ => {
                 let expr = self.parse_expression()?;
@@ -1555,7 +1014,6 @@ impl<'a> Parser<'a> {
                 TokenKind::LtLt | TokenKind::GtGt | TokenKind::GtGtGt => 7,
                 TokenKind::Add | TokenKind::Sub => 8,
                 TokenKind::Mul | TokenKind::Div | TokenKind::Mod => 9,
-                TokenKind::Is | TokenKind::As => 10,
                 _ => {
                     return Ok(left);
                 }
@@ -1568,17 +1026,6 @@ impl<'a> Parser<'a> {
             let tok = self.advance_token()?;
 
             left = match tok.kind {
-                TokenKind::Is | TokenKind::As => {
-                    let is = tok.is(TokenKind::Is);
-
-                    let right = Box::new(self.parse_type()?);
-                    let span = self.span_from(start);
-                    let expr =
-                        Expr::create_conv(self.generate_id(), tok.position, span, left, right, is);
-
-                    Box::new(expr)
-                }
-
                 _ => {
                     let right = self.parse_binary(right_precedence)?;
                     self.create_binary(tok, start, left, right)
@@ -1741,11 +1188,6 @@ impl<'a> Parser<'a> {
             TokenKind::Identifier(_) => self.parse_identifier(),
             TokenKind::True => self.parse_bool_literal(),
             TokenKind::False => self.parse_bool_literal(),
-            TokenKind::Nil => self.parse_nil(),
-            TokenKind::This => self.parse_this(),
-            TokenKind::Super => self.parse_super(),
-            TokenKind::Try => self.parse_try(),
-            TokenKind::TryForce | TokenKind::TryOpt => self.parse_try_op(),
             TokenKind::BitOr | TokenKind::Or => self.parse_lambda(),
             _ => Err(ParseErrorAndPos::new(
                 self.token.position,
@@ -1808,53 +1250,6 @@ impl<'a> Parser<'a> {
 
             Ok(expr)
         }
-    }
-
-    fn parse_try_op(&mut self) -> ExprResult {
-        let start = self.token.span.start();
-        let tok = self.advance_token()?;
-        let exp = self.parse_expression()?;
-
-        let mode = if tok.is(TokenKind::TryForce) {
-            TryMode::Force
-        } else {
-            TryMode::Opt
-        };
-
-        let span = self.span_from(start);
-
-        Ok(Box::new(Expr::create_try(
-            self.generate_id(),
-            tok.position,
-            span,
-            exp,
-            mode,
-        )))
-    }
-
-    fn parse_try(&mut self) -> ExprResult {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Try)?.position;
-        let exp = self.parse_expression()?;
-
-        let mode = if self.token.is(TokenKind::Else) {
-            self.advance_token()?;
-            let alt_exp = self.parse_expression()?;
-
-            TryMode::Else(alt_exp)
-        } else {
-            TryMode::Normal
-        };
-
-        let span = self.span_from(start);
-
-        Ok(Box::new(Expr::create_try(
-            self.generate_id(),
-            pos,
-            span,
-            exp,
-            mode,
-        )))
     }
 
     fn parse_lit_char(&mut self) -> ExprResult {
@@ -2012,39 +1407,6 @@ impl<'a> Parser<'a> {
         )))
     }
 
-    fn parse_this(&mut self) -> ExprResult {
-        let span = self.token.span;
-        let tok = self.advance_token()?;
-
-        Ok(Box::new(Expr::create_this(
-            self.generate_id(),
-            tok.position,
-            span,
-        )))
-    }
-
-    fn parse_super(&mut self) -> ExprResult {
-        let span = self.token.span;
-        let tok = self.advance_token()?;
-
-        Ok(Box::new(Expr::create_super(
-            self.generate_id(),
-            tok.position,
-            span,
-        )))
-    }
-
-    fn parse_nil(&mut self) -> ExprResult {
-        let span = self.token.span;
-        let tok = self.advance_token()?;
-
-        Ok(Box::new(Expr::create_nil(
-            self.generate_id(),
-            tok.position,
-            span,
-        )))
-    }
-
     fn parse_lambda(&mut self) -> ExprResult {
         let start = self.token.span.start();
         let tok = self.advance_token()?;
@@ -2128,60 +1490,6 @@ impl<'a> Parser<'a> {
 
     fn span_from(&self, start: u32) -> Span {
         Span::new(start, self.last_end.unwrap() - start)
-    }
-
-    fn generate_constructor(
-        &mut self,
-        cls: &mut Class,
-        ctor_params: Vec<ConstructorParam>,
-        use_cannon: bool,
-    ) -> Procedure {
-        let builder = Builder::new(self.id_generator);
-        let mut block = builder.build_block();
-
-        if let Some(ref parent_class) = cls.parent_class {
-            let expr = Expr::create_delegation(
-                self.generate_id(),
-                parent_class.pos,
-                parent_class.span,
-                parent_class.params.clone(),
-            );
-
-            block.add_expr(Box::new(expr));
-        }
-
-        for param in ctor_params.iter().filter(|param| param.field) {
-            let this = builder.build_this();
-            let lhs = builder.build_dot(this, builder.build_ident(param.name));
-            let rhs = builder.build_ident(param.name);
-            let ass = builder.build_assign(lhs, rhs);
-
-            block.add_expr(ass);
-        }
-
-        for field in cls.fields.iter().filter(|field| field.expr.is_some()) {
-            let this = builder.build_this();
-            let lhs = builder.build_dot(this, builder.build_ident(field.name));
-            let ass = builder.build_assign(lhs, field.expr.as_ref().unwrap().clone());
-
-            block.add_expr(ass);
-        }
-
-        block.add_stmts(mem::replace(&mut cls.initializers, Vec::new()));
-
-        let mut fct = builder.build_fct(cls.name);
-
-        for field in &ctor_params {
-            fct.add_param(field.name, field.data_type.clone());
-        }
-
-        fct.is_method(true)
-            .is_public(true)
-            .use_cannon(use_cannon)
-            .constructor(true)
-            .block(block.build());
-
-        fct.build()
     }
 }
 

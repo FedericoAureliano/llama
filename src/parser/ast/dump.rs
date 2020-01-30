@@ -343,11 +343,6 @@ impl<'a> AstDumper<'a> {
         dump!(self, "fct {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
-            dump!(d, "open = {}", fct.has_open);
-            dump!(d, "override = {}", fct.has_override);
-            dump!(d, "final = {}", fct.has_final);
-            dump!(d, "internal = {}", fct.internal);
-            dump!(d, "throws = {}", fct.throws);
             dump!(d, "params");
             d.indent(|d| {
                 if fct.params.is_empty() {

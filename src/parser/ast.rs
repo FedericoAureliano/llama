@@ -465,6 +465,8 @@ pub struct Module {
 
     pub inputs: Vec<Field>,
     pub vars: Vec<Field>,
+    pub consts: Vec<Const>,
+    pub enums: Vec<Enum>,
     pub functions: Vec<Function>,
     pub procedures: Vec<Procedure>,
 
@@ -559,22 +561,7 @@ pub struct Procedure {
     pub name: Name,
     pub pos: Position,
     pub span: Span,
-    pub method: bool,
-    pub has_open: bool,
-    pub has_override: bool,
-    pub has_final: bool,
-    pub has_optimize: bool,
-    pub has_optimize_immediately: bool,
-    pub is_pub: bool,
-    pub is_static: bool,
-    pub is_abstract: bool,
-    pub is_test: bool,
-    pub use_cannon: bool,
-    pub internal: bool,
-    pub is_constructor: bool,
-
     pub params: Vec<Param>,
-    pub throws: bool,
 
     pub return_type: Option<Type>,
     pub block: Option<Box<ExprBlockType>>,
@@ -622,34 +609,12 @@ pub struct ModifierElement {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Modifier {
     Synthesis,
-    Abstract,
-    Override,
-    Open,
-    Final,
-    Internal,
-    Optimize,
-    Pub,
-    Static,
-    Test,
-    Cannon,
-    OptimizeImmediately,
 }
 
 impl Modifier {
     pub fn name(&self) -> &'static str {
         match *self {
             Modifier::Synthesis => "synthesis",
-            Modifier::Abstract => "abstract",
-            Modifier::Open => "open",
-            Modifier::Override => "override",
-            Modifier::Final => "final",
-            Modifier::Internal => "internal",
-            Modifier::Optimize => "optimize",
-            Modifier::Pub => "pub",
-            Modifier::Static => "static",
-            Modifier::Test => "test",
-            Modifier::Cannon => "cannon",
-            Modifier::OptimizeImmediately => "optimize_immediately",
         }
     }
 }

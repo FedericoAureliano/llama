@@ -14,10 +14,6 @@ pub enum TokenKind {
     End,
 
     // Keywords
-    Class,
-    This,
-    CapitalThis,
-    Super,
     While,
     If,
     Else,
@@ -29,27 +25,13 @@ pub enum TokenKind {
     Return,
     True,
     False,
-    Nil,
-    Throws,
-    Throw,
-    Try,
-    TryForce,
-    TryOpt,
-    Do,
-    Catch,
-    Finally,
     At,
     
     Enum,
     Type,
-    Alias,
-    Struct,
-    Trait,
-    Impl,
     Const,
     
     Underscore,
-    Defer,
     
     // Operators
     Add,
@@ -87,8 +69,6 @@ pub enum TokenKind {
     Ge,
     EqEqEq,
     NeEqEq,
-    Is,
-    As,
     
     GtGt,
     GtGtGt,
@@ -128,10 +108,6 @@ impl TokenKind {
             TokenKind::End => "<<EOF>>",
 
             // Keywords
-            TokenKind::Class => "class",
-            TokenKind::This => "self",
-            TokenKind::CapitalThis => "Self",
-            TokenKind::Super => "super",
             TokenKind::Function => "function",
             TokenKind::Procedure => "procedure",
             TokenKind::Input => "input",
@@ -147,28 +123,14 @@ impl TokenKind {
             TokenKind::Return => "return",
             TokenKind::True => "true",
             TokenKind::False => "false",
-            TokenKind::Nil => "nil",
-            TokenKind::Throws => "throws",
-            TokenKind::Throw => "throw",
-            TokenKind::Try => "try",
-            TokenKind::TryForce => "try!",
-            TokenKind::TryOpt => "try?",
-            TokenKind::Do => "do",
-            TokenKind::Catch => "catch",
-            TokenKind::Finally => "finally",
             TokenKind::At => "@",
 
             TokenKind::Enum => "enum",
             TokenKind::Type => "type",
-            TokenKind::Alias => "alias",
-            TokenKind::Struct => "struct",
-            TokenKind::Trait => "trait",
-            TokenKind::Impl => "impl",
             TokenKind::Module => "module",
             TokenKind::Const => "const",
 
             TokenKind::Underscore => "_",
-            TokenKind::Defer => "defer",
 
             // Operators
             TokenKind::Add => "+",
@@ -211,8 +173,6 @@ impl TokenKind {
 
             TokenKind::EqEqEq => "===",
             TokenKind::NeEqEq => "!==",
-            TokenKind::Is => "is",
-            TokenKind::As => "as",
 
             TokenKind::Invariant => "invariant",
             TokenKind::Init => "init",
