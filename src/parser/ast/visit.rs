@@ -172,28 +172,38 @@ pub fn walk_module<'v, V: Visitor<'v>>(v: &mut V, m: &'v Module) {
 }
 
 pub fn walk_init<'v, V: Visitor<'v>>(v: &mut V, m: &'v Init) {
-    for stmt in &m.stmts {
-        v.visit_stmt(stmt);
-    }
-    
-    if let Some(ref expr) = m.expr {
-        v.visit_expr(expr);
+    if let Some(ref block) = m.block {
+        for stmt in &block.stmts {
+            v.visit_stmt(stmt);
+        }
+
+        if let Some(ref value) = block.expr {
+            v.visit_expr(value);
+        }
     }
 }
 
 pub fn walk_next<'v, V: Visitor<'v>>(v: &mut V, m: &'v Next) {
-    for stmt in &m.stmts {
-        v.visit_stmt(stmt);
-    }
-    
-    if let Some(ref expr) = m.expr {
-        v.visit_expr(expr);
+    if let Some(ref block) = m.block {
+        for stmt in &block.stmts {
+            v.visit_stmt(stmt);
+        }
+
+        if let Some(ref value) = block.expr {
+            v.visit_expr(value);
+        }
     }
 }
 
 pub fn walk_control<'v, V: Visitor<'v>>(v: &mut V, m: &'v Control) {
-    for stmt in &m.stmts {
-        v.visit_stmt(stmt);
+    if let Some(ref block) = m.block {
+        for stmt in &block.stmts {
+            v.visit_stmt(stmt);
+        }
+
+        if let Some(ref value) = block.expr {
+            v.visit_expr(value);
+        }
     }
 }
 

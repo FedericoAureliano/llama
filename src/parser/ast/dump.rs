@@ -262,7 +262,13 @@ impl<'a> AstDumper<'a> {
                 }
             });
 
-            // TODO: dump specs
+            dump!(d, "invs");
+            d.indent(|d| {
+                for mtd in &modu.invs {
+                    d.dump_spec(mtd);
+                }
+            });
+
             // TODO: dump init
             // TODO: dump next
             // TODO: dump control
@@ -278,6 +284,16 @@ impl<'a> AstDumper<'a> {
             field.id
         );
         self.indent(|d| d.dump_type(&field.data_type));
+    }
+
+    fn dump_spec(&mut self, inv: &Spec) {
+        dump!(
+            self,
+            "inv {} @ {} {}",
+            self.str(inv.name),
+            inv.pos,
+            inv.id
+        );
     }
 
     fn dump_fct(&mut self, fct: &Function) {
@@ -534,79 +550,39 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_init(&mut self, block: &Init) {
-        dump!(
-            self,
-            "init ({} statement(s)) @ {} {}",
-            block.stmts.len(),
-            block.pos,
-            block.id
-        );
+        dump!(self, "init @ {} {}", block.pos, block.id);
 
         self.indent(|d| {
-            if block.stmts.is_empty() {
-                dump!(d, "no statements");
-            } else {
-                for stmt in &block.stmts {
-                    d.dump_stmt(stmt);
-                }
-            }
+            dump!(d, "executes");
 
-            if let Some(ref expr) = block.expr {
-                dump!(d, "value");
-                d.dump_expr(expr);
+            if let Some(ref block) = block.block {
+                d.indent(|d| d.dump_expr_block(block));
             }
         });
-
-        dump!(self, "init end");
     }
 
     fn dump_next(&mut self, block: &Next) {
-        dump!(
-            self,
-            "next ({} statement(s)) @ {} {}",
-            block.stmts.len(),
-            block.pos,
-            block.id
-        );
+        dump!(self, "next @ {} {}", block.pos, block.id);
 
         self.indent(|d| {
-            if block.stmts.is_empty() {
-                dump!(d, "no statements");
-            } else {
-                for stmt in &block.stmts {
-                    d.dump_stmt(stmt);
-                }
-            }
+            dump!(d, "executes");
 
-            if let Some(ref expr) = block.expr {
-                dump!(d, "value");
-                d.dump_expr(expr);
+            if let Some(ref block) = block.block {
+                d.indent(|d| d.dump_expr_block(block));
             }
         });
-
-        dump!(self, "next end");
     }
 
     fn dump_control(&mut self, block: &Control) {
-        dump!(
-            self,
-            "control ({} statement(s)) @ {} {}",
-            block.stmts.len(),
-            block.pos,
-            block.id
-        );
+        dump!(self, "control @ {} {}", block.pos, block.id);
 
         self.indent(|d| {
-            if block.stmts.is_empty() {
-                dump!(d, "no statements");
-            } else {
-                for stmt in &block.stmts {
-                    d.dump_stmt(stmt);
-                }
+            dump!(d, "executes");
+
+            if let Some(ref block) = block.block {
+                d.indent(|d| d.dump_expr_block(block));
             }
         });
-
-        dump!(self, "control end");
     }
 
     fn dump_expr_if(&mut self, expr: &ExprIfType) {

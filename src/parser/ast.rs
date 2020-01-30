@@ -467,7 +467,8 @@ pub struct Module {
     pub vars: Vec<Field>,
     pub procedures: Vec<Function>,
 
-    // TODO: need specs as well
+    pub invs: Vec<Spec>,
+
     pub init: Option<Box<Init>>,
     pub next: Option<Box<Next>>,
     pub control: Option<Box<Control>>,
@@ -528,6 +529,15 @@ pub struct Field {
     pub primary_ctor: bool,
     pub expr: Option<Box<Expr>>,
     pub reassignable: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct Spec {
+    pub id: NodeId,
+    pub name: Name,
+    pub pos: Position,
+    pub span: Span,
+    pub expr: Option<Box<Expr>>,
 }
 
 #[derive(Clone, Debug)]
@@ -2169,8 +2179,7 @@ pub struct Init {
     pub pos: Position,
     pub span: Span,
 
-    pub stmts: Vec<Box<Stmt>>,
-    pub expr: Option<Box<Expr>>,
+    pub block: Option<Box<ExprBlockType>>,
 }
 
 #[derive(Clone, Debug)]
@@ -2179,8 +2188,7 @@ pub struct Next {
     pub pos: Position,
     pub span: Span,
 
-    pub stmts: Vec<Box<Stmt>>,
-    pub expr: Option<Box<Expr>>,
+    pub block: Option<Box<ExprBlockType>>,
 }
 
 #[derive(Clone, Debug)]
@@ -2189,7 +2197,7 @@ pub struct Control {
     pub pos: Position,
     pub span: Span,
 
-    pub stmts: Vec<Box<Stmt>>,
+    pub block: Option<Box<ExprBlockType>>,
 }
 
 

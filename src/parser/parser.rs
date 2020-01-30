@@ -440,7 +440,7 @@ impl<'a> Parser<'a> {
             inputs: Vec::new(),
             vars: Vec::new(),
             procedures: Vec::new(),
-            // TODO add spec
+            invs: Vec::new(),
             init: None,
             next: None,
             control: None,
@@ -652,12 +652,33 @@ impl<'a> Parser<'a> {
                     module.vars.push(field);
                 }
 
-                // TokenKind::Init => {
-                //     self.ban_modifiers(&modifiers)?;
+                TokenKind::Invariant => {
+                    self.ban_modifiers(&modifiers)?;
 
-                //     let block = self.parse_init()?;
-                //     module.init = Some(block);
-                // }                
+                    let spec = self.parse_invariant()?;
+                    module.invs.push(spec);
+                }
+
+                TokenKind::Init => {
+                    self.ban_modifiers(&modifiers)?;
+
+                    let block = self.parse_init()?;
+                    module.init = Some(Box::new(block));
+                }
+
+                TokenKind::Next => {
+                    self.ban_modifiers(&modifiers)?;
+
+                    let block = self.parse_next()?;
+                    module.next = Some(Box::new(block));
+                }
+
+                TokenKind::Control => {
+                    self.ban_modifiers(&modifiers)?;
+
+                    let block = self.parse_control()?;
+                    module.control = Some(Box::new(block));
+                }
 
                 _ => {
                     return Err(ParseErrorAndPos::new(
@@ -773,6 +794,26 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_invariant(&mut self) -> Result<Spec, ParseErrorAndPos> {
+        let start = self.token.span.start();
+        let pos = self.token.position;
+        self.expect_token(TokenKind::Invariant)?;
+        let name = self.expect_identifier()?;
+        self.expect_token(TokenKind::Colon)?;
+        let expr = Some(self.parse_expression()?);
+
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(Spec {
+            id: self.generate_id(),
+            name,
+            pos,
+            span,
+            expr,
+        })
+    }
+
     fn parse_function(&mut self, modifiers: &Modifiers) -> Result<Function, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Fun)?.position;
@@ -810,37 +851,47 @@ impl<'a> Parser<'a> {
         })
     }
 
-    // fn parse_init(&mut self) -> Result<Init, ParseErrorAndPos> {
-    //     let start = self.token.span.start();
-    //     let pos = self.expect_token(TokenKind::Fun)?.position;
-    //     let block = self.parse_function_block()?;
-    //     let span = self.span_from(start);
+    fn parse_init(&mut self) -> Result<Init, ParseErrorAndPos> {
+        let start = self.token.span.start();
+        let pos = self.expect_token(TokenKind::Init)?.position;
+        let block = self.parse_function_block()?;
+        let span = self.span_from(start);
 
-    //     Ok(Function {
-    //         id: self.generate_id(),
-    //         name: ident,
-    //         pos,
-    //         span,
-    //         method: self.in_class_or_module,
-    //         has_open: modifiers.contains(Modifier::Open),
-    //         has_override: modifiers.contains(Modifier::Override),
-    //         has_final: modifiers.contains(Modifier::Final),
-    //         has_optimize: modifiers.contains(Modifier::Optimize),
-    //         has_optimize_immediately: modifiers.contains(Modifier::OptimizeImmediately),
-    //         is_pub: modifiers.contains(Modifier::Pub),
-    //         is_static: modifiers.contains(Modifier::Static),
-    //         internal: modifiers.contains(Modifier::Internal),
-    //         is_abstract: modifiers.contains(Modifier::Abstract),
-    //         is_constructor: false,
-    //         is_test: modifiers.contains(Modifier::Test),
-    //         use_cannon: modifiers.contains(Modifier::Cannon),
-    //         params,
-    //         throws,
-    //         return_type,
-    //         block,
-    //         type_params,
-    //     })
-    // }
+        Ok(Init {
+            id: self.generate_id(),
+            pos,
+            span,
+            block,
+        })
+    }
+
+    fn parse_next(&mut self) -> Result<Next, ParseErrorAndPos> {
+        let start = self.token.span.start();
+        let pos = self.expect_token(TokenKind::Next)?.position;
+        let block = self.parse_function_block()?;
+        let span = self.span_from(start);
+
+        Ok(Next {
+            id: self.generate_id(),
+            pos,
+            span,
+            block,
+        })
+    }
+
+    fn parse_control(&mut self) -> Result<Control, ParseErrorAndPos> {
+        let start = self.token.span.start();
+        let pos = self.expect_token(TokenKind::Control)?.position;
+        let block = self.parse_function_block()?;
+        let span = self.span_from(start);
+
+        Ok(Control {
+            id: self.generate_id(),
+            pos,
+            span,
+            block,
+        })
+    }
 
     fn parse_throws(&mut self) -> Result<bool, ParseErrorAndPos> {
         if self.token.is(TokenKind::Throws) {

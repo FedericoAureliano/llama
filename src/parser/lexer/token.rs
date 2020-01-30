@@ -99,6 +99,7 @@ pub enum TokenKind {
     LtLt,
 
     // UCLID5
+    Invariant,
     Init,
     Next,
     Control,
@@ -211,6 +212,7 @@ impl TokenKind {
             TokenKind::Is => "is",
             TokenKind::As => "as",
 
+            TokenKind::Invariant => "invariant",
             TokenKind::Init => "init",
             TokenKind::Next => "next",
             TokenKind::Control => "control",

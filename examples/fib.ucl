@@ -13,7 +13,7 @@ module main {
     b = a + b;
   }
 
-  synthesis function h(x : integer, y : integer) : boolean;
+  // synthesis function h(x : integer, y : integer) : boolean;
 
   // Part 2: system specification.
   invariant a_le_b: a <= b && h(a, b);
