@@ -462,14 +462,15 @@ pub struct Module {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
-    pub parent_class: Option<ParentClass>,
-    pub internal: bool,
-    pub has_constructor: bool,
 
-    pub constructor: Option<Function>,
-    pub fields: Vec<Field>,
-    pub methods: Vec<Function>,
-    pub initializers: Vec<Box<Stmt>>,
+    pub inputs: Vec<Field>,
+    pub vars: Vec<Field>,
+    pub procedures: Vec<Function>,
+
+    // TODO: need specs as well
+    pub init: Option<Box<Init>>,
+    pub next: Option<Box<Next>>,
+    pub control: Option<Box<Control>>,
 }
 
 #[derive(Clone, Debug)]

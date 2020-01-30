@@ -241,34 +241,31 @@ impl<'a> AstDumper<'a> {
         );
 
         self.indent(|d| {
-            if let Some(ref parent_class) = modu.parent_class {
-                dump!(
-                    d,
-                    "super (name={} @ {})",
-                    d.str(parent_class.name),
-                    parent_class.pos
-                );
-            }
-
-            dump!(d, "fields");
-
+            dump!(d, "inputs");
             d.indent(|d| {
-                for field in &modu.fields {
-                    d.dump_field(field);
+                for input in &modu.inputs {
+                    d.dump_field(input);
                 }
             });
 
-            dump!(d, "constructor");
-            if let Some(ctor) = &modu.constructor {
-                d.indent(|d| d.dump_fct(ctor));
-            }
-
-            dump!(d, "methods");
+            dump!(d, "vars");
             d.indent(|d| {
-                for mtd in &modu.methods {
+                for variable in &modu.vars {
+                    d.dump_field(variable);
+                }
+            });
+
+            dump!(d, "procedures");
+            d.indent(|d| {
+                for mtd in &modu.procedures {
                     d.dump_fct(mtd);
                 }
             });
+
+            // TODO: dump specs
+            // TODO: dump init
+            // TODO: dump next
+            // TODO: dump control
         });
     }
 

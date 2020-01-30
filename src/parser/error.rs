@@ -11,6 +11,7 @@ pub enum ParseError {
 
     // Parser errors
     ExpectedTopLevelElement(String),
+    ExpectedModuleElement(String),
     UnknownAnnotation(String),
     RedundantAnnotation(String),
     MisplacedAnnotation(String),
@@ -36,7 +37,10 @@ impl ParseError {
 
             // Parser errors
             ParseError::ExpectedTopLevelElement(ref token) => {
-                format!("expected function or class but got {}.", token)
+                format!("expected module but got {}.", token)
+            }
+            ParseError::ExpectedModuleElement(ref token) => {
+                format!("expected input, var, function, procedure, invariant, init, next, or control, but got {}.", token)
             }
             ParseError::MisplacedAnnotation(ref modifier) => {
                 format!("misplaced annotation `{}`.", modifier)

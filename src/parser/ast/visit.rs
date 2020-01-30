@@ -153,17 +153,22 @@ pub fn walk_class<'v, V: Visitor<'v>>(v: &mut V, c: &'v Class) {
 }
 
 pub fn walk_module<'v, V: Visitor<'v>>(v: &mut V, m: &'v Module) {
-    for f in &m.fields {
+    for f in &m.inputs {
         v.visit_field(f);
     }
 
-    if let Some(ctor) = &m.constructor {
-        v.visit_ctor(ctor);
+    for f in &m.vars {
+        v.visit_field(f);
     }
 
-    for m in &m.methods {
+    for m in &m.procedures {
         v.visit_method(m);
     }
+
+    // TODO: visit specs
+    // TODO: visit init
+    // TODO: visit next
+    // TODO: visit control
 }
 
 pub fn walk_init<'v, V: Visitor<'v>>(v: &mut V, m: &'v Init) {
