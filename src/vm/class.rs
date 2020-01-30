@@ -10,7 +10,7 @@ use crate::sym::SymLevel;
 use crate::ty::{BuiltinType, TypeList};
 use crate::utils::GrowableVec;
 use crate::vm::VM;
-use crate::vm::{FctId, Field, FieldDef, FieldId, FileId, ImplId, TraitId};
+use crate::vm::{PrcdId, Field, FieldDef, FieldId, FileId, ImplId, TraitId};
 use crate::parser::interner::Name;
 use crate::parser::lexer::position::Position;
 
@@ -59,10 +59,10 @@ pub struct Class {
     pub table: SymLevel,
     pub static_table: SymLevel,
 
-    pub constructor: Option<FctId>,
+    pub constructor: Option<PrcdId>,
     pub fields: Vec<Field>,
-    pub methods: Vec<FctId>,
-    pub virtual_fcts: Vec<FctId>,
+    pub methods: Vec<PrcdId>,
+    pub virtual_fcts: Vec<PrcdId>,
 
     pub traits: Vec<TraitId>,
     pub impls: Vec<ImplId>,
@@ -120,7 +120,7 @@ impl Class {
         None
     }
 
-    pub fn find_method(&self, vm: &VM, name: Name, is_static: bool) -> Option<FctId> {
+    pub fn find_method(&self, vm: &VM, name: Name, is_static: bool) -> Option<PrcdId> {
         let mut classid = self.id;
 
         loop {
@@ -150,7 +150,7 @@ impl Class {
         trait_id: TraitId,
         name: Name,
         is_static: bool,
-    ) -> Option<FctId> {
+    ) -> Option<PrcdId> {
         for &impl_id in &self.impls {
             let ximpl = vm.impls[impl_id].read();
 
@@ -225,7 +225,7 @@ pub fn find_method_in_class(
     mut class: BuiltinType,
     name: Name,
     is_static: bool,
-) -> Option<(BuiltinType, FctId)> {
+) -> Option<(BuiltinType, PrcdId)> {
     loop {
         let cls_id = class.cls_id(vm).expect("no class");
         let cls = vm.classes.idx(cls_id);
@@ -254,7 +254,7 @@ pub fn find_methods_in_class(
     object_type: BuiltinType,
     name: Name,
     is_static: bool,
-) -> Vec<(BuiltinType, FctId)> {
+) -> Vec<(BuiltinType, PrcdId)> {
     let mut candidates = Vec::new();
     let mut ignores = HashSet::new();
 

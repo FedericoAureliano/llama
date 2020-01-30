@@ -69,7 +69,7 @@ impl<'a, 'ast> TypeParamCheck<'a, 'ast> {
                         self.tp_against_definition(tp, &cls.type_params[tpid.idx()], ty)
                     }
 
-                    BuiltinType::FctTypeParam(fct_id, tpid) => {
+                    BuiltinType::PrcdTypeParam(fct_id, tpid) => {
                         let fct = self.vm.fcts.idx(fct_id);
                         let fct = fct.read();
                         self.tp_against_definition(tp, &fct.type_params[tpid.idx()], ty)

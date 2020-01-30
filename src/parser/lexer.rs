@@ -117,6 +117,13 @@ impl Lexer {
             value.push(ch);
         }
 
+        // for primed vars
+        if is_char_quote(self.curr()) {
+            let ch = self.curr().unwrap();
+            self.read_char();
+            value.push(ch);
+        }
+
         let lookup = self.keywords.get(&value[..]).cloned();
         let mut ttype;
 
@@ -570,8 +577,9 @@ fn keywords_in_map() -> HashMap<&'static str, TokenKind> {
     keywords.insert("self", TokenKind::This);
     keywords.insert("Self", TokenKind::CapitalThis);
     keywords.insert("super", TokenKind::Super);
-    keywords.insert("fun", TokenKind::Fun);
-    keywords.insert("let", TokenKind::Let);
+    keywords.insert("function", TokenKind::Function);
+    keywords.insert("procedure", TokenKind::Procedure);
+    keywords.insert("input", TokenKind::Input);
     keywords.insert("var", TokenKind::Var);
     keywords.insert("while", TokenKind::While);
     keywords.insert("if", TokenKind::If);
@@ -1028,12 +1036,12 @@ mod tests {
 
     #[test]
     fn test_keywords() {
-        let mut reader = Lexer::from_str("fun let while if else self class");
-        assert_tok(&mut reader, TokenKind::Fun, 1, 1);
-        assert_tok(&mut reader, TokenKind::Let, 1, 5);
-        assert_tok(&mut reader, TokenKind::While, 1, 9);
-        assert_tok(&mut reader, TokenKind::If, 1, 15);
-        assert_tok(&mut reader, TokenKind::Else, 1, 18);
+        let mut reader = Lexer::from_str("function input while if else self class");
+        assert_tok(&mut reader, TokenKind::Function, 1, 1);
+        assert_tok(&mut reader, TokenKind::Input, 1, 10);
+        assert_tok(&mut reader, TokenKind::While, 1, 16);
+        assert_tok(&mut reader, TokenKind::If, 1, 22);
+        assert_tok(&mut reader, TokenKind::Else, 1, 25);
 
         let mut reader = Lexer::from_str("self class super");
         assert_tok(&mut reader, TokenKind::This, 1, 1);

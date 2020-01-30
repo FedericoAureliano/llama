@@ -18,9 +18,6 @@ pub enum TokenKind {
     This,
     CapitalThis,
     Super,
-    Fun,
-    Let,
-    Var,
     While,
     If,
     Else,
@@ -42,19 +39,18 @@ pub enum TokenKind {
     Catch,
     Finally,
     At,
-
+    
     Enum,
     Type,
     Alias,
     Struct,
     Trait,
     Impl,
-    Module,
     Const,
-
+    
     Underscore,
     Defer,
-
+    
     // Operators
     Add,
     AddEq,
@@ -81,7 +77,7 @@ pub enum TokenKind {
     Caret,
     And,
     Or,
-
+    
     Eq,
     EqEq,
     Ne,
@@ -93,12 +89,17 @@ pub enum TokenKind {
     NeEqEq,
     Is,
     As,
-
+    
     GtGt,
     GtGtGt,
     LtLt,
-
+    
     // UCLID5
+    Module,
+    Input,
+    Var,
+    Function,
+    Procedure,
     Invariant,
     Init,
     Next,
@@ -131,8 +132,9 @@ impl TokenKind {
             TokenKind::This => "self",
             TokenKind::CapitalThis => "Self",
             TokenKind::Super => "super",
-            TokenKind::Fun => "fun",
-            TokenKind::Let => "let",
+            TokenKind::Function => "function",
+            TokenKind::Procedure => "procedure",
+            TokenKind::Input => "input",
             TokenKind::Var => "var",
             TokenKind::While => "while",
             TokenKind::If => "if",

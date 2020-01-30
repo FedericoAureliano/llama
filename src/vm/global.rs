@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::ty::BuiltinType;
 use crate::utils::GrowableVec;
-use crate::vm::{FctId, FileId};
+use crate::vm::{PrcdId, FileId};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct GlobalId(u32);
@@ -30,7 +30,7 @@ pub struct GlobalData {
     pub ty: BuiltinType,
     pub reassignable: bool,
     pub name: Name,
-    pub getter: Option<FctId>,
+    pub getter: Option<PrcdId>,
 }
 
 impl GrowableVec<Mutex<GlobalData>> {

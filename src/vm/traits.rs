@@ -5,7 +5,7 @@ use crate::parser::interner::Name;
 use crate::parser::lexer::position::Position;
 
 use crate::ty::BuiltinType;
-use crate::vm::{FctId, FileId, VM};
+use crate::vm::{PrcdId, FileId, VM};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitId(u32);
@@ -22,11 +22,11 @@ pub struct TraitData {
     pub file: FileId,
     pub pos: Position,
     pub name: Name,
-    pub methods: Vec<FctId>,
+    pub methods: Vec<PrcdId>,
 }
 
 impl TraitData {
-    pub fn find_method(&self, vm: &VM, name: Name, is_static: bool) -> Option<FctId> {
+    pub fn find_method(&self, vm: &VM, name: Name, is_static: bool) -> Option<PrcdId> {
         for &method in &self.methods {
             let method = vm.fcts.idx(method);
             let method = method.read();
@@ -46,7 +46,7 @@ impl TraitData {
         name: Name,
         replace: Option<BuiltinType>,
         args: &[BuiltinType],
-    ) -> Option<FctId> {
+    ) -> Option<PrcdId> {
         for &method in &self.methods {
             let method = vm.fcts.idx(method);
             let method = method.read();

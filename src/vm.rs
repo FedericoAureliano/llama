@@ -19,11 +19,11 @@ pub use self::class::{
 };
 pub use self::cnst::{ConstData, ConstId, ConstValue};
 pub use self::enums::{EnumData, EnumId};
-pub use self::fct::{Fct, FctId, FctKind, FctParent, Intrinsic};
+pub use self::fct::{Prcd, PrcdId, PrcdKind, PrcdParent, Intrinsic};
 pub use self::field::{Field, FieldDef, FieldId};
 pub use self::global::{GlobalData, GlobalId};
 pub use self::impls::{ImplData, ImplId};
-pub use self::src::{CallType, ConvInfo, FctSrc, ForTypeInfo, IdentType, NodeMap, Var, VarId};
+pub use self::src::{CallType, ConvInfo, PrcdSrc, ForTypeInfo, IdentType, NodeMap, Var, VarId};
 pub use self::strct::{
     StructData, StructDef, StructDefId, StructFieldData, StructFieldDef, StructId,
 };
@@ -69,7 +69,7 @@ pub struct VM<'ast> {
     pub struct_defs: GrowableVec<Mutex<StructDef>>, // stores all struct definitions
     pub classes: GrowableVec<RwLock<Class>>,   // stores all class source definitions
     pub class_defs: GrowableVec<RwLock<ClassDef>>, // stores all class definitions
-    pub fcts: GrowableVec<RwLock<Fct<'ast>>>,  // stores all function definitions
+    pub fcts: GrowableVec<RwLock<Prcd<'ast>>>,  // stores all function definitions
     pub enums: Vec<RwLock<EnumData>>,          // store all enum definitions
     pub traits: Vec<RwLock<TraitData>>,        // stores all trait definitions
     pub impls: Vec<RwLock<ImplData>>,          // stores all impl definitions
@@ -83,7 +83,7 @@ impl<'ast> VM<'ast> {
         let empty_class_id: ClassId = 0.into();
         let empty_class_def_id: ClassDefId = 0.into();
         let empty_trait_id: TraitId = 0.into();
-        let empty_fct_id: FctId = 0.into();
+        let empty_fct_id: PrcdId = 0.into();
         // let gc = Gc::new(&args);
 
         let vm = Box::new(VM {
@@ -156,9 +156,9 @@ impl<'ast> VM<'ast> {
         vm
     }
 
-    pub fn add_fct(&mut self, mut fct: Fct<'ast>) -> FctId {
+    pub fn add_fct(&mut self, mut fct: Prcd<'ast>) -> PrcdId {
         let mut fcts = self.fcts.lock();
-        let fctid = FctId(fcts.len());
+        let fctid = PrcdId(fcts.len());
 
         fct.id = fctid;
 
@@ -167,7 +167,7 @@ impl<'ast> VM<'ast> {
         fctid
     }
 
-    pub fn add_fct_to_sym(&mut self, fct: Fct<'ast>) -> Result<FctId, Sym> {
+    pub fn add_fct_to_sym(&mut self, fct: Prcd<'ast>) -> Result<PrcdId, Sym> {
         let name = fct.name;
         let fctid = self.add_fct(fct);
 
@@ -176,7 +176,7 @@ impl<'ast> VM<'ast> {
         match sym.get(name) {
             Some(sym) => Err(sym),
             None => {
-                assert!(sym.insert(name, SymFct(fctid)).is_none());
+                assert!(sym.insert(name, SymPrcd(fctid)).is_none());
 
                 Ok(fctid)
             }
@@ -201,7 +201,7 @@ impl<'ast> VM<'ast> {
         class_name: &'static str,
         function_name: &'static str,
         is_static: bool,
-    ) -> Option<FctId> {
+    ) -> Option<PrcdId> {
         let class_name = self.interner.intern(class_name);
         let function_name = self.interner.intern(function_name);
 
@@ -220,13 +220,13 @@ impl<'ast> VM<'ast> {
         }
     }
 
-    pub fn fct_by_name(&self, name: &str) -> Option<FctId> {
+    pub fn fct_by_name(&self, name: &str) -> Option<PrcdId> {
         let name = self.interner.intern(name);
         self.sym.lock().get_fct(name)
     }
 
     #[cfg(test)]
-    pub fn ctor_by_name(&self, name: &str) -> FctId {
+    pub fn ctor_by_name(&self, name: &str) -> PrcdId {
         let name = self.interner.intern(name);
         let cls_id = self.sym.lock().get_class(name).expect("class not found");
         let cls = self.classes.idx(cls_id);

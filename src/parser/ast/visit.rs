@@ -60,20 +60,20 @@ pub trait Visitor<'v>: Sized {
         walk_struct_field(self, f);
     }
 
-    fn visit_ctor(&mut self, m: &'v Function) {
-        walk_fct(self, m);
+    fn visit_ctor(&mut self, m: &'v Procedure) {
+        walk_prcd(self, m);
     }
 
-    fn visit_method(&mut self, m: &'v Function) {
-        walk_fct(self, m);
+    fn visit_method(&mut self, m: &'v Procedure) {
+        walk_prcd(self, m);
     }
 
     fn visit_field(&mut self, p: &'v Field) {
         walk_field(self, p);
     }
 
-    fn visit_fct(&mut self, f: &'v Function) {
-        walk_fct(self, f);
+    fn visit_prcd(&mut self, f: &'v Procedure) {
+        walk_prcd(self, f);
     }
 
     fn visit_param(&mut self, p: &'v Param) {
@@ -102,7 +102,7 @@ pub fn walk_ast<'v, V: Visitor<'v>>(v: &mut V, a: &'v Ast) {
 pub fn walk_file<'v, V: Visitor<'v>>(v: &mut V, f: &'v File) {
     for e in &f.elements {
         match *e {
-            ElemFunction(ref f) => v.visit_fct(f),
+            ElemProcedure(ref f) => v.visit_prcd(f),
             ElemClass(ref c) => v.visit_class(c),
             ElemStruct(ref s) => v.visit_struct(s),
             ElemTrait(ref t) => v.visit_trait(t),
@@ -230,7 +230,7 @@ pub fn walk_field<'v, V: Visitor<'v>>(v: &mut V, f: &'v Field) {
     v.visit_type(&f.data_type);
 }
 
-pub fn walk_fct<'v, V: Visitor<'v>>(v: &mut V, f: &'v Function) {
+pub fn walk_prcd<'v, V: Visitor<'v>>(v: &mut V, f: &'v Procedure) {
     for p in &f.params {
         v.visit_param(p);
     }

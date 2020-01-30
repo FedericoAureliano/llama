@@ -58,10 +58,10 @@ pub enum SemError {
     CatchOrFinallyExpected,
     LetMissingInitialization,
     LetReassigned,
-    FctReassigned,
+    PrcdReassigned,
     ClassReassigned,
     TypeParamReassigned,
-    FctUsedAsIdentifier,
+    PrcdUsedAsIdentifier,
     ClsUsedAsIdentifier,
     TypeParamUsedAsIdentifier,
     EnumUsedAsIdentifier,
@@ -98,8 +98,8 @@ pub enum SemError {
     RedundantAnnotation(String),
     UnknownAnnotation(String),
     InvalidEscapeSequence(char),
-    MissingFctBody,
-    FctCallExpected,
+    MissingPrcdBody,
+    PrcdCallExpected,
     ThisOrSuperExpected(String),
     NoSuperDelegationWithPrimaryCtor(String),
     NoSuperClass(String),
@@ -282,10 +282,10 @@ impl SemError {
             SemError::CatchOrFinallyExpected => "`try` without `catch` or `finally`.".into(),
             SemError::LetMissingInitialization => "`let` binding is missing initialization.".into(),
             SemError::LetReassigned => "`let` binding cannot be reassigned.".into(),
-            SemError::FctReassigned => "function cannot be reassigned.".into(),
+            SemError::PrcdReassigned => "function cannot be reassigned.".into(),
             SemError::ClassReassigned => "class cannot be reassigned.".into(),
             SemError::TypeParamReassigned => "type param cannot be reassigned.".into(),
-            SemError::FctUsedAsIdentifier => "function cannot be used as identifier.".into(),
+            SemError::PrcdUsedAsIdentifier => "function cannot be used as identifier.".into(),
             SemError::ClsUsedAsIdentifier => "class cannot be used as identifier.".into(),
             SemError::TypeParamUsedAsIdentifier => {
                 "type param cannot be used as identifier.".into()
@@ -353,8 +353,8 @@ impl SemError {
             SemError::UnclosedString => "unclosed string.".into(),
             SemError::UnclosedChar => "unclosed char.".into(),
             SemError::IoError => "error reading from file.".into(),
-            SemError::MissingFctBody => "missing function body.".into(),
-            SemError::FctCallExpected => format!("function call expected"),
+            SemError::MissingPrcdBody => "missing function body.".into(),
+            SemError::PrcdCallExpected => format!("function call expected"),
             SemError::ThisOrSuperExpected(ref val) => {
                 format!("`self` or `super` expected but got {}.", val)
             }

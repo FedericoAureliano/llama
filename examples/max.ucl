@@ -1,0 +1,25 @@
+module main
+{
+  input a : integer;
+  input b : integer;
+
+  var c : integer;
+
+  @synthesis function max2 (x : integer, y : integer) : integer;
+
+  init {
+    c = max2(a, b);
+  }
+  
+  next {
+    c' = max2(a, b);
+  }
+  
+  invariant bigger_than_a : (c >= a);
+  invariant bigger_than_b : (c >= b);
+  
+  control {
+    induction;
+    check;
+  }
+}

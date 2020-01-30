@@ -16,8 +16,8 @@ impl<'a> Builder<'a> {
         BuilderBlock::new(self.id_generator)
     }
 
-    pub fn build_fct(&self, name: Name) -> BuilderFct<'a> {
-        BuilderFct::new(self.id_generator, name)
+    pub fn build_fct(&self, name: Name) -> BuilderPrcd<'a> {
+        BuilderPrcd::new(self.id_generator, name)
     }
 
     pub fn build_this(&self) -> Box<Expr> {
@@ -71,7 +71,7 @@ impl<'a> Builder<'a> {
     }
 }
 
-pub struct BuilderFct<'a> {
+pub struct BuilderPrcd<'a> {
     id_generator: &'a NodeIdGenerator,
     name: Name,
     is_method: bool,
@@ -83,9 +83,9 @@ pub struct BuilderFct<'a> {
     block: Option<Box<ExprBlockType>>,
 }
 
-impl<'a> BuilderFct<'a> {
-    pub fn new(id_generator: &'a NodeIdGenerator, name: Name) -> BuilderFct<'a> {
-        BuilderFct {
+impl<'a> BuilderPrcd<'a> {
+    pub fn new(id_generator: &'a NodeIdGenerator, name: Name) -> BuilderPrcd<'a> {
+        BuilderPrcd {
             id_generator,
             name,
             is_method: false,
@@ -98,7 +98,7 @@ impl<'a> BuilderFct<'a> {
         }
     }
 
-    pub fn add_param(&mut self, name: Name, ty: Type) -> &mut BuilderFct<'a> {
+    pub fn add_param(&mut self, name: Name, ty: Type) -> &mut BuilderPrcd<'a> {
         let id = self.id_generator.next();
 
         let param = Param {
@@ -115,33 +115,33 @@ impl<'a> BuilderFct<'a> {
         self
     }
 
-    pub fn is_method(&mut self, value: bool) -> &mut BuilderFct<'a> {
+    pub fn is_method(&mut self, value: bool) -> &mut BuilderPrcd<'a> {
         self.is_method = value;
         self
     }
 
-    pub fn is_public(&mut self, value: bool) -> &mut BuilderFct<'a> {
+    pub fn is_public(&mut self, value: bool) -> &mut BuilderPrcd<'a> {
         self.is_public = value;
         self
     }
 
-    pub fn use_cannon(&mut self, value: bool) -> &mut BuilderFct<'a> {
+    pub fn use_cannon(&mut self, value: bool) -> &mut BuilderPrcd<'a> {
         self.use_cannon = value;
         self
     }
 
-    pub fn constructor(&mut self, constructor: bool) -> &mut BuilderFct<'a> {
+    pub fn constructor(&mut self, constructor: bool) -> &mut BuilderPrcd<'a> {
         self.is_constructor = constructor;
         self
     }
 
-    pub fn block(&mut self, block: Box<ExprBlockType>) -> &mut BuilderFct<'a> {
+    pub fn block(&mut self, block: Box<ExprBlockType>) -> &mut BuilderPrcd<'a> {
         self.block = Some(block);
         self
     }
 
-    pub fn build(self) -> Function {
-        Function {
+    pub fn build(self) -> Procedure {
+        Procedure {
             id: self.id_generator.next(),
             pos: Position::new(1, 1),
             span: Span::invalid(),

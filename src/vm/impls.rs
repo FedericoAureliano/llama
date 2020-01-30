@@ -4,7 +4,7 @@ use std::ops::Index;
 
 use crate::parser::lexer::position::Position;
 
-use crate::vm::{ClassId, FctId, FileId, TraitId, VM};
+use crate::vm::{ClassId, PrcdId, FileId, TraitId, VM};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplId(u32);
@@ -22,7 +22,7 @@ pub struct ImplData {
     pub pos: Position,
     pub trait_id: Option<TraitId>,
     pub class_id: Option<ClassId>,
-    pub methods: Vec<FctId>,
+    pub methods: Vec<PrcdId>,
 }
 
 impl ImplData {
@@ -34,7 +34,7 @@ impl ImplData {
         self.class_id.expect("trait_id not initialized yet.")
     }
 
-    pub fn find_implements(&self, vm: &VM, fct_id: FctId) -> Option<FctId> {
+    pub fn find_implements(&self, vm: &VM, fct_id: PrcdId) -> Option<PrcdId> {
         for &mtd_id in &self.methods {
             let mtd = vm.fcts.idx(mtd_id);
             let mtd = mtd.read();

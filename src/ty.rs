@@ -3,7 +3,7 @@ use std::ops::Index;
 use std::sync::Arc;
 
 use crate::vm::VM;
-use crate::vm::{ClassId, EnumId, FctId, StructId, TraitId};
+use crate::vm::{ClassId, EnumId, PrcdId, StructId, TraitId};
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum BuiltinType {
@@ -46,7 +46,7 @@ pub enum BuiltinType {
     Trait(TraitId),
 
     // some type variable
-    FctTypeParam(FctId, TypeListId),
+    PrcdTypeParam(PrcdId, TypeListId),
     ClassTypeParam(ClassId, TypeListId),
 
     // some lambda
@@ -109,7 +109,7 @@ impl BuiltinType {
     pub fn is_type_param(&self) -> bool {
         match self {
             &BuiltinType::ClassTypeParam(_, _) => true,
-            &BuiltinType::FctTypeParam(_, _) => true,
+            &BuiltinType::PrcdTypeParam(_, _) => true,
             _ => false,
         }
     }
@@ -160,7 +160,7 @@ impl BuiltinType {
     pub fn contains_type_param(&self, vm: &VM) -> bool {
         match self {
             &BuiltinType::ClassTypeParam(_, _) => true,
-            &BuiltinType::FctTypeParam(_, _) => true,
+            &BuiltinType::PrcdTypeParam(_, _) => true,
 
             &BuiltinType::Class(_, list_id) => {
                 let params = vm.lists.lock().get(list_id);
@@ -275,7 +275,7 @@ impl BuiltinType {
                 vm.interner.str(cls.type_params[id.idx()].name).to_string()
             }
 
-            BuiltinType::FctTypeParam(fid, id) => {
+            BuiltinType::PrcdTypeParam(fid, id) => {
                 let fct = vm.fcts.idx(fid);
                 let fct = fct.read();
                 vm.interner.str(fct.type_params[id.idx()].name).to_string()
@@ -361,7 +361,7 @@ impl BuiltinType {
             BuiltinType::Enum(_) => *self == other,
 
             BuiltinType::ClassTypeParam(_, _) => *self == other,
-            BuiltinType::FctTypeParam(_, _) => *self == other,
+            BuiltinType::PrcdTypeParam(_, _) => *self == other,
 
             BuiltinType::Lambda(_) => {
                 // for now expect the exact same params and return types
@@ -399,7 +399,7 @@ impl BuiltinType {
             }
             BuiltinType::Struct(_, _) => panic!("no machine mode for struct."),
             BuiltinType::Trait(_) => MachineMode::Ptr,
-            BuiltinType::ClassTypeParam(_, _) | BuiltinType::FctTypeParam(_, _) => {
+            BuiltinType::ClassTypeParam(_, _) | BuiltinType::PrcdTypeParam(_, _) => {
                 panic!("no machine mode for type variable.")
             }
             BuiltinType::Tuple(_) => unimplemented!(),
@@ -435,7 +435,7 @@ impl BuiltinType {
             BuiltinType::Lambda(_) | BuiltinType::Struct(_, _) | BuiltinType::Tuple(_) => {
                 unimplemented!()
             }
-            BuiltinType::ClassTypeParam(_, _) | BuiltinType::FctTypeParam(_, _) => false,
+            BuiltinType::ClassTypeParam(_, _) | BuiltinType::PrcdTypeParam(_, _) => false,
         }
     }
 }
@@ -635,6 +635,6 @@ pub struct LambdaType {
 
 #[derive(Debug, Copy, Clone)]
 pub enum TypeParamId {
-    Fct(TypeListId),
+    Prcd(TypeListId),
     Class(TypeListId),
 }

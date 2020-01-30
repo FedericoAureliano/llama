@@ -96,7 +96,7 @@ impl<'a> Parser<'a> {
         let modifiers = self.parse_annotations()?;
 
         match self.token.kind {
-            TokenKind::Fun => {
+            TokenKind::Procedure => {
                 self.restrict_modifiers(
                     &modifiers,
                     &[
@@ -107,8 +107,8 @@ impl<'a> Parser<'a> {
                         Modifier::Cannon,
                     ],
                 )?;
-                let fct = self.parse_function(&modifiers)?;
-                elements.push(ElemFunction(fct));
+                let fct = self.parse_procedure(&modifiers)?;
+                elements.push(ElemProcedure(fct));
             }
 
             TokenKind::Class => {
@@ -149,7 +149,7 @@ impl<'a> Parser<'a> {
                 elements.push(ElemModule(module));
             }
 
-            TokenKind::Let | TokenKind::Var => {
+            TokenKind::Input | TokenKind::Var => {
                 self.ban_modifiers(&modifiers)?;
                 self.parse_global(elements)?;
             }
@@ -239,7 +239,7 @@ impl<'a> Parser<'a> {
             let mods = &[Modifier::Static, Modifier::Internal, Modifier::Cannon];
             self.restrict_modifiers(&modifiers, mods)?;
 
-            methods.push(self.parse_function(&modifiers)?);
+            methods.push(self.parse_procedure(&modifiers)?);
         }
 
         self.expect_token(TokenKind::RBrace)?;
@@ -307,7 +307,7 @@ impl<'a> Parser<'a> {
             let mods = &[Modifier::Static];
             self.restrict_modifiers(&modifiers, mods)?;
 
-            methods.push(self.parse_function(&modifiers)?);
+            methods.push(self.parse_procedure(&modifiers)?);
         }
 
         self.expect_token(TokenKind::RBrace)?;
@@ -439,6 +439,7 @@ impl<'a> Parser<'a> {
             pos: pos,
             inputs: Vec::new(),
             vars: Vec::new(),
+            functions: Vec::new(),
             procedures: Vec::new(),
             invs: Vec::new(),
             init: None,
@@ -533,7 +534,7 @@ impl<'a> Parser<'a> {
         cls: &mut Class,
     ) -> Result<ConstructorParam, ParseErrorAndPos> {
         let start = self.token.span.start();
-        let field = self.token.is(TokenKind::Var) || self.token.is(TokenKind::Let);
+        let field = self.token.is(TokenKind::Var) || self.token.is(TokenKind::Input);
         let reassignable = self.token.is(TokenKind::Var);
 
         // consume var and let
@@ -583,7 +584,7 @@ impl<'a> Parser<'a> {
             let modifiers = self.parse_annotations()?;
 
             match self.token.kind {
-                TokenKind::Fun => {
+                TokenKind::Procedure => {
                     let mods = &[
                         Modifier::Abstract,
                         Modifier::Internal,
@@ -596,11 +597,11 @@ impl<'a> Parser<'a> {
                     ];
                     self.restrict_modifiers(&modifiers, mods)?;
 
-                    let fct = self.parse_function(&modifiers)?;
+                    let fct = self.parse_procedure(&modifiers)?;
                     cls.methods.push(fct);
                 }
 
-                TokenKind::Var | TokenKind::Let => {
+                TokenKind::Var | TokenKind::Input => {
                     self.ban_modifiers(&modifiers)?;
 
                     let field = self.parse_field()?;
@@ -629,27 +630,37 @@ impl<'a> Parser<'a> {
             let modifiers = self.parse_annotations()?;
 
             match self.token.kind {
-                TokenKind::Fun => {
-                    let mods = &[
-                        Modifier::Abstract,
-                        Modifier::Internal,
-                        Modifier::Open,
-                        Modifier::Override,
-                        Modifier::Final,
-                        Modifier::Pub,
-                        Modifier::Static,
-                    ];
-                    self.restrict_modifiers(&modifiers, mods)?;
+                TokenKind::Input => {
+                    self.ban_modifiers(&modifiers)?;
 
-                    let fct = self.parse_function(&modifiers)?;
-                    module.procedures.push(fct);
+                    let field = self.parse_field()?;
+                    module.inputs.push(field);
                 }
 
-                TokenKind::Var | TokenKind::Let => {
+                TokenKind::Var => {
                     self.ban_modifiers(&modifiers)?;
 
                     let field = self.parse_field()?;
                     module.vars.push(field);
+                }
+
+                TokenKind::Function => {
+                    let mods = &[
+                        Modifier::Synthesis,
+                    ];
+                    self.restrict_modifiers(&modifiers, mods)?;
+
+                    let fct = self.parse_function(&modifiers)?;
+                    module.functions.push(fct);
+                }
+
+                TokenKind::Procedure => {
+                    let mods = &[
+                    ];
+                    self.restrict_modifiers(&modifiers, mods)?;
+
+                    let fct = self.parse_procedure(&modifiers)?;
+                    module.procedures.push(fct);
                 }
 
                 TokenKind::Invariant => {
@@ -702,6 +713,7 @@ impl<'a> Parser<'a> {
             self.advance_token()?;
             let ident = self.expect_identifier()?;
             let modifier = match self.interner.str(ident).as_str() {
+                "synthesis" => Modifier::Synthesis,
                 "abstract" => Modifier::Abstract,
                 "open" => Modifier::Open,
                 "override" => Modifier::Override,
@@ -763,7 +775,7 @@ impl<'a> Parser<'a> {
 
             true
         } else {
-            self.expect_token(TokenKind::Let)?;
+            self.expect_token(TokenKind::Input)?;
 
             false
         };
@@ -814,18 +826,18 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_function(&mut self, modifiers: &Modifiers) -> Result<Function, ParseErrorAndPos> {
+    fn parse_procedure(&mut self, modifiers: &Modifiers) -> Result<Procedure, ParseErrorAndPos> {
         let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Fun)?.position;
+        let pos = self.expect_token(TokenKind::Procedure)?.position;
         let ident = self.expect_identifier()?;
         let type_params = self.parse_type_params()?;
-        let params = self.parse_function_params()?;
+        let params = self.parse_procedure_params()?;
         let throws = self.parse_throws()?;
-        let return_type = self.parse_function_type()?;
-        let block = self.parse_function_block()?;
+        let return_type = self.parse_procedure_type()?;
+        let block = self.parse_procedure_block()?;
         let span = self.span_from(start);
 
-        Ok(Function {
+        Ok(Procedure {
             id: self.generate_id(),
             name: ident,
             pos,
@@ -851,10 +863,32 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_function(&mut self, modifiers: &Modifiers) -> Result<Function, ParseErrorAndPos> {
+        let start = self.token.span.start();
+        let pos = self.expect_token(TokenKind::Function)?.position;
+        let ident = self.expect_identifier()?;
+        let type_params = self.parse_type_params()?;
+        let params = self.parse_procedure_params()?;
+        let return_type = self.parse_procedure_type()?;
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(Function {
+            id: self.generate_id(),
+            name: ident,
+            pos,
+            span,
+            to_synthesize: modifiers.contains(Modifier::Synthesis),
+            params,
+            return_type,
+            type_params,
+        })
+    }
+
     fn parse_init(&mut self) -> Result<Init, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Init)?.position;
-        let block = self.parse_function_block()?;
+        let block = self.parse_procedure_block()?;
         let span = self.span_from(start);
 
         Ok(Init {
@@ -868,7 +902,7 @@ impl<'a> Parser<'a> {
     fn parse_next(&mut self) -> Result<Next, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Next)?.position;
-        let block = self.parse_function_block()?;
+        let block = self.parse_procedure_block()?;
         let span = self.span_from(start);
 
         Ok(Next {
@@ -882,7 +916,7 @@ impl<'a> Parser<'a> {
     fn parse_control(&mut self) -> Result<Control, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Control)?.position;
-        let block = self.parse_function_block()?;
+        let block = self.parse_procedure_block()?;
         let span = self.span_from(start);
 
         Ok(Control {
@@ -903,14 +937,14 @@ impl<'a> Parser<'a> {
         Ok(false)
     }
 
-    fn parse_function_params(&mut self) -> Result<Vec<Param>, ParseErrorAndPos> {
+    fn parse_procedure_params(&mut self) -> Result<Vec<Param>, ParseErrorAndPos> {
         self.expect_token(TokenKind::LParen)?;
         self.param_idx = 0;
 
         let params = self.parse_comma_list(TokenKind::RParen, |p| {
             p.param_idx += 1;
 
-            p.parse_function_param()
+            p.parse_procedure_param()
         })?;
 
         Ok(params)
@@ -949,7 +983,7 @@ impl<'a> Parser<'a> {
         Ok(data)
     }
 
-    fn parse_function_param(&mut self) -> Result<Param, ParseErrorAndPos> {
+    fn parse_procedure_param(&mut self) -> Result<Param, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.token.position;
 
@@ -978,8 +1012,8 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_function_type(&mut self) -> Result<Option<Type>, ParseErrorAndPos> {
-        if self.token.is(TokenKind::Arrow) {
+    fn parse_procedure_type(&mut self) -> Result<Option<Type>, ParseErrorAndPos> {
+        if self.token.is(TokenKind::Colon) {
             self.advance_token()?;
             let ty = self.parse_type()?;
 
@@ -989,13 +1023,13 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_function_block(&mut self) -> Result<Option<Box<ExprBlockType>>, ParseErrorAndPos> {
+    fn parse_procedure_block(&mut self) -> Result<Option<Box<ExprBlockType>>, ParseErrorAndPos> {
         if self.token.is(TokenKind::Semicolon) {
             self.advance_token()?;
 
             Ok(None)
         } else if self.token.is(TokenKind::Eq) {
-            let expr = self.parse_function_block_expression()?;
+            let expr = self.parse_procedure_block_expression()?;
 
             Ok(Some(expr))
         } else {
@@ -1009,7 +1043,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_function_block_expression(&mut self) -> Result<Box<ExprBlockType>, ParseErrorAndPos> {
+    fn parse_procedure_block_expression(&mut self) -> Result<Box<ExprBlockType>, ParseErrorAndPos> {
         self.expect_token(TokenKind::Eq)?;
 
         match self.token.kind {
@@ -1219,12 +1253,12 @@ impl<'a> Parser<'a> {
 
     fn parse_var(&mut self) -> StmtResult {
         let start = self.token.span.start();
-        let reassignable = if self.token.is(TokenKind::Let) {
+        let reassignable = if self.token.is(TokenKind::Input) {
             false
         } else if self.token.is(TokenKind::Var) {
             true
         } else {
-            panic!("let or var expected")
+            panic!("input or var expected")
         };
 
         let pos = self.advance_token()?.position;
@@ -1320,7 +1354,7 @@ impl<'a> Parser<'a> {
 
     fn parse_statement_or_expression(&mut self) -> StmtOrExprResult {
         match self.token.kind {
-            TokenKind::Let | TokenKind::Var => Ok(StmtOrExpr::Stmt(self.parse_var()?)),
+            TokenKind::Input | TokenKind::Var => Ok(StmtOrExpr::Stmt(self.parse_var()?)),
             TokenKind::While => Ok(StmtOrExpr::Stmt(self.parse_while()?)),
             TokenKind::Loop => Ok(StmtOrExpr::Stmt(self.parse_loop()?)),
             TokenKind::Break => Ok(StmtOrExpr::Stmt(self.parse_break()?)),
@@ -2022,7 +2056,7 @@ impl<'a> Parser<'a> {
             self.param_idx = 0;
             self.parse_comma_list(TokenKind::BitOr, |p| {
                 p.param_idx += 1;
-                p.parse_function_param()
+                p.parse_procedure_param()
             })?
         };
 
@@ -2101,7 +2135,7 @@ impl<'a> Parser<'a> {
         cls: &mut Class,
         ctor_params: Vec<ConstructorParam>,
         use_cannon: bool,
-    ) -> Function {
+    ) -> Procedure {
         let builder = Builder::new(self.id_generator);
         let mut block = builder.build_block();
 

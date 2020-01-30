@@ -7,12 +7,12 @@ use crate::parser::interner::Name;
 
 use crate::ty::{BuiltinType, TypeList};
 use crate::vm::{
-    ClassId, ConstId, EnumId, FctId, FieldId, GlobalId, Intrinsic, StructId, TraitId, TypeParamId,
+    ClassId, ConstId, EnumId, PrcdId, FieldId, GlobalId, Intrinsic, StructId, TraitId, TypeParamId,
 };
 
 #[derive(Debug)]
-pub struct FctSrc {
-    pub map_calls: NodeMap<Arc<CallType>>, // maps function call to FctId
+pub struct PrcdSrc {
+    pub map_calls: NodeMap<Arc<CallType>>, // maps function call to PrcdId
     pub map_idents: NodeMap<IdentType>,
     pub map_tys: NodeMap<BuiltinType>,
     pub map_vars: NodeMap<VarId>,
@@ -22,13 +22,13 @@ pub struct FctSrc {
 
     pub always_returns: bool, // true if function is always exited via return statement
     // false if function execution could reach the closing } of this function
-    // pub specializations: RwLock<HashMap<(TypeList, TypeList), JitFctId>>,
+    // pub specializations: RwLock<HashMap<(TypeList, TypeList), JitPrcdId>>,
     pub vars: Vec<Var>, // variables in functions
 }
 
-impl Clone for FctSrc {
-    fn clone(&self) -> FctSrc {
-        FctSrc {
+impl Clone for PrcdSrc {
+    fn clone(&self) -> PrcdSrc {
+        PrcdSrc {
             map_calls: self.map_calls.clone(),
             map_idents: self.map_idents.clone(),
             map_tys: self.map_tys.clone(),
@@ -43,9 +43,9 @@ impl Clone for FctSrc {
     }
 }
 
-impl FctSrc {
-    pub fn new() -> FctSrc {
-        FctSrc {
+impl PrcdSrc {
+    pub fn new() -> PrcdSrc {
+        PrcdSrc {
             map_calls: NodeMap::new(),
             map_idents: NodeMap::new(),
             map_tys: NodeMap::new(),
@@ -148,10 +148,10 @@ pub enum IdentType {
     Const(ConstId),
 
     // name of function
-    Fct(FctId),
+    Prcd(PrcdId),
 
     // name of function with type params: some_fct[T1, T2, ...]
-    FctType(FctId, TypeList),
+    PrcdType(PrcdId, TypeList),
 
     // name of class
     Class(ClassId),
@@ -223,8 +223,8 @@ impl IdentType {
 
     pub fn is_fct(&self) -> bool {
         match *self {
-            IdentType::Fct(_) => true,
-            IdentType::FctType(_, _) => true,
+            IdentType::Prcd(_) => true,
+            IdentType::PrcdType(_, _) => true,
             _ => false,
         }
     }
@@ -232,32 +232,32 @@ impl IdentType {
 
 #[derive(Debug, Clone)]
 pub struct ForTypeInfo {
-    pub make_iterator: FctId,
-    pub next: FctId,
-    pub has_next: FctId,
+    pub make_iterator: PrcdId,
+    pub next: PrcdId,
+    pub has_next: PrcdId,
     pub iterator_type: BuiltinType,
 }
 
 #[derive(Debug, Clone)]
 pub enum CallType {
     // Function calls, e.g. fct(<args>) or Class::static_fct(<args>)
-    Fct(FctId, TypeList, TypeList),
+    Prcd(PrcdId, TypeList, TypeList),
 
     // Direct or virtual method calls, e.g. obj.method(<args>)
-    Method(BuiltinType, FctId, TypeList),
+    Method(BuiltinType, PrcdId, TypeList),
 
     // Constructor call Class(<args>)
-    CtorNew(BuiltinType, FctId),
-    Ctor(BuiltinType, FctId),
+    CtorNew(BuiltinType, PrcdId),
+    Ctor(BuiltinType, PrcdId),
 
     // Invoke on expression, e.g. <expr>(<args>)
-    Expr(BuiltinType, FctId),
+    Expr(BuiltinType, PrcdId),
 
     // Invoke method on trait object
-    Trait(TraitId, FctId),
+    Trait(TraitId, PrcdId),
 
     // Invoke static trait method on type param, e.g. T::method()
-    TraitStatic(TypeParamId, TraitId, FctId),
+    TraitStatic(TypeParamId, TraitId, PrcdId),
 
     Intrinsic(Intrinsic),
 }
@@ -298,9 +298,9 @@ impl CallType {
         }
     }
 
-    pub fn fct_id(&self) -> Option<FctId> {
+    pub fn fct_id(&self) -> Option<PrcdId> {
         match *self {
-            CallType::Fct(fctid, _, _) => Some(fctid),
+            CallType::Prcd(fctid, _, _) => Some(fctid),
             CallType::Method(_, fctid, _) => Some(fctid),
             CallType::CtorNew(_, fctid) => Some(fctid),
             CallType::Ctor(_, fctid) => Some(fctid),

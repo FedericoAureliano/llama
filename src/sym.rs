@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use self::Sym::*;
 
 use crate::ty::TypeListId;
-use crate::vm::{ClassId, ConstId, EnumId, FctId, FieldId, GlobalId, StructId, TraitId, VarId};
+use crate::vm::{ClassId, ConstId, EnumId, PrcdId, FieldId, GlobalId, StructId, TraitId, VarId};
 use crate::parser::interner::Name;
 
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl SymTable {
         self.get(name).and_then(|n| n.to_const())
     }
 
-    pub fn get_fct(&self, name: Name) -> Option<FctId> {
+    pub fn get_fct(&self, name: Name) -> Option<PrcdId> {
         self.get(name).and_then(|n| n.to_fct())
     }
 
@@ -109,14 +109,14 @@ impl SymLevel {
 #[derive(Debug, Clone)]
 pub enum Sym {
     SymField(FieldId),
-    SymFct(FctId),
+    SymPrcd(PrcdId),
     SymVar(VarId),
     SymClass(ClassId),
     SymStruct(StructId),
     SymTrait(TraitId),
     SymGlobal(GlobalId),
     SymClassTypeParam(ClassId, TypeListId),
-    SymFctTypeParam(FctId, TypeListId),
+    SymPrcdTypeParam(PrcdId, TypeListId),
     SymConst(ConstId),
     SymEnum(EnumId),
 }
@@ -124,14 +124,14 @@ pub enum Sym {
 impl Sym {
     pub fn is_fct(&self) -> bool {
         match *self {
-            SymFct(_) => true,
+            SymPrcd(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_fct(&self) -> Option<FctId> {
+    pub fn to_fct(&self) -> Option<PrcdId> {
         match *self {
-            SymFct(id) => Some(id),
+            SymPrcd(id) => Some(id),
             _ => None,
         }
     }
@@ -209,7 +209,7 @@ impl Sym {
     pub fn is_type_param(&self) -> bool {
         match *self {
             SymClassTypeParam(_, _) => true,
-            SymFctTypeParam(_, _) => true,
+            SymPrcdTypeParam(_, _) => true,
             _ => false,
         }
     }

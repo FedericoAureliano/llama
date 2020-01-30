@@ -22,13 +22,13 @@ pub fn dump(ast: &Ast, interner: &Interner) {
     dumper.dump_ast(ast);
 }
 
-pub fn dump_fct(fct: &Function, interner: &Interner) {
+pub fn dump_prcd(fct: &Procedure, interner: &Interner) {
     let mut dumper = AstDumper {
         interner,
         indent: 0,
     };
 
-    dumper.dump_fct(fct);
+    dumper.dump_prcd(fct);
 }
 
 pub fn dump_expr<'a>(expr: &'a Expr, interner: &'a Interner) {
@@ -68,7 +68,7 @@ impl<'a> AstDumper<'a> {
     fn dump_file(&mut self, f: &File) {
         for el in &f.elements {
             match *el {
-                ElemFunction(ref fct) => self.dump_fct(fct),
+                ElemProcedure(ref fct) => self.dump_prcd(fct),
                 ElemClass(ref cls) => self.dump_class(cls),
                 ElemStruct(ref struc) => self.dump_struct(struc),
                 ElemTrait(ref xtrait) => self.dump_trait(xtrait),
@@ -147,7 +147,7 @@ impl<'a> AstDumper<'a> {
             d.dump_type(&ximpl.class_type);
 
             for mtd in &ximpl.methods {
-                d.dump_fct(mtd);
+                d.dump_prcd(mtd);
             }
         });
     }
@@ -183,7 +183,7 @@ impl<'a> AstDumper<'a> {
         dump!(self, "trait {} @ {} {}", self.str(t.name), t.pos, t.id);
         self.indent(|d| {
             for m in &t.methods {
-                d.dump_fct(m);
+                d.dump_prcd(m);
             }
         });
     }
@@ -219,13 +219,13 @@ impl<'a> AstDumper<'a> {
 
             dump!(d, "constructor");
             if let Some(ctor) = &cls.constructor {
-                d.indent(|d| d.dump_fct(ctor));
+                d.indent(|d| d.dump_prcd(ctor));
             }
 
             dump!(d, "methods");
             d.indent(|d| {
                 for mtd in &cls.methods {
-                    d.dump_fct(mtd);
+                    d.dump_prcd(mtd);
                 }
             });
         });
@@ -255,10 +255,17 @@ impl<'a> AstDumper<'a> {
                 }
             });
 
+            dump!(d, "functions");
+            d.indent(|d| {
+                for mtd in &modu.functions {
+                    d.dump_function(mtd);
+                }
+            });
+
             dump!(d, "procedures");
             d.indent(|d| {
                 for mtd in &modu.procedures {
-                    d.dump_fct(mtd);
+                    d.dump_prcd(mtd);
                 }
             });
 
@@ -269,9 +276,20 @@ impl<'a> AstDumper<'a> {
                 }
             });
 
-            // TODO: dump init
-            // TODO: dump next
-            // TODO: dump control
+            dump!(d, "init");
+            if let Some(ref init) = &modu.init {
+                d.indent(|d| d.dump_init(init));
+            }
+            
+            dump!(d, "next");
+            if let Some(ref next) = &modu.next {
+                d.indent(|d| d.dump_next(next));
+            }
+            
+            dump!(d, "control");
+            if let Some(ref control) = &modu.control {
+                d.indent(|d| d.dump_control(control));
+            }
         });
     }
 
@@ -296,7 +314,32 @@ impl<'a> AstDumper<'a> {
         );
     }
 
-    fn dump_fct(&mut self, fct: &Function) {
+    fn dump_function(&mut self, fct: &Function) {
+        dump!(self, "fct {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
+
+        self.indent(|d| {
+            dump!(d, "to synthesize = {}", fct.to_synthesize);
+            dump!(d, "params");
+            d.indent(|d| {
+                if fct.params.is_empty() {
+                    dump!(d, "no params");
+                } else {
+                    for param in &fct.params {
+                        d.dump_param(param);
+                    }
+                }
+            });
+
+            dump!(d, "returns");
+            if let Some(ref ty) = fct.return_type {
+                d.indent(|d| d.dump_type(ty));
+            } else {
+                d.indent(|d| dump!(d, "<no return type>"))
+            }
+        });
+    }
+
+    fn dump_prcd(&mut self, fct: &Procedure) {
         dump!(self, "fct {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {

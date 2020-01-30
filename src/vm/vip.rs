@@ -1,7 +1,7 @@
 use parking_lot::Mutex;
 
 use crate::ty::{BuiltinType};
-use crate::vm::{ClassDefId, ClassId, FctId, TraitId};
+use crate::vm::{ClassDefId, ClassId, PrcdId, TraitId};
 
 #[derive(Debug)]
 pub struct KnownElements {
@@ -48,9 +48,9 @@ pub struct KnownClasses {
 
 #[derive(Debug)]
 pub struct KnownFunctions {
-    pub string_buffer_empty: FctId,
-    pub string_buffer_append: FctId,
-    pub string_buffer_to_string: FctId,
+    pub string_buffer_empty: PrcdId,
+    pub string_buffer_append: PrcdId,
+    pub string_buffer_to_string: PrcdId,
 }
 
 impl KnownElements {

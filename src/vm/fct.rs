@@ -8,36 +8,36 @@ use crate::parser::lexer::position::Position;
 
 use crate::ty::BuiltinType;
 use crate::utils::GrowableVec;
-use crate::vm::{ClassId, FctSrc, FileId, ImplId, TraitId, TypeParam, VM};
+use crate::vm::{ClassId, PrcdSrc, FileId, ImplId, TraitId, TypeParam, VM};
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
-pub struct FctId(pub usize);
+pub struct PrcdId(pub usize);
 
-impl FctId {
+impl PrcdId {
     pub fn to_usize(self) -> usize {
         self.0
     }
 }
 
-impl From<usize> for FctId {
-    fn from(id: usize) -> FctId {
-        FctId(id)
+impl From<usize> for PrcdId {
+    fn from(id: usize) -> PrcdId {
+        PrcdId(id)
     }
 }
 
-impl<'ast> GrowableVec<RwLock<Fct<'ast>>> {
-    pub fn idx(&self, index: FctId) -> Arc<RwLock<Fct<'ast>>> {
+impl<'ast> GrowableVec<RwLock<Prcd<'ast>>> {
+    pub fn idx(&self, index: PrcdId) -> Arc<RwLock<Prcd<'ast>>> {
         self.idx_usize(index.0)
     }
 }
 
 #[derive(Debug)]
-pub struct Fct<'ast> {
-    pub id: FctId,
-    pub ast: &'ast ast::Function,
+pub struct Prcd<'ast> {
+    pub id: PrcdId,
+    pub ast: &'ast ast::Procedure,
     pub pos: Position,
     pub name: Name,
-    pub parent: FctParent,
+    pub parent: PrcdParent,
     pub has_open: bool,
     pub has_override: bool,
     pub has_final: bool,
@@ -49,50 +49,50 @@ pub struct Fct<'ast> {
     pub use_cannon: bool,
     pub internal: bool,
     pub internal_resolved: bool,
-    pub overrides: Option<FctId>,
+    pub overrides: Option<PrcdId>,
     pub param_types: Vec<BuiltinType>,
     pub return_type: BuiltinType,
     pub is_constructor: bool,
     pub file: FileId,
 
     pub vtable_index: Option<u32>,
-    pub impl_for: Option<FctId>,
+    pub impl_for: Option<PrcdId>,
     pub initialized: bool,
     pub throws: bool,
 
     pub type_params: Vec<TypeParam>,
-    pub kind: FctKind,
+    pub kind: PrcdKind,
 }
 
-impl<'ast> Fct<'ast> {
+impl<'ast> Prcd<'ast> {
     pub fn is_virtual(&self) -> bool {
         (self.has_open || self.has_override) && !self.has_final
     }
 
     pub fn in_class(&self) -> bool {
         match self.parent {
-            FctParent::Class(_) => true,
+            PrcdParent::Class(_) => true,
             _ => false,
         }
     }
 
     pub fn in_trait(&self) -> bool {
         match self.parent {
-            FctParent::Trait(_) => true,
+            PrcdParent::Trait(_) => true,
             _ => false,
         }
     }
 
     pub fn cls_id(&self) -> ClassId {
         match self.parent {
-            FctParent::Class(clsid) => clsid,
+            PrcdParent::Class(clsid) => clsid,
             _ => unreachable!(),
         }
     }
 
     pub fn trait_id(&self) -> TraitId {
         match self.parent {
-            FctParent::Trait(traitid) => traitid,
+            PrcdParent::Trait(traitid) => traitid,
             _ => unreachable!(),
         }
     }
@@ -100,7 +100,7 @@ impl<'ast> Fct<'ast> {
     pub fn full_name(&self, vm: &VM) -> String {
         let mut repr = String::new();
 
-        if let FctParent::Class(class_id) = self.parent {
+        if let PrcdParent::Class(class_id) = self.parent {
             let cls = vm.classes.idx(class_id);
             let cls = cls.read();
             let name = cls.name;
@@ -154,7 +154,7 @@ impl<'ast> Fct<'ast> {
 
     pub fn is_src(&self) -> bool {
         match self.kind {
-            FctKind::Source(_) => true,
+            PrcdKind::Source(_) => true,
             _ => false,
         }
     }
@@ -163,16 +163,16 @@ impl<'ast> Fct<'ast> {
         self.ast.pos
     }
 
-    pub fn src(&self) -> &RwLock<FctSrc> {
+    pub fn src(&self) -> &RwLock<PrcdSrc> {
         match self.kind {
-            FctKind::Source(ref src) => src,
+            PrcdKind::Source(ref src) => src,
             _ => panic!("source expected"),
         }
     }
 
     pub fn has_self(&self) -> bool {
         match self.parent {
-            FctParent::Class(_) | FctParent::Trait(_) | FctParent::Impl(_) => !self.is_static,
+            PrcdParent::Class(_) | PrcdParent::Trait(_) | PrcdParent::Impl(_) => !self.is_static,
 
             _ => false,
         }
@@ -192,62 +192,62 @@ impl<'ast> Fct<'ast> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum FctParent {
+pub enum PrcdParent {
     Class(ClassId),
     Trait(TraitId),
     Impl(ImplId),
     None,
 }
 
-impl FctParent {
+impl PrcdParent {
     pub fn is_none(&self) -> bool {
         match self {
-            &FctParent::None => true,
+            &PrcdParent::None => true,
             _ => false,
         }
     }
 
     pub fn is_trait(&self) -> bool {
         match self {
-            &FctParent::Trait(_) => true,
+            &PrcdParent::Trait(_) => true,
             _ => false,
         }
     }
 
     pub fn cls_id(&self) -> ClassId {
         match self {
-            &FctParent::Class(id) => id,
+            &PrcdParent::Class(id) => id,
             _ => unreachable!(),
         }
     }
 }
 
 #[derive(Debug)]
-pub enum FctKind {
-    Source(RwLock<FctSrc>),
+pub enum PrcdKind {
+    Source(RwLock<PrcdSrc>),
     Definition,
     // Native(Address),
     Builtin(Intrinsic),
 }
 
-impl FctKind {
+impl PrcdKind {
     pub fn is_src(&self) -> bool {
         match *self {
-            FctKind::Source(_) => true,
+            PrcdKind::Source(_) => true,
             _ => false,
         }
     }
 
     pub fn is_intrinsic(&self) -> bool {
         match *self {
-            FctKind::Builtin(_) => true,
+            PrcdKind::Builtin(_) => true,
             _ => false,
         }
     }
 
     pub fn is_definition(&self) -> bool {
         match *self {
-            FctKind::Definition => true,
+            PrcdKind::Definition => true,
             _ => false,
         }
     }

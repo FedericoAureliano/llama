@@ -20,16 +20,16 @@ impl Ast {
     }
 
     #[cfg(test)]
-    pub fn fct0(&self) -> &Function {
+    pub fn fct0(&self) -> &Procedure {
         self.files.last().unwrap().elements[0]
-            .to_function()
+            .to_procedure()
             .unwrap()
     }
 
     #[cfg(test)]
-    pub fn fct(&self, index: usize) -> &Function {
+    pub fn fct(&self, index: usize) -> &Procedure {
         self.files.last().unwrap().elements[index]
-            .to_function()
+            .to_procedure()
             .unwrap()
     }
 
@@ -107,7 +107,7 @@ impl fmt::Display for NodeId {
 
 #[derive(Clone, Debug)]
 pub enum Elem {
-    ElemFunction(Function),
+    ElemProcedure(Procedure),
     ElemClass(Class),
     ElemStruct(Struct),
     ElemTrait(Trait),
@@ -124,7 +124,7 @@ pub enum Elem {
 impl Elem {
     pub fn id(&self) -> NodeId {
         match self {
-            &ElemFunction(ref fct) => fct.id,
+            &ElemProcedure(ref fct) => fct.id,
             &ElemClass(ref class) => class.id,
             &ElemStruct(ref s) => s.id,
             &ElemTrait(ref t) => t.id,
@@ -139,9 +139,9 @@ impl Elem {
         }
     }
 
-    pub fn to_function(&self) -> Option<&Function> {
+    pub fn to_procedure(&self) -> Option<&Procedure> {
         match self {
-            &ElemFunction(ref fct) => Some(fct),
+            &ElemProcedure(ref fct) => Some(fct),
             _ => None,
         }
     }
@@ -426,7 +426,7 @@ pub struct Impl {
     pub type_params: Option<Vec<TypeParam>>,
     pub trait_type: Option<Type>,
     pub class_type: Type,
-    pub methods: Vec<Function>,
+    pub methods: Vec<Procedure>,
 }
 
 #[derive(Clone, Debug)]
@@ -435,7 +435,7 @@ pub struct Trait {
     pub name: Name,
     pub pos: Position,
     pub span: Span,
-    pub methods: Vec<Function>,
+    pub methods: Vec<Procedure>,
 }
 
 #[derive(Clone, Debug)]
@@ -450,9 +450,9 @@ pub struct Class {
     pub internal: bool,
     pub has_constructor: bool,
 
-    pub constructor: Option<Function>,
+    pub constructor: Option<Procedure>,
     pub fields: Vec<Field>,
-    pub methods: Vec<Function>,
+    pub methods: Vec<Procedure>,
     pub initializers: Vec<Box<Stmt>>,
     pub type_params: Option<Vec<TypeParam>>,
 }
@@ -465,7 +465,8 @@ pub struct Module {
 
     pub inputs: Vec<Field>,
     pub vars: Vec<Field>,
-    pub procedures: Vec<Function>,
+    pub functions: Vec<Function>,
+    pub procedures: Vec<Procedure>,
 
     pub invs: Vec<Spec>,
 
@@ -546,6 +547,18 @@ pub struct Function {
     pub name: Name,
     pub pos: Position,
     pub span: Span,
+    pub to_synthesize: bool,
+    pub params: Vec<Param>,
+    pub return_type: Option<Type>,
+    pub type_params: Option<Vec<TypeParam>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Procedure {
+    pub id: NodeId,
+    pub name: Name,
+    pub pos: Position,
+    pub span: Span,
     pub method: bool,
     pub has_open: bool,
     pub has_override: bool,
@@ -568,7 +581,7 @@ pub struct Function {
     pub type_params: Option<Vec<TypeParam>>,
 }
 
-impl Function {
+impl Procedure {
     pub fn block(&self) -> &ExprBlockType {
         self.block.as_ref().unwrap()
     }
@@ -608,6 +621,7 @@ pub struct ModifierElement {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Modifier {
+    Synthesis,
     Abstract,
     Override,
     Open,
@@ -624,6 +638,7 @@ pub enum Modifier {
 impl Modifier {
     pub fn name(&self) -> &'static str {
         match *self {
+            Modifier::Synthesis => "synthesis",
             Modifier::Abstract => "abstract",
             Modifier::Open => "open",
             Modifier::Override => "override",
