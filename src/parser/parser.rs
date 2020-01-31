@@ -128,7 +128,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_const(&mut self) -> Result<Const, ParseErrorAndPos> {
+    fn parse_const(&mut self) -> Result<Constant, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Const)?.position;
         let name = self.expect_identifier()?;
@@ -139,7 +139,7 @@ impl<'a> Parser<'a> {
         self.expect_semicolon()?;
         let span = self.span_from(start);
 
-        Ok(Const {
+        Ok(Constant {
             id: self.generate_id(),
             pos,
             span,
@@ -157,12 +157,12 @@ impl<'a> Parser<'a> {
             name: ident,
             pos: pos,
             inputs: Vec::new(),
-            vars: Vec::new(),
-            consts: Vec::new(),
+            variables: Vec::new(),
+            constants: Vec::new(),
             enums: Vec::new(),
             functions: Vec::new(),
             procedures: Vec::new(),
-            invs: Vec::new(),
+            invariants: Vec::new(),
             init: None,
             next: None,
             control: None,
@@ -243,13 +243,13 @@ impl<'a> Parser<'a> {
                     self.ban_modifiers(&modifiers)?;
 
                     let field = self.parse_field()?;
-                    module.vars.push(field);
+                    module.variables.push(field);
                 }
 
                 TokenKind::Const => {
                     self.ban_modifiers(&modifiers)?;
                     let xconst = self.parse_const()?;
-                    module.consts.push(xconst);
+                    module.constants.push(xconst);
                 }
     
                 TokenKind::Enum => {
@@ -281,7 +281,7 @@ impl<'a> Parser<'a> {
                     self.ban_modifiers(&modifiers)?;
 
                     let spec = self.parse_invariant()?;
-                    module.invs.push(spec);
+                    module.invariants.push(spec);
                 }
 
                 TokenKind::Init => {
@@ -409,7 +409,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_invariant(&mut self) -> Result<Spec, ParseErrorAndPos> {
+    fn parse_invariant(&mut self) -> Result<Invariant, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.token.position;
         self.expect_token(TokenKind::Invariant)?;
@@ -420,7 +420,7 @@ impl<'a> Parser<'a> {
         self.expect_semicolon()?;
         let span = self.span_from(start);
 
-        Ok(Spec {
+        Ok(Invariant {
             id: self.generate_id(),
             name,
             pos,
@@ -688,7 +688,7 @@ impl<'a> Parser<'a> {
                     let ret = Box::new(self.parse_type()?);
                     let span = self.span_from(start);
 
-                    Ok(Type::create_fct(
+                    Ok(Type::create_lambda(
                         self.generate_id(),
                         token.position,
                         span,
@@ -818,7 +818,6 @@ impl<'a> Parser<'a> {
         match self.token.kind {
             TokenKind::Input | TokenKind::Var => Ok(StmtOrExpr::Stmt(self.parse_var()?)),
             TokenKind::While => Ok(StmtOrExpr::Stmt(self.parse_while()?)),
-            TokenKind::Loop => Ok(StmtOrExpr::Stmt(self.parse_loop()?)),
             TokenKind::Break => Ok(StmtOrExpr::Stmt(self.parse_break()?)),
             TokenKind::Continue => Ok(StmtOrExpr::Stmt(self.parse_continue()?)),
             TokenKind::Return => Ok(StmtOrExpr::Stmt(self.parse_return()?)),
@@ -910,20 +909,6 @@ impl<'a> Parser<'a> {
             pos,
             span,
             expr,
-            block,
-        )))
-    }
-
-    fn parse_loop(&mut self) -> StmtResult {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Loop)?.position;
-        let block = self.parse_block_stmt()?;
-        let span = self.span_from(start);
-
-        Ok(Box::new(Stmt::create_loop(
-            self.generate_id(),
-            pos,
-            span,
             block,
         )))
     }

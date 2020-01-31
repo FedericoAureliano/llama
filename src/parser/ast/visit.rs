@@ -12,22 +12,6 @@ pub trait Visitor<'v>: Sized {
         walk_file(self, a);
     }
 
-    fn visit_global(&mut self, g: &'v Global) {
-        walk_global(self, g);
-    }
-
-    fn visit_trait(&mut self, t: &'v Trait) {
-        walk_trait(self, t);
-    }
-
-    fn visit_impl(&mut self, i: &'v Impl) {
-        walk_impl(self, i);
-    }
-
-    fn visit_class(&mut self, c: &'v Class) {
-        walk_class(self, c);
-    }
-
     fn visit_module(&mut self, m: &'v Module) {
         walk_module(self, m);
     }
@@ -44,36 +28,28 @@ pub trait Visitor<'v>: Sized {
         walk_control(self, m);
     }
 
-    fn visit_struct(&mut self, s: &'v Struct) {
-        walk_struct(self, s);
-    }
-
-    fn visit_const(&mut self, c: &'v Const) {
-        walk_const(self, c);
-    }
-
     fn visit_enum(&mut self, e: &'v Enum) {
         walk_enum(self, e);
     }
 
-    fn visit_struct_field(&mut self, f: &'v StructField) {
-        walk_struct_field(self, f);
-    }
-
     fn visit_ctor(&mut self, m: &'v Procedure) {
-        walk_prcd(self, m);
+        walk_procedure(self, m);
     }
 
     fn visit_method(&mut self, m: &'v Procedure) {
-        walk_prcd(self, m);
+        walk_procedure(self, m);
     }
 
     fn visit_field(&mut self, p: &'v Field) {
         walk_field(self, p);
     }
 
+    fn visit_constant(&mut self, p: &'v Constant) {
+        walk_constant(self, p);
+    }
+
     fn visit_prcd(&mut self, f: &'v Procedure) {
-        walk_prcd(self, f);
+        walk_procedure(self, f);
     }
 
     fn visit_param(&mut self, p: &'v Param) {
@@ -103,13 +79,8 @@ pub fn walk_file<'v, V: Visitor<'v>>(v: &mut V, f: &'v File) {
     for e in &f.elements {
         match *e {
             ElemProcedure(ref f) => v.visit_prcd(f),
-            ElemClass(ref c) => v.visit_class(c),
-            ElemStruct(ref s) => v.visit_struct(s),
-            ElemTrait(ref t) => v.visit_trait(t),
-            ElemImpl(ref i) => v.visit_impl(i),
             ElemModule(ref m) => v.visit_module(m),
-            ElemGlobal(ref g) => v.visit_global(g),
-            ElemConst(ref c) => v.visit_const(c),
+            ElemConstant(ref m) => v.visit_constant(m),
             ElemEnum(ref e) => v.visit_enum(e),
             ElemInit(ref e) => v.visit_init(e),
             ElemNext(ref e) => v.visit_next(e),
@@ -118,46 +89,12 @@ pub fn walk_file<'v, V: Visitor<'v>>(v: &mut V, f: &'v File) {
     }
 }
 
-pub fn walk_global<'v, V: Visitor<'v>>(v: &mut V, g: &'v Global) {
-    v.visit_type(&g.data_type);
-
-    if let Some(ref expr) = g.expr {
-        v.visit_expr(expr);
-    }
-}
-
-pub fn walk_trait<'v, V: Visitor<'v>>(v: &mut V, t: &'v Trait) {
-    for m in &t.methods {
-        v.visit_method(m);
-    }
-}
-
-pub fn walk_impl<'v, V: Visitor<'v>>(v: &mut V, i: &'v Impl) {
-    for m in &i.methods {
-        v.visit_method(m);
-    }
-}
-
-pub fn walk_class<'v, V: Visitor<'v>>(v: &mut V, c: &'v Class) {
-    for f in &c.fields {
-        v.visit_field(f);
-    }
-
-    if let Some(ctor) = &c.constructor {
-        v.visit_ctor(ctor);
-    }
-
-    for m in &c.methods {
-        v.visit_method(m);
-    }
-}
-
 pub fn walk_module<'v, V: Visitor<'v>>(v: &mut V, m: &'v Module) {
     for f in &m.inputs {
         v.visit_field(f);
     }
 
-    for f in &m.vars {
+    for f in &m.variables {
         v.visit_field(f);
     }
 
@@ -207,7 +144,7 @@ pub fn walk_control<'v, V: Visitor<'v>>(v: &mut V, m: &'v Control) {
     }
 }
 
-pub fn walk_const<'v, V: Visitor<'v>>(v: &mut V, c: &'v Const) {
+pub fn walk_constant<'v, V: Visitor<'v>>(v: &mut V, c: &'v Constant) {
     v.visit_type(&c.data_type);
     v.visit_expr(&c.expr);
 }
@@ -216,21 +153,11 @@ pub fn walk_enum<'v, V: Visitor<'v>>(_v: &mut V, _e: &'v Enum) {
     // nothing to do
 }
 
-pub fn walk_struct<'v, V: Visitor<'v>>(v: &mut V, s: &'v Struct) {
-    for f in &s.fields {
-        v.visit_struct_field(f);
-    }
-}
-
-pub fn walk_struct_field<'v, V: Visitor<'v>>(v: &mut V, f: &'v StructField) {
-    v.visit_type(&f.data_type);
-}
-
 pub fn walk_field<'v, V: Visitor<'v>>(v: &mut V, f: &'v Field) {
     v.visit_type(&f.data_type);
 }
 
-pub fn walk_prcd<'v, V: Visitor<'v>>(v: &mut V, f: &'v Procedure) {
+pub fn walk_procedure<'v, V: Visitor<'v>>(v: &mut V, f: &'v Procedure) {
     for p in &f.params {
         v.visit_param(p);
     }
@@ -256,7 +183,6 @@ pub fn walk_param<'v, V: Visitor<'v>>(v: &mut V, p: &'v Param) {
 
 pub fn walk_type<'v, V: Visitor<'v>>(v: &mut V, t: &'v Type) {
     match *t {
-        TypeSelf(_) => {}
         TypeBasic(_) => {}
         TypeTuple(ref tuple) => {
             for ty in &tuple.subtypes {
@@ -296,10 +222,6 @@ pub fn walk_stmt<'v, V: Visitor<'v>>(v: &mut V, s: &'v Stmt) {
             v.visit_stmt(&value.block);
         }
 
-        StmtLoop(ref value) => {
-            v.visit_stmt(&value.block);
-        }
-
         StmtExpr(ref value) => {
             v.visit_expr(&value.expr);
         }
@@ -309,28 +231,6 @@ pub fn walk_stmt<'v, V: Visitor<'v>>(v: &mut V, s: &'v Stmt) {
                 v.visit_expr(e);
             }
         }
-
-        StmtThrow(ref value) => {
-            v.visit_expr(&value.expr);
-        }
-
-        StmtDefer(ref value) => {
-            v.visit_expr(&value.expr);
-        }
-
-        StmtDo(ref value) => {
-            v.visit_stmt(&value.do_block);
-
-            for catch in &value.catch_blocks {
-                v.visit_type(&catch.data_type);
-                v.visit_stmt(&catch.block);
-            }
-
-            if let Some(ref finally_block) = value.finally_block {
-                v.visit_stmt(&finally_block.block);
-            }
-        }
-
         StmtBreak(_) => {}
         StmtContinue(_) => {}
     }
@@ -384,10 +284,6 @@ pub fn walk_expr<'v, V: Visitor<'v>>(v: &mut V, e: &'v Expr) {
             v.visit_type(&value.data_type);
         }
 
-        ExprTry(ref value) => {
-            v.visit_expr(&value.expr);
-        }
-
         ExprLambda(ref value) => {
             for param in &value.params {
                 v.visit_type(&param.data_type);
@@ -430,15 +326,11 @@ pub fn walk_expr<'v, V: Visitor<'v>>(v: &mut V, e: &'v Expr) {
                 v.visit_expr(expr);
             }
         }
-
-        ExprSuper(_) => {}
-        ExprSelf(_) => {}
         ExprLitChar(_) => {}
         ExprLitInt(_) => {}
         ExprLitFloat(_) => {}
         ExprLitStr(_) => {}
         ExprLitBool(_) => {}
         ExprIdent(_) => {}
-        ExprNil(_) => {}
     }
 }

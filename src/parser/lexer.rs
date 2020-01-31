@@ -565,7 +565,6 @@ fn keywords_in_map() -> HashMap<&'static str, TokenKind> {
     keywords.insert("else", TokenKind::Else);
     keywords.insert("for", TokenKind::For);
     keywords.insert("in", TokenKind::In);
-    keywords.insert("loop", TokenKind::Loop);
     keywords.insert("break", TokenKind::Break);
     keywords.insert("continue", TokenKind::Continue);
     keywords.insert("return", TokenKind::Return);
@@ -1008,11 +1007,10 @@ mod tests {
         assert_tok(&mut reader, TokenKind::If, 1, 22);
         assert_tok(&mut reader, TokenKind::Else, 1, 25);
 
-        let mut reader = Lexer::from_str("loop break continue return nil");
-        assert_tok(&mut reader, TokenKind::Loop, 1, 1);
-        assert_tok(&mut reader, TokenKind::Break, 1, 6);
-        assert_tok(&mut reader, TokenKind::Continue, 1, 12);
-        assert_tok(&mut reader, TokenKind::Return, 1, 21);
+        let mut reader = Lexer::from_str("break continue return nil");
+        assert_tok(&mut reader, TokenKind::Break, 1, 1);
+        assert_tok(&mut reader, TokenKind::Continue, 1, 7);
+        assert_tok(&mut reader, TokenKind::Return, 1, 16);
 
         let mut reader = Lexer::from_str("type enum const");
         assert_tok(&mut reader, TokenKind::Type, 1, 1);

@@ -1,15 +1,9 @@
 pub mod error;
 pub mod parser;
-pub mod semck;
-pub mod sym;
-pub mod ty;
-pub mod utils;
 pub mod vm;
 
 #[cfg(not(test))]
 use std::process::exit;
-
-use std::path::Path;
 
 use crate::vm::VM;
 use crate::parser::ast::{self, Ast};
@@ -65,14 +59,7 @@ pub fn start() -> i32 {
     let mut vm = VM::new(&empty);
 
     let arg_file = args.arg_file.clone();
-    let path = Path::new(&arg_file);
-
-    let res = if path.is_file() {
-        parse_file(&arg_file, &mut vm, &mut ast)
-    } else {
-        println!("file `{}` does not exist.", &arg_file);
-        Err(1)
-    };
+    let res = parse_file(&arg_file, &mut vm, &mut ast);
 
     if let Err(code) = res {
         return code;

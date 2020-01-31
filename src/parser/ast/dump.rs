@@ -22,13 +22,13 @@ pub fn dump(ast: &Ast, interner: &Interner) {
     dumper.dump_ast(ast);
 }
 
-pub fn dump_prcd(fct: &Procedure, interner: &Interner) {
+pub fn dump_procedure(prcd: &Procedure, interner: &Interner) {
     let mut dumper = AstDumper {
         interner,
         indent: 0,
     };
 
-    dumper.dump_prcd(fct);
+    dumper.dump_procedure(prcd);
 }
 
 pub fn dump_expr<'a>(expr: &'a Expr, interner: &'a Interner) {
@@ -68,14 +68,9 @@ impl<'a> AstDumper<'a> {
     fn dump_file(&mut self, f: &File) {
         for el in &f.elements {
             match *el {
-                ElemProcedure(ref fct) => self.dump_prcd(fct),
-                ElemClass(ref cls) => self.dump_class(cls),
-                ElemStruct(ref struc) => self.dump_struct(struc),
-                ElemTrait(ref xtrait) => self.dump_trait(xtrait),
-                ElemImpl(ref ximpl) => self.dump_impl(ximpl),
+                ElemProcedure(ref fct) => self.dump_procedure(fct),
                 ElemModule(ref module) => self.dump_module(module),
-                ElemGlobal(ref global) => self.dump_global(global),
-                ElemConst(ref xconst) => self.dump_const(xconst),
+                ElemConstant(ref xconst) => self.dump_constant(xconst),
                 ElemEnum(ref xenum) => self.dump_enum(xenum),
                 ElemInit(ref xinit) => self.dump_init(xinit),
                 ElemNext(ref xnext) => self.dump_next(xnext),
@@ -84,27 +79,7 @@ impl<'a> AstDumper<'a> {
         }
     }
 
-    fn dump_global(&mut self, global: &Global) {
-        dump!(
-            self,
-            "global {} @ {} {}",
-            self.str(global.name),
-            global.pos,
-            global.id
-        );
-
-        self.indent(|d| {
-            d.dump_type(&global.data_type);
-
-            if let Some(ref expr) = global.expr {
-                d.dump_expr(expr);
-            } else {
-                dump!(d, "<no expr given>");
-            }
-        });
-    }
-
-    fn dump_const(&mut self, xconst: &Const) {
+    fn dump_constant(&mut self, xconst: &Constant) {
         dump!(
             self,
             "const {} @ {} {}",
@@ -135,102 +110,6 @@ impl<'a> AstDumper<'a> {
         });
     }
 
-    fn dump_impl(&mut self, ximpl: &Impl) {
-        dump!(self, "impl @ {} {}", ximpl.pos, ximpl.id);
-
-        self.indent(|d| {
-            if let Some(trait_type) = ximpl.trait_type.as_ref() {
-                d.dump_type(trait_type);
-                dump!(d, "for");
-            }
-
-            d.dump_type(&ximpl.class_type);
-
-            for mtd in &ximpl.methods {
-                d.dump_prcd(mtd);
-            }
-        });
-    }
-
-    fn dump_struct(&mut self, struc: &Struct) {
-        dump!(
-            self,
-            "struct {} @ {} {}",
-            self.str(struc.name),
-            struc.pos,
-            struc.id
-        );
-
-        self.indent(|d| {
-            for field in &struc.fields {
-                d.dump_struct_field(field);
-            }
-        });
-    }
-
-    fn dump_struct_field(&mut self, field: &StructField) {
-        dump!(
-            self,
-            "field {} @ {} {}",
-            self.str(field.name),
-            field.pos,
-            field.id
-        );
-        self.indent(|d| d.dump_type(&field.data_type));
-    }
-
-    fn dump_trait(&mut self, t: &Trait) {
-        dump!(self, "trait {} @ {} {}", self.str(t.name), t.pos, t.id);
-        self.indent(|d| {
-            for m in &t.methods {
-                d.dump_prcd(m);
-            }
-        });
-    }
-
-    fn dump_class(&mut self, cls: &Class) {
-        dump!(
-            self,
-            "class {} @ {} {}",
-            self.str(cls.name),
-            cls.pos,
-            cls.id
-        );
-
-        self.indent(|d| {
-            dump!(d, "open = {}", cls.has_open);
-
-            if let Some(ref parent_class) = cls.parent_class {
-                dump!(
-                    d,
-                    "super (name={} @ {})",
-                    d.str(parent_class.name),
-                    parent_class.pos
-                );
-            }
-
-            dump!(d, "fields");
-
-            d.indent(|d| {
-                for field in &cls.fields {
-                    d.dump_field(field);
-                }
-            });
-
-            dump!(d, "constructor");
-            if let Some(ctor) = &cls.constructor {
-                d.indent(|d| d.dump_prcd(ctor));
-            }
-
-            dump!(d, "methods");
-            d.indent(|d| {
-                for mtd in &cls.methods {
-                    d.dump_prcd(mtd);
-                }
-            });
-        });
-    }
-
     fn dump_module(&mut self, modu: &Module) {
         dump!(
             self,
@@ -241,55 +120,63 @@ impl<'a> AstDumper<'a> {
         );
 
         self.indent(|d| {
-            dump!(d, "inputs");
-            d.indent(|d| {
-                for input in &modu.inputs {
-                    d.dump_field(input);
-                }
-            });
+            if !modu.inputs.is_empty() {
+                dump!(d, "inputs");
+                d.indent(|d| {
+                    for input in &modu.inputs {
+                        d.dump_field(input);
+                    }
+                });
+            };
 
-            dump!(d, "vars");
-            d.indent(|d| {
-                for variable in &modu.vars {
-                    d.dump_field(variable);
-                }
-            });
+            if !modu.variables.is_empty() {
+                dump!(d, "variables");
+                d.indent(|d| {
+                    for var in &modu.variables {
+                        d.dump_field(var);
+                    }
+                });
+            };
 
-            dump!(d, "functions");
-            d.indent(|d| {
-                for mtd in &modu.functions {
-                    d.dump_function(mtd);
-                }
-            });
+            if !modu.functions.is_empty() {
+                dump!(d, "functions");
+                d.indent(|d| {
+                    for func in &modu.functions {
+                        d.dump_function(func);
+                    }
+                });
+            };
 
-            dump!(d, "procedures");
-            d.indent(|d| {
-                for mtd in &modu.procedures {
-                    d.dump_prcd(mtd);
-                }
-            });
+            if !modu.procedures.is_empty() {
+                dump!(d, "procedures");
+                d.indent(|d| {
+                    for prcd in &modu.procedures {
+                        d.dump_procedure(prcd);
+                    }
+                });
+            };
 
-            dump!(d, "invs");
-            d.indent(|d| {
-                for mtd in &modu.invs {
-                    d.dump_spec(mtd);
-                }
-            });
-
-            dump!(d, "init");
             if let Some(ref init) = &modu.init {
-                d.indent(|d| d.dump_init(init));
+                if let Some(ref next) = &modu.next {
+                    dump!(d, "transition system");
+                    d.indent(|d| d.dump_init(init));
+                    d.indent(|d| d.dump_next(next));
+                };
             }
-            
-            dump!(d, "next");
-            if let Some(ref next) = &modu.next {
-                d.indent(|d| d.dump_next(next));
-            }
-            
-            dump!(d, "control");
+
+            if !modu.invariants.is_empty() {
+                dump!(d, "specification");
+                d.indent(|d| {
+                    for prcd in &modu.invariants {
+                        d.dump_invariant(prcd);
+                    }
+                });
+            };
+
             if let Some(ref control) = &modu.control {
+                dump!(d, "proof script");
                 d.indent(|d| d.dump_control(control));
-            }
+            };
         });
     }
 
@@ -304,10 +191,10 @@ impl<'a> AstDumper<'a> {
         self.indent(|d| d.dump_type(&field.data_type));
     }
 
-    fn dump_spec(&mut self, inv: &Spec) {
+    fn dump_invariant(&mut self, inv: &Invariant) {
         dump!(
             self,
-            "inv {} @ {} {}",
+            "invariant {} @ {} {}",
             self.str(inv.name),
             inv.pos,
             inv.id
@@ -315,7 +202,7 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_function(&mut self, fct: &Function) {
-        dump!(self, "fct {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
+        dump!(self, "function {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
             dump!(d, "to synthesize = {}", fct.to_synthesize);
@@ -339,8 +226,8 @@ impl<'a> AstDumper<'a> {
         });
     }
 
-    fn dump_prcd(&mut self, fct: &Procedure) {
-        dump!(self, "fct {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
+    fn dump_procedure(&mut self, fct: &Procedure) {
+        dump!(self, "procedure {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
             dump!(d, "params");
@@ -385,7 +272,7 @@ impl<'a> AstDumper<'a> {
     fn dump_type(&mut self, ty: &Type) {
         dump!(
             self,
-            "type `{}` @ {:?} {}",
+            "type `{}` @ {} {}",
             ty.to_string(self.interner),
             ty.pos(),
             ty.id()
@@ -400,10 +287,6 @@ impl<'a> AstDumper<'a> {
             StmtExpr(ref expr) => self.dump_stmt_expr(expr),
             StmtVar(ref stmt) => self.dump_stmt_var(stmt),
             StmtWhile(ref stmt) => self.dump_stmt_while(stmt),
-            StmtLoop(ref stmt) => self.dump_stmt_loop(stmt),
-            StmtThrow(ref stmt) => self.dump_stmt_throw(stmt),
-            StmtDefer(ref stmt) => self.dump_stmt_defer(stmt),
-            StmtDo(ref stmt) => self.dump_stmt_do(stmt),
             StmtFor(ref stmt) => self.dump_stmt_for(stmt),
         }
     }
@@ -470,13 +353,6 @@ impl<'a> AstDumper<'a> {
         });
     }
 
-    fn dump_stmt_loop(&mut self, stmt: &StmtLoopType) {
-        dump!(self, "loop @ {} {}", stmt.pos, stmt.id);
-        self.indent(|d| {
-            d.dump_stmt(&stmt.block);
-        });
-    }
-
     fn dump_stmt_expr(&mut self, stmt: &StmtExprType) {
         dump!(self, "expr stmt @ {} {}", stmt.pos, stmt.id);
         self.indent(|d| {
@@ -504,34 +380,6 @@ impl<'a> AstDumper<'a> {
         dump!(self, "continue @ {} {}", stmt.pos, stmt.id);
     }
 
-    fn dump_stmt_throw(&mut self, stmt: &StmtThrowType) {
-        dump!(self, "throw @ {} {}", stmt.pos, stmt.id);
-        self.indent(|d| d.dump_expr(&stmt.expr));
-    }
-
-    fn dump_stmt_defer(&mut self, stmt: &StmtDeferType) {
-        dump!(self, "defer @ {} {}", stmt.pos, stmt.id);
-        self.indent(|d| d.dump_expr(&stmt.expr));
-    }
-
-    fn dump_stmt_do(&mut self, stmt: &StmtDoType) {
-        dump!(self, "try @ {} {}", stmt.pos, stmt.id);
-        self.indent(|d| d.dump_stmt(&stmt.do_block));
-
-        for catch in &stmt.catch_blocks {
-            dump!(self, "catch (var={})", self.str(catch.name));
-            self.indent(|d| {
-                d.dump_type(&catch.data_type);
-                d.dump_stmt(&catch.block);
-            });
-        }
-
-        if let Some(ref finally_block) = stmt.finally_block {
-            dump!(self, "finally");
-            self.dump_stmt(&finally_block.block);
-        }
-    }
-
     fn dump_expr(&mut self, expr: &Expr) {
         match *expr {
             ExprUn(ref un) => self.dump_expr_un(un),
@@ -548,11 +396,7 @@ impl<'a> AstDumper<'a> {
             ExprTypeParam(ref expr) => self.dump_expr_type_param(expr),
             ExprPath(ref path) => self.dump_expr_path(path),
             ExprDelegation(ref call) => self.dump_expr_delegation(call),
-            ExprSelf(ref selfie) => self.dump_expr_self(selfie),
-            ExprSuper(ref expr) => self.dump_expr_super(expr),
-            ExprNil(ref nil) => self.dump_expr_nil(nil),
             ExprConv(ref expr) => self.dump_expr_conv(expr),
-            ExprTry(ref expr) => self.dump_expr_try(expr),
             ExprLambda(ref expr) => self.dump_expr_lambda(expr),
             ExprBlock(ref expr) => self.dump_expr_block(expr),
             ExprIf(ref expr) => self.dump_expr_if(expr),
@@ -588,11 +432,8 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_init(&mut self, block: &Init) {
-        dump!(self, "init @ {} {}", block.pos, block.id);
-
         self.indent(|d| {
-            dump!(d, "executes");
-
+            dump!(d, "init @ {} {}", block.pos, block.id);
             if let Some(ref block) = block.block {
                 d.indent(|d| d.dump_expr_block(block));
             }
@@ -600,11 +441,8 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_next(&mut self, block: &Next) {
-        dump!(self, "next @ {} {}", block.pos, block.id);
-
         self.indent(|d| {
-            dump!(d, "executes");
-
+            dump!(d, "next @ {} {}", block.pos, block.id);
             if let Some(ref block) = block.block {
                 d.indent(|d| d.dump_expr_block(block));
             }
@@ -612,11 +450,8 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_control(&mut self, block: &Control) {
-        dump!(self, "control @ {} {}", block.pos, block.id);
-
         self.indent(|d| {
-            dump!(d, "executes");
-
+            dump!(d, "control @ {} {}", block.pos, block.id);
             if let Some(ref block) = block.block {
                 d.indent(|d| d.dump_expr_block(block));
             }
@@ -648,11 +483,6 @@ impl<'a> AstDumper<'a> {
         self.indent(|d| d.dump_type(&expr.data_type));
     }
 
-    fn dump_expr_try(&mut self, expr: &ExprTryType) {
-        dump!(self, "try @ {} {}", expr.pos, expr.id);
-        self.indent(|d| d.dump_expr(&expr.expr));
-    }
-
     fn dump_expr_delegation(&mut self, expr: &ExprDelegationType) {
         dump!(self, "super @ {} {}", expr.pos, expr.id);
 
@@ -661,18 +491,6 @@ impl<'a> AstDumper<'a> {
                 d.dump_expr(arg);
             }
         });
-    }
-
-    fn dump_expr_self(&mut self, selfie: &ExprSelfType) {
-        dump!(self, "self @ {} {}", selfie.pos, selfie.id);
-    }
-
-    fn dump_expr_super(&mut self, selfie: &ExprSuperType) {
-        dump!(self, "super @ {} {}", selfie.pos, selfie.id);
-    }
-
-    fn dump_expr_nil(&mut self, nil: &ExprNilType) {
-        dump!(self, "nil @ {} {}", nil.pos, nil.id);
     }
 
     fn dump_expr_lit_char(&mut self, lit: &ExprLitCharType) {

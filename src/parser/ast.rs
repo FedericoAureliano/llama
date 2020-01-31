@@ -34,40 +34,6 @@ impl Ast {
     }
 
     #[cfg(test)]
-    pub fn cls0(&self) -> &Class {
-        self.files.last().unwrap().elements[0].to_class().unwrap()
-    }
-
-    #[cfg(test)]
-    pub fn cls(&self, index: usize) -> &Class {
-        self.files.last().unwrap().elements[index]
-            .to_class()
-            .unwrap()
-    }
-
-    #[cfg(test)]
-    pub fn struct0(&self) -> &Struct {
-        self.files.last().unwrap().elements[0].to_struct().unwrap()
-    }
-
-    #[cfg(test)]
-    pub fn trai(&self, index: usize) -> &Trait {
-        self.files.last().unwrap().elements[index]
-            .to_trait()
-            .unwrap()
-    }
-
-    #[cfg(test)]
-    pub fn trait0(&self) -> &Trait {
-        self.files.last().unwrap().elements[0].to_trait().unwrap()
-    }
-
-    #[cfg(test)]
-    pub fn impl0(&self) -> &Impl {
-        self.files.last().unwrap().elements[0].to_impl().unwrap()
-    }
-
-    #[cfg(test)]
     pub fn mod0(&self) -> &Module {
         self.files.last().unwrap().elements[0].to_module().unwrap()
     }
@@ -80,13 +46,8 @@ impl Ast {
     }
 
     #[cfg(test)]
-    pub fn global0(&self) -> &Global {
-        self.files.last().unwrap().elements[0].to_global().unwrap()
-    }
-
-    #[cfg(test)]
-    pub fn const0(&self) -> &Const {
-        self.files.last().unwrap().elements[0].to_const().unwrap()
+    pub fn const0(&self) -> &Constant {
+        self.files.last().unwrap().elements[0].to_constant().unwrap()
     }
 }
 
@@ -108,13 +69,8 @@ impl fmt::Display for NodeId {
 #[derive(Clone, Debug)]
 pub enum Elem {
     ElemProcedure(Procedure),
-    ElemClass(Class),
-    ElemStruct(Struct),
-    ElemTrait(Trait),
-    ElemImpl(Impl),
     ElemModule(Module),
-    ElemGlobal(Global),
-    ElemConst(Const),
+    ElemConstant(Constant),
     ElemEnum(Enum),
     ElemInit(Init),
     ElemNext(Next),
@@ -125,13 +81,8 @@ impl Elem {
     pub fn id(&self) -> NodeId {
         match self {
             &ElemProcedure(ref fct) => fct.id,
-            &ElemClass(ref class) => class.id,
-            &ElemStruct(ref s) => s.id,
-            &ElemTrait(ref t) => t.id,
-            &ElemImpl(ref i) => i.id,
             &ElemModule(ref m) => m.id,
-            &ElemGlobal(ref g) => g.id,
-            &ElemConst(ref c) => c.id,
+            &ElemConstant(ref c) => c.id,
             &ElemEnum(ref e) => e.id,
             &ElemInit(ref e) => e.id,
             &ElemNext(ref e) => e.id,
@@ -146,34 +97,6 @@ impl Elem {
         }
     }
 
-    pub fn to_class(&self) -> Option<&Class> {
-        match self {
-            &ElemClass(ref class) => Some(class),
-            _ => None,
-        }
-    }
-
-    pub fn to_struct(&self) -> Option<&Struct> {
-        match self {
-            &ElemStruct(ref struc) => Some(struc),
-            _ => None,
-        }
-    }
-
-    pub fn to_trait(&self) -> Option<&Trait> {
-        match self {
-            &ElemTrait(ref trai) => Some(trai),
-            _ => None,
-        }
-    }
-
-    pub fn to_impl(&self) -> Option<&Impl> {
-        match self {
-            &ElemImpl(ref ximpl) => Some(ximpl),
-            _ => None,
-        }
-    }
-
     pub fn to_module(&self) -> Option<&Module> {
         match self {
             &ElemModule(ref module) => Some(module),
@@ -181,34 +104,16 @@ impl Elem {
         }
     }
 
-    pub fn to_global(&self) -> Option<&Global> {
+    pub fn to_constant(&self) -> Option<&Constant> {
         match self {
-            &ElemGlobal(ref global) => Some(global),
-            _ => None,
-        }
-    }
-
-    pub fn to_const(&self) -> Option<&Const> {
-        match self {
-            &ElemConst(ref konst) => Some(konst),
+            &ElemConstant(ref konst) => Some(konst),
             _ => None,
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct Global {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-    pub name: Name,
-    pub reassignable: bool,
-    pub data_type: Type,
-    pub expr: Option<Box<Expr>>,
-}
-
-#[derive(Clone, Debug)]
-pub struct Const {
+pub struct Constant {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -227,36 +132,10 @@ pub struct Enum {
 }
 
 #[derive(Clone, Debug)]
-pub struct Struct {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-    pub name: Name,
-    pub fields: Vec<StructField>,
-}
-
-#[derive(Clone, Debug)]
-pub struct StructField {
-    pub id: NodeId,
-    pub name: Name,
-    pub pos: Position,
-    pub span: Span,
-    pub data_type: Type,
-}
-
-#[derive(Clone, Debug)]
 pub enum Type {
-    TypeSelf(TypeSelfType),
     TypeBasic(TypeBasicType),
     TypeTuple(TypeTupleType),
     TypeLambda(TypeLambdaType),
-}
-
-#[derive(Clone, Debug)]
-pub struct TypeSelfType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
 }
 
 #[derive(Clone, Debug)]
@@ -289,9 +168,6 @@ pub struct TypeBasicType {
 }
 
 impl Type {
-    pub fn create_self(id: NodeId, pos: Position, span: Span) -> Type {
-        Type::TypeSelf(TypeSelfType { id, pos, span })
-    }
 
     pub fn create_basic(
         id: NodeId,
@@ -309,7 +185,7 @@ impl Type {
         })
     }
 
-    pub fn create_fct(
+    pub fn create_lambda(
         id: NodeId,
         pos: Position,
         span: Span,
@@ -362,7 +238,7 @@ impl Type {
         }
     }
 
-    pub fn to_fct(&self) -> Option<&TypeLambdaType> {
+    pub fn to_lambda(&self) -> Option<&TypeLambdaType> {
         match *self {
             Type::TypeLambda(ref val) => Some(val),
             _ => None,
@@ -379,7 +255,6 @@ impl Type {
 
     pub fn to_string(&self, interner: &Interner) -> String {
         match *self {
-            Type::TypeSelf(_) => "Self".into(),
             Type::TypeBasic(ref val) => format!("{}", *interner.str(val.name)),
 
             Type::TypeTuple(ref val) => {
@@ -400,7 +275,6 @@ impl Type {
 
     pub fn pos(&self) -> Position {
         match *self {
-            Type::TypeSelf(ref val) => val.pos,
             Type::TypeBasic(ref val) => val.pos,
             Type::TypeTuple(ref val) => val.pos,
             Type::TypeLambda(ref val) => val.pos,
@@ -409,52 +283,11 @@ impl Type {
 
     pub fn id(&self) -> NodeId {
         match *self {
-            Type::TypeSelf(ref val) => val.id,
             Type::TypeBasic(ref val) => val.id,
             Type::TypeTuple(ref val) => val.id,
             Type::TypeLambda(ref val) => val.id,
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct Impl {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-
-    pub type_params: Option<Vec<TypeParam>>,
-    pub trait_type: Option<Type>,
-    pub class_type: Type,
-    pub methods: Vec<Procedure>,
-}
-
-#[derive(Clone, Debug)]
-pub struct Trait {
-    pub id: NodeId,
-    pub name: Name,
-    pub pos: Position,
-    pub span: Span,
-    pub methods: Vec<Procedure>,
-}
-
-#[derive(Clone, Debug)]
-pub struct Class {
-    pub id: NodeId,
-    pub name: Name,
-    pub pos: Position,
-    pub span: Span,
-    pub parent_class: Option<ParentClass>,
-    pub has_open: bool,
-    pub is_abstract: bool,
-    pub internal: bool,
-    pub has_constructor: bool,
-
-    pub constructor: Option<Procedure>,
-    pub fields: Vec<Field>,
-    pub methods: Vec<Procedure>,
-    pub initializers: Vec<Box<Stmt>>,
-    pub type_params: Option<Vec<TypeParam>>,
 }
 
 #[derive(Clone, Debug)]
@@ -464,13 +297,13 @@ pub struct Module {
     pub pos: Position,
 
     pub inputs: Vec<Field>,
-    pub vars: Vec<Field>,
-    pub consts: Vec<Const>,
+    pub variables: Vec<Field>,
+    pub constants: Vec<Constant>,
     pub enums: Vec<Enum>,
     pub functions: Vec<Function>,
     pub procedures: Vec<Procedure>,
 
-    pub invs: Vec<Spec>,
+    pub invariants: Vec<Invariant>,
 
     pub init: Option<Box<Init>>,
     pub next: Option<Box<Next>>,
@@ -535,7 +368,7 @@ pub struct Field {
 }
 
 #[derive(Clone, Debug)]
-pub struct Spec {
+pub struct Invariant {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
@@ -634,14 +467,10 @@ pub struct Param {
 pub enum Stmt {
     StmtVar(StmtVarType),
     StmtWhile(StmtWhileType),
-    StmtLoop(StmtLoopType),
     StmtExpr(StmtExprType),
     StmtBreak(StmtBreakType),
     StmtContinue(StmtContinueType),
     StmtReturn(StmtReturnType),
-    StmtThrow(StmtThrowType),
-    StmtDefer(StmtDeferType),
-    StmtDo(StmtDoType),
     StmtFor(StmtForType),
 }
 
@@ -703,16 +532,6 @@ impl Stmt {
         })
     }
 
-    pub fn create_loop(id: NodeId, pos: Position, span: Span, block: Box<Stmt>) -> Stmt {
-        Stmt::StmtLoop(StmtLoopType {
-            id,
-            pos,
-            span,
-
-            block,
-        })
-    }
-
     pub fn create_expr(id: NodeId, pos: Position, span: Span, expr: Box<Expr>) -> Stmt {
         Stmt::StmtExpr(StmtExprType {
             id,
@@ -741,58 +560,15 @@ impl Stmt {
         })
     }
 
-    pub fn create_throw(id: NodeId, pos: Position, span: Span, expr: Box<Expr>) -> Stmt {
-        Stmt::StmtThrow(StmtThrowType {
-            id,
-            pos,
-            span,
-
-            expr,
-        })
-    }
-
-    pub fn create_defer(id: NodeId, pos: Position, span: Span, expr: Box<Expr>) -> Stmt {
-        Stmt::StmtDefer(StmtDeferType {
-            id,
-            pos,
-            span,
-
-            expr,
-        })
-    }
-
-    pub fn create_do(
-        id: NodeId,
-        pos: Position,
-        span: Span,
-        do_block: Box<Stmt>,
-        catch_blocks: Vec<CatchBlock>,
-        finally_block: Option<FinallyBlock>,
-    ) -> Stmt {
-        Stmt::StmtDo(StmtDoType {
-            id,
-            pos,
-            span,
-
-            do_block,
-            catch_blocks,
-            finally_block,
-        })
-    }
-
     pub fn id(&self) -> NodeId {
         match *self {
             Stmt::StmtVar(ref stmt) => stmt.id,
             Stmt::StmtWhile(ref stmt) => stmt.id,
             Stmt::StmtFor(ref stmt) => stmt.id,
-            Stmt::StmtLoop(ref stmt) => stmt.id,
             Stmt::StmtExpr(ref stmt) => stmt.id,
             Stmt::StmtBreak(ref stmt) => stmt.id,
             Stmt::StmtContinue(ref stmt) => stmt.id,
             Stmt::StmtReturn(ref stmt) => stmt.id,
-            Stmt::StmtThrow(ref stmt) => stmt.id,
-            Stmt::StmtDefer(ref stmt) => stmt.id,
-            Stmt::StmtDo(ref stmt) => stmt.id,
         }
     }
 
@@ -801,14 +577,10 @@ impl Stmt {
             Stmt::StmtVar(ref stmt) => stmt.pos,
             Stmt::StmtWhile(ref stmt) => stmt.pos,
             Stmt::StmtFor(ref stmt) => stmt.pos,
-            Stmt::StmtLoop(ref stmt) => stmt.pos,
             Stmt::StmtExpr(ref stmt) => stmt.pos,
             Stmt::StmtBreak(ref stmt) => stmt.pos,
             Stmt::StmtContinue(ref stmt) => stmt.pos,
             Stmt::StmtReturn(ref stmt) => stmt.pos,
-            Stmt::StmtThrow(ref stmt) => stmt.pos,
-            Stmt::StmtDefer(ref stmt) => stmt.pos,
-            Stmt::StmtDo(ref stmt) => stmt.pos,
         }
     }
 
@@ -817,56 +589,10 @@ impl Stmt {
             Stmt::StmtVar(ref stmt) => stmt.span,
             Stmt::StmtWhile(ref stmt) => stmt.span,
             Stmt::StmtFor(ref stmt) => stmt.span,
-            Stmt::StmtLoop(ref stmt) => stmt.span,
             Stmt::StmtExpr(ref stmt) => stmt.span,
             Stmt::StmtBreak(ref stmt) => stmt.span,
             Stmt::StmtContinue(ref stmt) => stmt.span,
             Stmt::StmtReturn(ref stmt) => stmt.span,
-            Stmt::StmtThrow(ref stmt) => stmt.span,
-            Stmt::StmtDefer(ref stmt) => stmt.span,
-            Stmt::StmtDo(ref stmt) => stmt.span,
-        }
-    }
-
-    pub fn to_throw(&self) -> Option<&StmtThrowType> {
-        match *self {
-            Stmt::StmtThrow(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn is_throw(&self) -> bool {
-        match *self {
-            Stmt::StmtThrow(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn to_defer(&self) -> Option<&StmtDeferType> {
-        match *self {
-            Stmt::StmtDefer(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn is_defer(&self) -> bool {
-        match *self {
-            Stmt::StmtDefer(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn to_do(&self) -> Option<&StmtDoType> {
-        match *self {
-            Stmt::StmtDo(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn is_try(&self) -> bool {
-        match *self {
-            Stmt::StmtDo(_) => true,
-            _ => false,
         }
     }
 
@@ -908,20 +634,6 @@ impl Stmt {
     pub fn is_for(&self) -> bool {
         match *self {
             Stmt::StmtFor(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn to_loop(&self) -> Option<&StmtLoopType> {
-        match *self {
-            Stmt::StmtLoop(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn is_loop(&self) -> bool {
-        match *self {
-            Stmt::StmtLoop(_) => true,
             _ => false,
         }
     }
@@ -1014,15 +726,6 @@ pub struct StmtWhileType {
     pub span: Span,
 
     pub cond: Box<Expr>,
-    pub block: Box<Stmt>,
-}
-
-#[derive(Clone, Debug)]
-pub struct StmtLoopType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-
     pub block: Box<Stmt>,
 }
 
@@ -1245,11 +948,7 @@ pub enum Expr {
     ExprPath(ExprPathType),
     ExprDelegation(ExprDelegationType),
     ExprDot(ExprDotType),
-    ExprSelf(ExprSelfType),
-    ExprSuper(ExprSuperType),
-    ExprNil(ExprNilType),
     ExprConv(ExprConvType),
-    ExprTry(ExprTryType),
     ExprLambda(ExprLambdaType),
     ExprBlock(ExprBlockType),
     ExprIf(ExprIfType),
@@ -1301,23 +1000,6 @@ impl Expr {
 
             op,
             opnd,
-        })
-    }
-
-    pub fn create_try(
-        id: NodeId,
-        pos: Position,
-        span: Span,
-        expr: Box<Expr>,
-        mode: TryMode,
-    ) -> Expr {
-        Expr::ExprTry(ExprTryType {
-            id,
-            pos,
-            span,
-
-            expr,
-            mode,
         })
     }
 
@@ -1432,18 +1114,6 @@ impl Expr {
 
             value,
         })
-    }
-
-    pub fn create_this(id: NodeId, pos: Position, span: Span) -> Expr {
-        Expr::ExprSelf(ExprSelfType { id, pos, span })
-    }
-
-    pub fn create_super(id: NodeId, pos: Position, span: Span) -> Expr {
-        Expr::ExprSuper(ExprSuperType { id, pos, span })
-    }
-
-    pub fn create_nil(id: NodeId, pos: Position, span: Span) -> Expr {
-        Expr::ExprNil(ExprNilType { id, pos, span })
     }
 
     pub fn create_ident(
@@ -1772,34 +1442,6 @@ impl Expr {
         }
     }
 
-    pub fn is_this(&self) -> bool {
-        match *self {
-            Expr::ExprSelf(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_super(&self) -> bool {
-        match *self {
-            Expr::ExprSuper(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn to_super(&self) -> Option<&ExprSuperType> {
-        match *self {
-            Expr::ExprSuper(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn is_nil(&self) -> bool {
-        match *self {
-            Expr::ExprNil(_) => true,
-            _ => false,
-        }
-    }
-
     pub fn to_conv(&self) -> Option<&ExprConvType> {
         match *self {
             Expr::ExprConv(ref val) => Some(val),
@@ -1810,20 +1452,6 @@ impl Expr {
     pub fn is_conv(&self) -> bool {
         match *self {
             Expr::ExprConv(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn to_try(&self) -> Option<&ExprTryType> {
-        match *self {
-            Expr::ExprTry(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn is_try(&self) -> bool {
-        match *self {
-            Expr::ExprTry(_) => true,
             _ => false,
         }
     }
@@ -1908,11 +1536,7 @@ impl Expr {
             Expr::ExprPath(ref val) => val.pos,
             Expr::ExprDelegation(ref val) => val.pos,
             Expr::ExprDot(ref val) => val.pos,
-            Expr::ExprSelf(ref val) => val.pos,
-            Expr::ExprSuper(ref val) => val.pos,
-            Expr::ExprNil(ref val) => val.pos,
             Expr::ExprConv(ref val) => val.pos,
-            Expr::ExprTry(ref val) => val.pos,
             Expr::ExprLambda(ref val) => val.pos,
             Expr::ExprBlock(ref val) => val.pos,
             Expr::ExprIf(ref val) => val.pos,
@@ -1936,11 +1560,7 @@ impl Expr {
             Expr::ExprPath(ref val) => val.span,
             Expr::ExprDelegation(ref val) => val.span,
             Expr::ExprDot(ref val) => val.span,
-            Expr::ExprSelf(ref val) => val.span,
-            Expr::ExprSuper(ref val) => val.span,
-            Expr::ExprNil(ref val) => val.span,
             Expr::ExprConv(ref val) => val.span,
-            Expr::ExprTry(ref val) => val.span,
             Expr::ExprLambda(ref val) => val.span,
             Expr::ExprBlock(ref val) => val.span,
             Expr::ExprIf(ref val) => val.span,
@@ -1964,11 +1584,7 @@ impl Expr {
             Expr::ExprPath(ref val) => val.id,
             Expr::ExprDelegation(ref val) => val.id,
             Expr::ExprDot(ref val) => val.id,
-            Expr::ExprSelf(ref val) => val.id,
-            Expr::ExprSuper(ref val) => val.id,
-            Expr::ExprNil(ref val) => val.id,
             Expr::ExprConv(ref val) => val.id,
-            Expr::ExprTry(ref val) => val.id,
             Expr::ExprLambda(ref val) => val.id,
             Expr::ExprBlock(ref val) => val.id,
             Expr::ExprIf(ref val) => val.id,
@@ -2006,54 +1622,6 @@ pub struct ExprConvType {
     pub object: Box<Expr>,
     pub is: bool,
     pub data_type: Box<Type>,
-}
-
-#[derive(Clone, Debug)]
-pub struct ExprTryType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-
-    pub expr: Box<Expr>,
-    pub mode: TryMode,
-}
-
-#[derive(Clone, Debug)]
-pub enum TryMode {
-    Normal,
-    Else(Box<Expr>),
-    Opt,
-    Force,
-}
-
-impl TryMode {
-    pub fn is_normal(&self) -> bool {
-        match self {
-            &TryMode::Normal => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_else(&self) -> bool {
-        match self {
-            &TryMode::Else(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_force(&self) -> bool {
-        match self {
-            &TryMode::Force => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_opt(&self) -> bool {
-        match self {
-            &TryMode::Opt => true,
-            _ => false,
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -2178,28 +1746,6 @@ pub struct Control {
     pub span: Span,
 
     pub block: Option<Box<ExprBlockType>>,
-}
-
-
-#[derive(Clone, Debug)]
-pub struct ExprSuperType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-}
-
-#[derive(Clone, Debug)]
-pub struct ExprSelfType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-}
-
-#[derive(Clone, Debug)]
-pub struct ExprNilType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
 }
 
 #[derive(Clone, Debug)]
