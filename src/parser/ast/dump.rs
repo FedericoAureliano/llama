@@ -70,28 +70,12 @@ impl<'a> AstDumper<'a> {
             match *el {
                 ElemProcedure(ref fct) => self.dump_procedure(fct),
                 ElemModule(ref module) => self.dump_module(module),
-                ElemConstant(ref xconst) => self.dump_constant(xconst),
                 ElemEnum(ref xenum) => self.dump_enum(xenum),
                 ElemInit(ref xinit) => self.dump_init(xinit),
                 ElemNext(ref xnext) => self.dump_next(xnext),
                 ElemControl(ref xcontrol) => self.dump_control(xcontrol),
             }
         }
-    }
-
-    fn dump_constant(&mut self, xconst: &Constant) {
-        dump!(
-            self,
-            "const {} @ {} {}",
-            self.str(xconst.name),
-            xconst.pos,
-            xconst.id
-        );
-
-        self.indent(|d| {
-            d.dump_type(&xconst.data_type);
-            d.dump_expr(&xconst.expr);
-        });
     }
 
     fn dump_enum(&mut self, xenum: &Enum) {
@@ -129,11 +113,29 @@ impl<'a> AstDumper<'a> {
                 });
             };
 
+            if !modu.outputs.is_empty() {
+                dump!(d, "outputs");
+                d.indent(|d| {
+                    for input in &modu.outputs {
+                        d.dump_field(input);
+                    }
+                });
+            };
+
             if !modu.variables.is_empty() {
                 dump!(d, "variables");
                 d.indent(|d| {
                     for var in &modu.variables {
                         d.dump_field(var);
+                    }
+                });
+            };
+
+            if !modu.constants.is_empty() {
+                dump!(d, "constants");
+                d.indent(|d| {
+                    for input in &modu.constants {
+                        d.dump_field(input);
                     }
                 });
             };
@@ -156,13 +158,17 @@ impl<'a> AstDumper<'a> {
                 });
             };
 
+            if modu.init.is_some() || modu.next.is_some() {
+                dump!(d, "transition system");
+            };
+
             if let Some(ref init) = &modu.init {
-                if let Some(ref next) = &modu.next {
-                    dump!(d, "transition system");
-                    d.indent(|d| d.dump_init(init));
-                    d.indent(|d| d.dump_next(next));
-                };
-            }
+                d.indent(|d| d.dump_init(init));
+            };
+
+            if let Some(ref next) = &modu.next {
+                d.indent(|d| d.dump_next(next));
+            };
 
             if !modu.invariants.is_empty() {
                 dump!(d, "specification");
@@ -243,10 +249,8 @@ impl<'a> AstDumper<'a> {
 
             dump!(d, "returns");
 
-            if let Some(ref ty) = fct.return_type {
-                d.indent(|d| d.dump_type(ty));
-            } else {
-                d.indent(|d| dump!(d, "<no return type>"))
+            for p in &fct.returns {
+                d.indent(|d| d.dump_return_param(p));
             }
 
             dump!(d, "executes");
@@ -261,6 +265,19 @@ impl<'a> AstDumper<'a> {
         dump!(
             self,
             "param {} @ {} {}",
+            self.str(param.name),
+            param.pos,
+            param.id
+        );
+
+        self.indent(|d| d.dump_type(&param.data_type));
+    }
+
+
+    fn dump_return_param(&mut self, param: &Param) {
+        dump!(
+            self,
+            "return {} @ {} {}",
             self.str(param.name),
             param.pos,
             param.id

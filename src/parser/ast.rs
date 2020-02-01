@@ -44,11 +44,6 @@ impl Ast {
             .to_module()
             .unwrap()
     }
-
-    #[cfg(test)]
-    pub fn const0(&self) -> &Constant {
-        self.files.last().unwrap().elements[0].to_constant().unwrap()
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -70,7 +65,6 @@ impl fmt::Display for NodeId {
 pub enum Elem {
     ElemProcedure(Procedure),
     ElemModule(Module),
-    ElemConstant(Constant),
     ElemEnum(Enum),
     ElemInit(Init),
     ElemNext(Next),
@@ -82,7 +76,6 @@ impl Elem {
         match self {
             &ElemProcedure(ref fct) => fct.id,
             &ElemModule(ref m) => m.id,
-            &ElemConstant(ref c) => c.id,
             &ElemEnum(ref e) => e.id,
             &ElemInit(ref e) => e.id,
             &ElemNext(ref e) => e.id,
@@ -103,23 +96,6 @@ impl Elem {
             _ => None,
         }
     }
-
-    pub fn to_constant(&self) -> Option<&Constant> {
-        match self {
-            &ElemConstant(ref konst) => Some(konst),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Constant {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-    pub name: Name,
-    pub data_type: Type,
-    pub expr: Box<Expr>,
 }
 
 #[derive(Clone, Debug)]
@@ -297,9 +273,12 @@ pub struct Module {
     pub pos: Position,
 
     pub inputs: Vec<Field>,
+    pub outputs: Vec<Field>,
     pub variables: Vec<Field>,
-    pub constants: Vec<Constant>,
+    pub constants: Vec<Field>,
+
     pub enums: Vec<Enum>,
+    
     pub functions: Vec<Function>,
     pub procedures: Vec<Procedure>,
 
@@ -385,7 +364,6 @@ pub struct Function {
     pub to_synthesize: bool,
     pub params: Vec<Param>,
     pub return_type: Option<Type>,
-    pub type_params: Option<Vec<TypeParam>>,
 }
 
 #[derive(Clone, Debug)]
@@ -396,9 +374,8 @@ pub struct Procedure {
     pub span: Span,
     pub params: Vec<Param>,
 
-    pub return_type: Option<Type>,
+    pub returns: Vec<Param>,
     pub block: Option<Box<ExprBlockType>>,
-    pub type_params: Option<Vec<TypeParam>>,
 }
 
 impl Procedure {

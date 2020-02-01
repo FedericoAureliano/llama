@@ -28,8 +28,7 @@ pub enum TokenKind {
     
     Enum,
     Type,
-    Const,
-    
+
     Underscore,
     
     // Operators
@@ -76,13 +75,26 @@ pub enum TokenKind {
     // UCLID5
     Module,
     Input,
+    Output,
     Var,
+    Const,
     Function,
     Procedure,
     Invariant,
     Init,
     Next,
     Control,
+
+    Havoc,
+    Call,
+
+    Returns,
+    Modifies,
+    Requires,
+    Ensures,
+
+    Assume,
+    Assert,
 }
 
 impl TokenKind {
@@ -110,6 +122,7 @@ impl TokenKind {
             TokenKind::Function => "function",
             TokenKind::Procedure => "procedure",
             TokenKind::Input => "input",
+            TokenKind::Output => "output",
             TokenKind::Var => "var",
             TokenKind::While => "while",
             TokenKind::If => "if",
@@ -176,6 +189,17 @@ impl TokenKind {
             TokenKind::Init => "init",
             TokenKind::Next => "next",
             TokenKind::Control => "control",
+
+            TokenKind::Havoc => "havoc",
+            TokenKind::Call => "call",
+
+            TokenKind::Assume => "assume",
+            TokenKind::Assert => "assert",
+            
+            TokenKind::Returns => "returns",
+            TokenKind::Modifies => "modifies",
+            TokenKind::Requires => "requires",
+            TokenKind::Ensures => "ensures",
         }
     }
 }

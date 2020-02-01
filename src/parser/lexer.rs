@@ -578,6 +578,10 @@ fn keywords_in_map() -> HashMap<&'static str, TokenKind> {
     keywords.insert("init", TokenKind::Init);
     keywords.insert("next", TokenKind::Next);
     keywords.insert("control", TokenKind::Control);
+    keywords.insert("requires", TokenKind::Requires);
+    keywords.insert("ensures", TokenKind::Ensures);
+    keywords.insert("returns", TokenKind::Returns);
+    keywords.insert("modifies", TokenKind::Modifies);
 
     keywords
 }
