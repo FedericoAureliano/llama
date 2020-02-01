@@ -236,25 +236,33 @@ impl<'a> AstDumper<'a> {
         dump!(self, "procedure {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
-            dump!(d, "params");
-            d.indent(|d| {
-                if fct.params.is_empty() {
-                    dump!(d, "no params");
-                } else {
-                    for param in &fct.params {
-                        d.dump_param(param);
-                    }
+
+            if !fct.params.is_empty() {
+                dump!(d, "params");
+                for param in &fct.params {
+                    d.indent(|d| d.dump_param(param));
                 }
-            });
+            };
 
-            dump!(d, "returns");
+            if !fct.returns.is_empty() {
+                dump!(d, "returns");
+                for p in &fct.returns {
+                    d.indent(|d| d.dump_return_param(p));
+                }
+            };
 
-            for p in &fct.returns {
-                d.indent(|d| d.dump_return_param(p));
-            }
+            if !fct.modifies.is_empty() {
+                dump!(d, "modifies");
+                for p in &fct.modifies {
+                    d.indent(|d| dump!(
+                        d,
+                        "{:?}",
+                        p,
+                    ))
+                };
+            };
 
             dump!(d, "executes");
-
             if let Some(ref block) = fct.block {
                 d.indent(|d| d.dump_expr_block(block));
             }

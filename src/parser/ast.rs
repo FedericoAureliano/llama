@@ -375,6 +375,7 @@ pub struct Procedure {
     pub params: Vec<Param>,
 
     pub returns: Vec<Param>,
+    pub modifies: Vec<Name>,
     pub block: Option<Box<ExprBlockType>>,
 }
 

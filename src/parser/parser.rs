@@ -391,11 +391,29 @@ impl<'a> Parser<'a> {
         let ident = self.expect_identifier()?;
         let params = self.parse_procedure_params()?;
 
-        // TODO Fix so that the order doesn't matter
-        let returns = self.parse_procedure_returns()?;
-        // let requires = self.parse_procedure_requires()?;
-        // let modifes = self.parse_procedure_modifes()?;
-        // let ensures = self.parse_procedure_ensures()?;
+        let mut returns = Vec::new();
+        // let mut requires = Vec::new();
+        let mut modifies = Vec::new();
+        // let mut ensures = Vec::new();
+
+        while self.token.is(TokenKind::Returns) || self.token.is(TokenKind::Modifies) {//|| self.token.is(TokenKind::Requires) || self.token.is(TokenKind::Ensures) {
+            let tmp_returns = self.parse_procedure_returns()?;
+            if !tmp_returns.is_empty() {
+                returns = tmp_returns;
+            }
+            // let tmp_requires = self.parse_procedure_requires()?;
+            // if !tmp_requires.is_empty() {
+            //     requires = tmp_requires;
+            // }
+            let tmp_modifies = self.parse_procedure_modifies()?;
+            if !tmp_modifies.is_empty() {
+                modifies = tmp_modifies;
+            }
+            // let tmp_ensures = self.parse_procedure_ensures()?;
+            // if !tmp_ensures.is_empty() {
+            //     ensures = tmp_ensures;
+            // }
+        };
         
         let block = self.parse_procedure_block()?;
         let span = self.span_from(start);
@@ -407,6 +425,7 @@ impl<'a> Parser<'a> {
             span,
             params,
             returns,
+            modifies,
             block,
         })
     }
@@ -574,6 +593,22 @@ impl<'a> Parser<'a> {
         })?;
 
         Ok(params)
+    }
+
+    fn parse_procedure_modifies(&mut self) -> Result<Vec<Name>, ParseErrorAndPos> {
+        if !self.token.is(TokenKind::Modifies) {
+            return Ok(Vec::new())
+        }
+        self.expect_token(TokenKind::Modifies)?;
+        self.param_idx = 0;
+
+        let names = self.parse_comma_list(TokenKind::Semicolon, |p| {
+            p.param_idx += 1;
+
+            p.expect_identifier()
+        })?;
+
+        Ok(names)
     }
 
     fn parse_procedure_block(&mut self) -> Result<Option<Box<ExprBlockType>>, ParseErrorAndPos> {
@@ -791,7 +826,8 @@ impl<'a> Parser<'a> {
 
     fn parse_statement_or_expression(&mut self) -> StmtOrExprResult {
         match self.token.kind {
-            TokenKind::Input | TokenKind::Var => Ok(StmtOrExpr::Stmt(self.parse_var()?)),
+            // TODO deal with havoc, assert, assume, so on 
+            TokenKind::Input | TokenKind::Var | TokenKind::Const => Ok(StmtOrExpr::Stmt(self.parse_var()?)),
             TokenKind::While => Ok(StmtOrExpr::Stmt(self.parse_while()?)),
             TokenKind::Break => Ok(StmtOrExpr::Stmt(self.parse_break()?)),
             TokenKind::Continue => Ok(StmtOrExpr::Stmt(self.parse_continue()?)),
