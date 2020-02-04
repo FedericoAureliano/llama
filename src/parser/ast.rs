@@ -443,6 +443,7 @@ pub struct Param {
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
+    StmtHavoc(StmtHavocType),
     StmtVar(StmtVarType),
     StmtWhile(StmtWhileType),
     StmtExpr(StmtExprType),
@@ -471,6 +472,21 @@ impl Stmt {
             reassignable,
             data_type,
             expr,
+        })
+    }
+
+    pub fn create_havoc(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        name: Name,
+    ) -> Stmt {
+        Stmt::StmtHavoc(StmtHavocType {
+            id,
+            pos,
+            span,
+
+            name,
         })
     }
 
@@ -540,6 +556,7 @@ impl Stmt {
 
     pub fn id(&self) -> NodeId {
         match *self {
+            Stmt::StmtHavoc(ref stmt) => stmt.id,
             Stmt::StmtVar(ref stmt) => stmt.id,
             Stmt::StmtWhile(ref stmt) => stmt.id,
             Stmt::StmtFor(ref stmt) => stmt.id,
@@ -552,6 +569,7 @@ impl Stmt {
 
     pub fn pos(&self) -> Position {
         match *self {
+            Stmt::StmtHavoc(ref stmt) => stmt.pos,
             Stmt::StmtVar(ref stmt) => stmt.pos,
             Stmt::StmtWhile(ref stmt) => stmt.pos,
             Stmt::StmtFor(ref stmt) => stmt.pos,
@@ -564,6 +582,7 @@ impl Stmt {
 
     pub fn span(&self) -> Span {
         match *self {
+            Stmt::StmtHavoc(ref stmt) => stmt.span,
             Stmt::StmtVar(ref stmt) => stmt.span,
             Stmt::StmtWhile(ref stmt) => stmt.span,
             Stmt::StmtFor(ref stmt) => stmt.span,
@@ -671,6 +690,15 @@ impl Stmt {
             _ => false,
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct StmtHavocType {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+
+    pub name: Name,
 }
 
 #[derive(Clone, Debug)]

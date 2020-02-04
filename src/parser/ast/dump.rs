@@ -306,6 +306,7 @@ impl<'a> AstDumper<'a> {
 
     fn dump_stmt(&mut self, stmt: &Stmt) {
         match *stmt {
+            StmtHavoc(ref hav) => self.dump_stmt_havoc(hav),
             StmtReturn(ref ret) => self.dump_stmt_return(ret),
             StmtBreak(ref stmt) => self.dump_stmt_break(stmt),
             StmtContinue(ref stmt) => self.dump_stmt_continue(stmt),
@@ -314,6 +315,16 @@ impl<'a> AstDumper<'a> {
             StmtWhile(ref stmt) => self.dump_stmt_while(stmt),
             StmtFor(ref stmt) => self.dump_stmt_for(stmt),
         }
+    }
+
+    fn dump_stmt_havoc(&mut self, stmt: &StmtHavocType) {
+        dump!(
+            self,
+            "havoc {} @ {} {}",
+            self.str(stmt.name),
+            stmt.pos,
+            stmt.id
+        );
     }
 
     fn dump_stmt_var(&mut self, stmt: &StmtVarType) {

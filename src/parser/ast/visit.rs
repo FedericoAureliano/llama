@@ -196,6 +196,7 @@ pub fn walk_type<'v, V: Visitor<'v>>(v: &mut V, t: &'v Type) {
 
 pub fn walk_stmt<'v, V: Visitor<'v>>(v: &mut V, s: &'v Stmt) {
     match *s {
+        StmtHavoc(_) => {}
         StmtVar(ref value) => {
             if let Some(ref ty) = value.data_type {
                 v.visit_type(ty);

@@ -725,7 +725,8 @@ impl<'a> Parser<'a> {
 
     fn parse_var(&mut self) -> StmtResult {
         let start = self.token.span.start();
-        let reassignable = if self.token.is(TokenKind::Input) {
+        // TODO: how to deal with outputs?
+        let reassignable = if self.token.is(TokenKind::Input) || self.token.is(TokenKind::Const) {
             false
         } else if self.token.is(TokenKind::Var) {
             true
@@ -749,6 +750,23 @@ impl<'a> Parser<'a> {
             reassignable,
             data_type,
             expr,
+        )))
+    }
+
+    fn parse_havoc(&mut self) -> StmtResult {
+        // TODO: multiple names to havoc?
+        let start = self.token.span.start();
+        let pos = self.advance_token()?.position;
+        let ident = self.expect_identifier()?;
+
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(Box::new(Stmt::create_havoc(
+            self.generate_id(),
+            pos,
+            span,
+            ident,
         )))
     }
 
@@ -826,7 +844,9 @@ impl<'a> Parser<'a> {
 
     fn parse_statement_or_expression(&mut self) -> StmtOrExprResult {
         match self.token.kind {
-            // TODO deal with havoc, assert, assume, so on 
+            // TODO deal with call, assert, assume, so on 
+            TokenKind::Havoc => Ok(StmtOrExpr::Stmt(self.parse_havoc()?)),
+            // TokenKind::Call => Ok(StmtOrExpr::Stmt(self.parse_call()?)),
             TokenKind::Input | TokenKind::Var | TokenKind::Const => Ok(StmtOrExpr::Stmt(self.parse_var()?)),
             TokenKind::While => Ok(StmtOrExpr::Stmt(self.parse_while()?)),
             TokenKind::Break => Ok(StmtOrExpr::Stmt(self.parse_break()?)),
