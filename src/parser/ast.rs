@@ -443,6 +443,7 @@ pub struct Param {
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
+    StmtCall(StmtCallType),
     StmtHavoc(StmtHavocType),
     StmtVar(StmtVarType),
     StmtWhile(StmtWhileType),
@@ -487,6 +488,24 @@ impl Stmt {
             span,
 
             name,
+        })
+    }
+
+    pub fn create_call(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        func: Name,
+        rets: Vec<Name>,
+        args: Vec<Box<Expr>>,
+    ) -> Stmt {
+        Stmt::StmtCall(StmtCallType {
+            id,
+            pos,
+            span,
+            func,
+            rets,
+            args,
         })
     }
 
@@ -556,6 +575,7 @@ impl Stmt {
 
     pub fn id(&self) -> NodeId {
         match *self {
+            Stmt::StmtCall(ref stmt) => stmt.id,
             Stmt::StmtHavoc(ref stmt) => stmt.id,
             Stmt::StmtVar(ref stmt) => stmt.id,
             Stmt::StmtWhile(ref stmt) => stmt.id,
@@ -569,6 +589,7 @@ impl Stmt {
 
     pub fn pos(&self) -> Position {
         match *self {
+            Stmt::StmtCall(ref stmt) => stmt.pos,
             Stmt::StmtHavoc(ref stmt) => stmt.pos,
             Stmt::StmtVar(ref stmt) => stmt.pos,
             Stmt::StmtWhile(ref stmt) => stmt.pos,
@@ -582,6 +603,7 @@ impl Stmt {
 
     pub fn span(&self) -> Span {
         match *self {
+            Stmt::StmtCall(ref stmt) => stmt.span,
             Stmt::StmtHavoc(ref stmt) => stmt.span,
             Stmt::StmtVar(ref stmt) => stmt.span,
             Stmt::StmtWhile(ref stmt) => stmt.span,
@@ -691,6 +713,18 @@ impl Stmt {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct StmtCallType {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+
+    pub func: Name,
+    pub rets: Vec<Name>,
+    pub args: Vec<Box<Expr>>,
+}
+
 
 #[derive(Clone, Debug)]
 pub struct StmtHavocType {

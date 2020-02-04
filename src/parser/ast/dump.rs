@@ -189,12 +189,12 @@ impl<'a> AstDumper<'a> {
     fn dump_field(&mut self, field: &Field) {
         dump!(
             self,
-            "field {} @ {} {}",
+            "\"{}\" {} @ {} {}",
+            field.data_type.to_string(self.interner),
             self.str(field.name),
             field.pos,
             field.id
         );
-        self.indent(|d| d.dump_type(&field.data_type));
     }
 
     fn dump_invariant(&mut self, inv: &Invariant) {
@@ -233,7 +233,7 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_procedure(&mut self, fct: &Procedure) {
-        dump!(self, "procedure {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
+        dump!(self, "{} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
 
@@ -252,14 +252,8 @@ impl<'a> AstDumper<'a> {
             };
 
             if !fct.modifies.is_empty() {
-                dump!(d, "modifies");
-                for p in &fct.modifies {
-                    d.indent(|d| dump!(
-                        d,
-                        "{:?}",
-                        p,
-                    ))
-                };
+                let str_mods : Vec<ArcStr> = fct.modifies.iter().map(|p| d.str(*p)).collect();
+                dump!(d, "modifies {}", str_mods.join(", "));
             };
 
             dump!(d, "executes");
@@ -306,6 +300,7 @@ impl<'a> AstDumper<'a> {
 
     fn dump_stmt(&mut self, stmt: &Stmt) {
         match *stmt {
+            StmtCall(ref cal) => self.dump_stmt_call(cal),
             StmtHavoc(ref hav) => self.dump_stmt_havoc(hav),
             StmtReturn(ref ret) => self.dump_stmt_return(ret),
             StmtBreak(ref stmt) => self.dump_stmt_break(stmt),
@@ -315,6 +310,22 @@ impl<'a> AstDumper<'a> {
             StmtWhile(ref stmt) => self.dump_stmt_while(stmt),
             StmtFor(ref stmt) => self.dump_stmt_for(stmt),
         }
+    }
+
+    fn dump_stmt_call(&mut self, stmt: &StmtCallType) {
+        dump!(
+            self,
+            "call {} @ {} {}",
+            self.str(stmt.func),
+            stmt.pos,
+            stmt.id
+        );
+        if !stmt.rets.is_empty() {
+            self.indent(|d| dump!(d, "into {:?}",  stmt.rets));
+        };
+        if !stmt.args.is_empty() {
+            self.indent(|d| dump!(d, "with args {:?}",  stmt.args));
+        };
     }
 
     fn dump_stmt_havoc(&mut self, stmt: &StmtHavocType) {
@@ -581,9 +592,9 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_expr_bin(&mut self, expr: &ExprBinType) {
-        self.indent(|d| d.dump_expr(&expr.rhs));
         dump!(self, "binary {:?} @ {} {}", expr.op, expr.pos, expr.id);
         self.indent(|d| d.dump_expr(&expr.lhs));
+        self.indent(|d| d.dump_expr(&expr.rhs));
     }
 
     fn dump_expr_lambda(&mut self, expr: &ExprLambdaType) {
@@ -613,15 +624,17 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_expr_call(&mut self, expr: &ExprCallType) {
-        dump!(self, "call @ {} {}", expr.pos, expr.id);
+        dump!(self, "function application @ {} {}", expr.pos, expr.id);
 
         self.indent(|d| {
-            dump!(d, "callee");
-            d.indent(|d| d.dump_expr(&expr.callee));
-
-            for arg in &expr.args {
-                d.dump_expr(arg);
-            }
+            d.indent(|d| {
+                d.dump_expr(&expr.callee);
+                d.indent(|d| {
+                    for arg in &expr.args {
+                        d.dump_expr(arg);
+                    }
+                })
+            });
         });
     }
 

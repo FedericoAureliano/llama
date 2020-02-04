@@ -770,6 +770,33 @@ impl<'a> Parser<'a> {
         )))
     }
 
+    fn parse_call(&mut self) -> StmtResult {
+        let start = self.token.span.start();
+        let pos = self.advance_token()?.position;
+        let rets = if self.token.is(TokenKind::LParen) {
+            self.advance_token()?;
+            self.parse_comma_list(TokenKind::RParen, |p| p.expect_identifier())?
+        } else {
+            Vec::new()
+        };
+
+        let func = self.expect_identifier()?;
+        self.expect_token(TokenKind::LParen)?;
+        let args = self.parse_comma_list(TokenKind::RParen, |p| p.parse_expression())?;
+
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(Box::new(Stmt::create_call(
+            self.generate_id(),
+            pos,
+            span,
+            func,
+            rets,
+            args,
+        )))
+    }
+
     fn parse_var_type(&mut self) -> Result<Option<Type>, ParseErrorAndPos> {
         if self.token.is(TokenKind::Colon) {
             self.advance_token()?;
@@ -846,7 +873,7 @@ impl<'a> Parser<'a> {
         match self.token.kind {
             // TODO deal with call, assert, assume, so on 
             TokenKind::Havoc => Ok(StmtOrExpr::Stmt(self.parse_havoc()?)),
-            // TokenKind::Call => Ok(StmtOrExpr::Stmt(self.parse_call()?)),
+            TokenKind::Call => Ok(StmtOrExpr::Stmt(self.parse_call()?)),
             TokenKind::Input | TokenKind::Var | TokenKind::Const => Ok(StmtOrExpr::Stmt(self.parse_var()?)),
             TokenKind::While => Ok(StmtOrExpr::Stmt(self.parse_while()?)),
             TokenKind::Break => Ok(StmtOrExpr::Stmt(self.parse_break()?)),
