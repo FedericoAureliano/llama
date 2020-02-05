@@ -775,7 +775,9 @@ impl<'a> Parser<'a> {
         let pos = self.advance_token()?.position;
         let rets = if self.token.is(TokenKind::LParen) {
             self.advance_token()?;
-            self.parse_comma_list(TokenKind::RParen, |p| p.expect_identifier())?
+            let tmp = self.parse_comma_list(TokenKind::RParen, |p| p.expect_identifier())?;
+            self.expect_token(TokenKind::Eq)?;
+            tmp
         } else {
             Vec::new()
         };

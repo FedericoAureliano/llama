@@ -189,7 +189,7 @@ impl<'a> AstDumper<'a> {
     fn dump_field(&mut self, field: &Field) {
         dump!(
             self,
-            "\"{}\" {} @ {} {}",
+            "`{}` {} @ {} {}",
             field.data_type.to_string(self.interner),
             self.str(field.name),
             field.pos,
@@ -214,9 +214,7 @@ impl<'a> AstDumper<'a> {
             dump!(d, "to synthesize = {}", fct.to_synthesize);
             dump!(d, "params");
             d.indent(|d| {
-                if fct.params.is_empty() {
-                    dump!(d, "no params");
-                } else {
+                if !fct.params.is_empty() {
                     for param in &fct.params {
                         d.dump_param(param);
                     }
@@ -226,9 +224,7 @@ impl<'a> AstDumper<'a> {
             dump!(d, "returns");
             if let Some(ref ty) = fct.return_type {
                 d.indent(|d| d.dump_type(ty));
-            } else {
-                d.indent(|d| dump!(d, "<no return type>"))
-            }
+            };
         });
     }
 
@@ -247,7 +243,7 @@ impl<'a> AstDumper<'a> {
             if !fct.returns.is_empty() {
                 dump!(d, "returns");
                 for p in &fct.returns {
-                    d.indent(|d| d.dump_return_param(p));
+                    d.indent(|d| d.dump_param(p));
                 }
             };
 
@@ -266,26 +262,12 @@ impl<'a> AstDumper<'a> {
     fn dump_param(&mut self, param: &Param) {
         dump!(
             self,
-            "param {} @ {} {}",
+            "`{}` {} @ {} {}",
+            param.data_type.to_string(self.interner),
             self.str(param.name),
             param.pos,
             param.id
         );
-
-        self.indent(|d| d.dump_type(&param.data_type));
-    }
-
-
-    fn dump_return_param(&mut self, param: &Param) {
-        dump!(
-            self,
-            "return {} @ {} {}",
-            self.str(param.name),
-            param.pos,
-            param.id
-        );
-
-        self.indent(|d| d.dump_type(&param.data_type));
     }
 
     fn dump_type(&mut self, ty: &Type) {
@@ -321,10 +303,18 @@ impl<'a> AstDumper<'a> {
             stmt.id
         );
         if !stmt.rets.is_empty() {
-            self.indent(|d| dump!(d, "into {:?}",  stmt.rets));
+            let str_rets : Vec<ArcStr> = stmt.rets.iter().map(|p| self.str(*p)).collect();
+            self.indent(|d| dump!(d, "into {}",  str_rets.join(", ")));
         };
         if !stmt.args.is_empty() {
-            self.indent(|d| dump!(d, "with args {:?}",  stmt.args));
+            self.indent(|d| { 
+                dump!(d, "with args");
+                d.indent(|d| {
+                    for arg in &stmt.args {
+                        d.dump_expr(arg);
+                    }
+                });
+            });
         };
     }
 
