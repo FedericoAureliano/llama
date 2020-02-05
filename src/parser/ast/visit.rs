@@ -196,7 +196,9 @@ pub fn walk_type<'v, V: Visitor<'v>>(v: &mut V, t: &'v Type) {
 
 pub fn walk_stmt<'v, V: Visitor<'v>>(v: &mut V, s: &'v Stmt) {
     match *s {
-        // TODO: how to walk call and havoc?
+        // TODO: how to walk call, havoc, assume, assert?
+        StmtAssert(_) => {}
+        StmtAssume(_) => {}
         StmtCall(_) => {}
         StmtHavoc(_) => {}
         StmtVar(ref value) => {

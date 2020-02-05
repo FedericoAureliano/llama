@@ -371,7 +371,7 @@ impl<'a> Parser<'a> {
         self.expect_token(TokenKind::Invariant)?;
         let name = self.expect_identifier()?;
         self.expect_token(TokenKind::Colon)?;
-        let expr = Some(self.parse_expression()?);
+        let expr = self.parse_expression()?;
 
         self.expect_semicolon()?;
         let span = self.span_from(start);
@@ -723,6 +723,38 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn parse_assert(&mut self) -> StmtResult {
+        let start = self.token.span.start();
+        let pos = self.expect_token(TokenKind::Assert)?.position;
+        let expr = self.parse_expression()?;
+
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(Box::new(Stmt::create_assert(
+            self.generate_id(),
+            pos,
+            span,
+            expr,
+        )))
+    }
+
+    fn parse_assume(&mut self) -> StmtResult {
+        let start = self.token.span.start();
+        let pos = self.expect_token(TokenKind::Assume)?.position;
+        let expr = self.parse_expression()?;
+
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(Box::new(Stmt::create_assume(
+            self.generate_id(),
+            pos,
+            span,
+            expr,
+        )))
+    }
+
     fn parse_var(&mut self) -> StmtResult {
         let start = self.token.span.start();
         // TODO: how to deal with outputs?
@@ -874,6 +906,8 @@ impl<'a> Parser<'a> {
     fn parse_statement_or_expression(&mut self) -> StmtOrExprResult {
         match self.token.kind {
             // TODO deal with call, assert, assume, so on 
+            TokenKind::Assert => Ok(StmtOrExpr::Stmt(self.parse_assert()?)),
+            TokenKind::Assume => Ok(StmtOrExpr::Stmt(self.parse_assume()?)),
             TokenKind::Havoc => Ok(StmtOrExpr::Stmt(self.parse_havoc()?)),
             TokenKind::Call => Ok(StmtOrExpr::Stmt(self.parse_call()?)),
             TokenKind::Input | TokenKind::Var | TokenKind::Const => Ok(StmtOrExpr::Stmt(self.parse_var()?)),

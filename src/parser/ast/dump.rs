@@ -180,8 +180,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if let Some(ref control) = &modu.control {
-                dump!(d, "proof script");
-                d.indent(|d| d.dump_control(control));
+                d.dump_control(control);
             };
         });
     }
@@ -200,15 +199,19 @@ impl<'a> AstDumper<'a> {
     fn dump_invariant(&mut self, inv: &Invariant) {
         dump!(
             self,
-            "invariant {} @ {} {}",
+            "{} @ {} {}",
             self.str(inv.name),
             inv.pos,
             inv.id
         );
+        self.indent(|d| {
+            let ref expr = inv.expr;
+            d.dump_expr(expr);
+        });
     }
 
     fn dump_function(&mut self, fct: &Function) {
-        dump!(self, "function {} @ {} {}", self.str(fct.name), fct.pos, fct.id);
+        dump!(self, "{} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
             dump!(d, "to synthesize = {}", fct.to_synthesize);
@@ -221,9 +224,11 @@ impl<'a> AstDumper<'a> {
                 }
             });
 
-            dump!(d, "returns");
             if let Some(ref ty) = fct.return_type {
-                d.indent(|d| d.dump_type(ty));
+                let name = ty.to_string(d.interner);
+                let pos = ty.pos();
+                let id = ty.id();
+                dump!(d, "returns `{}` @ {} {}", name, pos, id);
             };
         });
     }
@@ -282,6 +287,8 @@ impl<'a> AstDumper<'a> {
 
     fn dump_stmt(&mut self, stmt: &Stmt) {
         match *stmt {
+            StmtAssert(ref ass) => self.dump_stmt_assert(ass),
+            StmtAssume(ref ass) => self.dump_stmt_assume(ass),
             StmtCall(ref cal) => self.dump_stmt_call(cal),
             StmtHavoc(ref hav) => self.dump_stmt_havoc(hav),
             StmtReturn(ref ret) => self.dump_stmt_return(ret),
@@ -355,6 +362,34 @@ impl<'a> AstDumper<'a> {
                     dump!(d, "<no expr given>");
                 }
             });
+        });
+    }
+
+    fn dump_stmt_assume(&mut self, stmt: &StmtAssumeType) {
+        dump!(
+            self,
+            "assume @ {} {}",
+            stmt.pos,
+            stmt.id
+        );
+
+        self.indent(|d| {
+            let ref expr = stmt.expr;
+            d.dump_expr(expr);
+        });
+    }
+
+    fn dump_stmt_assert(&mut self, stmt: &StmtAssertType) {
+        dump!(
+            self,
+            "assert @ {} {}",
+            stmt.pos,
+            stmt.id
+        );
+
+        self.indent(|d| {
+            let ref expr = stmt.expr;
+            d.dump_expr(expr);
         });
     }
 
@@ -487,12 +522,10 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_control(&mut self, block: &Control) {
-        self.indent(|d| {
-            dump!(d, "control @ {} {}", block.pos, block.id);
-            if let Some(ref block) = block.block {
-                d.indent(|d| d.dump_expr_block(block));
-            }
-        });
+        dump!(self, "control @ {} {}", block.pos, block.id);
+        if let Some(ref block) = block.block {
+            self.indent(|d| d.dump_expr_block(block));
+        }
     }
 
     fn dump_expr_if(&mut self, expr: &ExprIfType) {

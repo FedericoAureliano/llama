@@ -352,7 +352,7 @@ pub struct Invariant {
     pub name: Name,
     pub pos: Position,
     pub span: Span,
-    pub expr: Option<Box<Expr>>,
+    pub expr: Box<Expr>,
 }
 
 #[derive(Clone, Debug)]
@@ -443,6 +443,8 @@ pub struct Param {
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
+    StmtAssert(StmtAssertType),
+    StmtAssume(StmtAssumeType),
     StmtCall(StmtCallType),
     StmtHavoc(StmtHavocType),
     StmtVar(StmtVarType),
@@ -472,6 +474,34 @@ impl Stmt {
             name,
             reassignable,
             data_type,
+            expr,
+        })
+    }
+
+    pub fn create_assume(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        expr: Box<Expr>,
+    ) -> Stmt {
+        Stmt::StmtAssume(StmtAssumeType {
+            id,
+            pos,
+            span,
+            expr,
+        })
+    }
+
+    pub fn create_assert(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        expr: Box<Expr>,
+    ) -> Stmt {
+        Stmt::StmtAssert(StmtAssertType {
+            id,
+            pos,
+            span,
             expr,
         })
     }
@@ -575,6 +605,8 @@ impl Stmt {
 
     pub fn id(&self) -> NodeId {
         match *self {
+            Stmt::StmtAssert(ref stmt) => stmt.id,
+            Stmt::StmtAssume(ref stmt) => stmt.id,
             Stmt::StmtCall(ref stmt) => stmt.id,
             Stmt::StmtHavoc(ref stmt) => stmt.id,
             Stmt::StmtVar(ref stmt) => stmt.id,
@@ -589,6 +621,8 @@ impl Stmt {
 
     pub fn pos(&self) -> Position {
         match *self {
+            Stmt::StmtAssert(ref stmt) => stmt.pos,
+            Stmt::StmtAssume(ref stmt) => stmt.pos,
             Stmt::StmtCall(ref stmt) => stmt.pos,
             Stmt::StmtHavoc(ref stmt) => stmt.pos,
             Stmt::StmtVar(ref stmt) => stmt.pos,
@@ -603,6 +637,8 @@ impl Stmt {
 
     pub fn span(&self) -> Span {
         match *self {
+            Stmt::StmtAssert(ref stmt) => stmt.span,
+            Stmt::StmtAssume(ref stmt) => stmt.span,
             Stmt::StmtCall(ref stmt) => stmt.span,
             Stmt::StmtHavoc(ref stmt) => stmt.span,
             Stmt::StmtVar(ref stmt) => stmt.span,
@@ -733,6 +769,22 @@ pub struct StmtHavocType {
     pub span: Span,
 
     pub name: Name,
+}
+
+#[derive(Clone, Debug)]
+pub struct StmtAssumeType {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+    pub expr: Box<Expr>,
+}
+
+#[derive(Clone, Debug)]
+pub struct StmtAssertType {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+    pub expr: Box<Expr>,
 }
 
 #[derive(Clone, Debug)]
