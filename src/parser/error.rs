@@ -22,6 +22,7 @@ pub enum ParseError {
     NumberOverflow(String),
     UnclosedStringTemplate,
     ExpectedIdentifier(String),
+    ExpectedStatement,
 }
 
 impl ParseError {
@@ -59,7 +60,8 @@ impl ParseError {
             ParseError::UnclosedStringTemplate => "unclosed string template.".into(),
             ParseError::ExpectedIdentifier(ref tok) => {
                 format!("identifier expected but got {}.", tok)
-            }
+            },
+            ParseError::ExpectedStatement => "expected a statement.".into(),
         }
     }
 }

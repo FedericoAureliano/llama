@@ -28,12 +28,6 @@ pub struct Parser<'a> {
 
 type ExprResult = Result<Box<Expr>, ParseErrorAndPos>;
 type StmtResult = Result<Box<Stmt>, ParseErrorAndPos>;
-type StmtOrExprResult = Result<StmtOrExpr, ParseErrorAndPos>;
-
-enum StmtOrExpr {
-    Stmt(Box<Stmt>),
-    Expr(Box<Expr>),
-}
 
 impl<'a> Parser<'a> {
     pub fn new(
@@ -616,10 +610,6 @@ impl<'a> Parser<'a> {
             self.advance_token()?;
 
             Ok(None)
-        } else if self.token.is(TokenKind::Eq) {
-            let expr = self.parse_procedure_block_expression()?;
-
-            Ok(Some(expr))
         } else {
             let block = self.parse_block()?;
 
@@ -627,35 +617,6 @@ impl<'a> Parser<'a> {
                 Ok(Some(Box::new(block_type)))
             } else {
                 unreachable!()
-            }
-        }
-    }
-
-    fn parse_procedure_block_expression(&mut self) -> Result<Box<ExprBlockType>, ParseErrorAndPos> {
-        self.expect_token(TokenKind::Eq)?;
-
-        match self.token.kind {
-            TokenKind::Return => {
-                let stmt = self.parse_return()?;
-                Ok(Box::new(ExprBlockType {
-                    id: self.generate_id(),
-                    pos: stmt.pos(),
-                    span: stmt.span(),
-                    stmts: vec![stmt],
-                    expr: None,
-                }))
-            }
-
-            _ => {
-                let expr = self.parse_expression()?;
-                self.expect_token(TokenKind::Semicolon)?;
-                Ok(Box::new(ExprBlockType {
-                    id: self.generate_id(),
-                    pos: expr.pos(),
-                    span: expr.span(),
-                    stmts: Vec::new(),
-                    expr: Some(expr),
-                }))
             }
         }
     }
@@ -866,29 +827,10 @@ impl<'a> Parser<'a> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::LBrace)?.position;
         let mut stmts = vec![];
-        let mut expr = None;
 
         while !self.token.is(TokenKind::RBrace) && !self.token.is_eof() {
-            let stmt_or_expr = self.parse_statement_or_expression()?;
-
-            match stmt_or_expr {
-                StmtOrExpr::Stmt(stmt) => stmts.push(stmt),
-                StmtOrExpr::Expr(curr_expr) => {
-                    if curr_expr.needs_semicolon() {
-                        expr = Some(curr_expr);
-                        break;
-                    } else if !self.token.is(TokenKind::RBrace) {
-                        stmts.push(Box::new(Stmt::create_expr(
-                            self.generate_id(),
-                            curr_expr.pos(),
-                            curr_expr.span(),
-                            curr_expr,
-                        )));
-                    } else {
-                        expr = Some(curr_expr);
-                    }
-                }
-            }
+            let stmt = self.parse_statement()?;
+            stmts.push(stmt);
         }
 
         self.expect_token(TokenKind::RBrace)?;
@@ -899,43 +841,46 @@ impl<'a> Parser<'a> {
             pos,
             span,
             stmts,
-            expr,
         )))
     }
 
-    fn parse_statement_or_expression(&mut self) -> StmtOrExprResult {
+    fn parse_statement(&mut self) -> StmtResult {
         match self.token.kind {
             // TODO deal with call, assert, assume, so on 
-            TokenKind::Assert => Ok(StmtOrExpr::Stmt(self.parse_assert()?)),
-            TokenKind::Assume => Ok(StmtOrExpr::Stmt(self.parse_assume()?)),
-            TokenKind::Havoc => Ok(StmtOrExpr::Stmt(self.parse_havoc()?)),
-            TokenKind::Call => Ok(StmtOrExpr::Stmt(self.parse_call()?)),
-            TokenKind::Input | TokenKind::Var | TokenKind::Const => Ok(StmtOrExpr::Stmt(self.parse_var()?)),
-            TokenKind::While => Ok(StmtOrExpr::Stmt(self.parse_while()?)),
-            TokenKind::Break => Ok(StmtOrExpr::Stmt(self.parse_break()?)),
-            TokenKind::Continue => Ok(StmtOrExpr::Stmt(self.parse_continue()?)),
-            TokenKind::Return => Ok(StmtOrExpr::Stmt(self.parse_return()?)),
+            TokenKind::Assert => self.parse_assert(),
+            TokenKind::Assume => self.parse_assume(),
+            TokenKind::Havoc => self.parse_havoc(),
+            TokenKind::Call => self.parse_call(),
+            TokenKind::Input | TokenKind::Var | TokenKind::Const => self.parse_var(),
+            TokenKind::While => self.parse_while(),
+            TokenKind::Break => self.parse_break(),
+            TokenKind::Continue => self.parse_continue(),
+            TokenKind::Return => self.parse_return(),
             TokenKind::Else => Err(ParseErrorAndPos::new(
                 self.token.position,
                 ParseError::MisplacedElse,
             )),
-            TokenKind::For => Ok(StmtOrExpr::Stmt(self.parse_for()?)),
+            TokenKind::For => self.parse_for(),
+            TokenKind::If => {
+                let expr = self.parse_if()?;
+                Ok(Box::new(Stmt::create_expr(
+                    self.generate_id(),
+                    expr.pos(),
+                    expr.span(),
+                    expr,
+                )))
+            },
             _ => {
                 let expr = self.parse_expression()?;
+                self.expect_token(TokenKind::Semicolon)?;
+                let span = self.span_from(expr.span().start());
 
-                if self.token.is(TokenKind::Semicolon) {
-                    self.expect_token(TokenKind::Semicolon)?;
-                    let span = self.span_from(expr.span().start());
-
-                    Ok(StmtOrExpr::Stmt(Box::new(Stmt::create_expr(
-                        self.generate_id(),
-                        expr.pos(),
-                        span,
-                        expr,
-                    ))))
-                } else {
-                    Ok(StmtOrExpr::Expr(expr))
-                }
+                Ok(Box::new(Stmt::create_expr(
+                    self.generate_id(),
+                    expr.pos(),
+                    span,
+                    expr,
+                )))
             }
         }
     }

@@ -426,10 +426,7 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_stmt_expr(&mut self, stmt: &StmtExprType) {
-        dump!(self, "expr stmt @ {} {}", stmt.pos, stmt.id);
-        self.indent(|d| {
-            d.dump_expr(&stmt.expr);
-        });
+        self.dump_expr(&stmt.expr);
     }
 
     fn dump_stmt_return(&mut self, ret: &StmtReturnType) {
@@ -486,17 +483,8 @@ impl<'a> AstDumper<'a> {
         );
 
         self.indent(|d| {
-            if block.stmts.is_empty() {
-                dump!(d, "no statements");
-            } else {
-                for stmt in &block.stmts {
-                    d.dump_stmt(stmt);
-                }
-            }
-
-            if let Some(ref expr) = block.expr {
-                dump!(d, "value");
-                d.dump_expr(expr);
+            for stmt in &block.stmts {
+                d.dump_stmt(stmt);
             }
         });
 

@@ -1053,7 +1053,6 @@ impl Expr {
         pos: Position,
         span: Span,
         stmts: Vec<Box<Stmt>>,
-        expr: Option<Box<Expr>>,
     ) -> Expr {
         Expr::ExprBlock(ExprBlockType {
             id,
@@ -1061,7 +1060,6 @@ impl Expr {
             span,
 
             stmts,
-            expr,
         })
     }
 
@@ -1810,7 +1808,6 @@ pub struct ExprBlockType {
     pub span: Span,
 
     pub stmts: Vec<Box<Stmt>>,
-    pub expr: Option<Box<Expr>>,
 }
 
 #[derive(Clone, Debug)]

@@ -108,10 +108,6 @@ pub fn walk_init<'v, V: Visitor<'v>>(v: &mut V, m: &'v Init) {
         for stmt in &block.stmts {
             v.visit_stmt(stmt);
         }
-
-        if let Some(ref value) = block.expr {
-            v.visit_expr(value);
-        }
     }
 }
 
@@ -120,10 +116,6 @@ pub fn walk_next<'v, V: Visitor<'v>>(v: &mut V, m: &'v Next) {
         for stmt in &block.stmts {
             v.visit_stmt(stmt);
         }
-
-        if let Some(ref value) = block.expr {
-            v.visit_expr(value);
-        }
     }
 }
 
@@ -131,10 +123,6 @@ pub fn walk_control<'v, V: Visitor<'v>>(v: &mut V, m: &'v Control) {
     if let Some(ref block) = m.block {
         for stmt in &block.stmts {
             v.visit_stmt(stmt);
-        }
-
-        if let Some(ref value) = block.expr {
-            v.visit_expr(value);
         }
     }
 }
@@ -159,10 +147,6 @@ pub fn walk_procedure<'v, V: Visitor<'v>>(v: &mut V, f: &'v Procedure) {
     if let Some(ref block) = f.block {
         for stmt in &block.stmts {
             v.visit_stmt(stmt);
-        }
-
-        if let Some(ref value) = block.expr {
-            v.visit_expr(value);
         }
     }
 }
@@ -298,10 +282,6 @@ pub fn walk_expr<'v, V: Visitor<'v>>(v: &mut V, e: &'v Expr) {
         ExprBlock(ref value) => {
             for stmt in &value.stmts {
                 v.visit_stmt(stmt);
-            }
-
-            if let Some(ref expr) = value.expr {
-                v.visit_expr(expr);
             }
         }
 
