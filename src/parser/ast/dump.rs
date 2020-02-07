@@ -170,10 +170,15 @@ impl<'a> AstDumper<'a> {
                 d.indent(|d| d.dump_next(next));
             };
 
-            if !modu.propertys.is_empty() {
+            if !modu.theorems.is_empty() || !modu.lemmas.is_empty() {
                 dump!(d, "specification");
                 d.indent(|d| {
-                    for prcd in &modu.propertys {
+                    for prcd in &modu.theorems {
+                        d.dump_property(prcd);
+                    }
+                });
+                d.indent(|d| {
+                    for prcd in &modu.lemmas {
                         d.dump_property(prcd);
                     }
                 });

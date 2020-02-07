@@ -140,7 +140,8 @@ impl<'a> Parser<'a> {
             functions: Vec::new(),
             procedures: Vec::new(),
             
-            propertys: Vec::new(),
+            theorems: Vec::new(),
+            lemmas: Vec::new(),
             
             init: None,
             next: None,
@@ -221,14 +222,14 @@ impl<'a> Parser<'a> {
                     self.ban_modifiers(&modifiers)?;
 
                     let spec = self.parse_theorem()?;
-                    module.propertys.push(spec);
+                    module.theorems.push(spec);
                 }
 
                 TokenKind::Lemma => {
                     self.ban_modifiers(&modifiers)?;
 
                     let spec = self.parse_lemma()?;
-                    module.propertys.push(spec);
+                    module.theorems.push(spec);
                 }
 
                 TokenKind::Init => {
@@ -557,14 +558,6 @@ impl<'a> Parser<'a> {
         let start = self.token.span.start();
         let pos = self.token.position;
 
-        let reassignable = if self.token.is(TokenKind::Var) {
-            self.advance_token()?;
-
-            true
-        } else {
-            false
-        };
-
         let name = self.expect_identifier()?;
 
         self.expect_token(TokenKind::Colon)?;
@@ -574,7 +567,6 @@ impl<'a> Parser<'a> {
         Ok(Param {
             id: self.generate_id(),
             idx: self.param_idx - 1,
-            reassignable,
             name,
             pos,
             span,

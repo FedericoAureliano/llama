@@ -268,6 +268,7 @@ impl Type {
 
 #[derive(Clone, Debug)]
 pub struct Module {
+    // TODO: types, defines, instances
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
@@ -282,7 +283,8 @@ pub struct Module {
     pub functions: Vec<Function>,
     pub procedures: Vec<Procedure>,
 
-    pub propertys: Vec<Property>,
+    pub theorems: Vec<Property>,
+    pub lemmas: Vec<Property>,
 
     pub init: Option<Box<Init>>,
     pub next: Option<Box<Next>>,
@@ -395,7 +397,6 @@ impl Modifier {
 pub struct Param {
     pub id: NodeId,
     pub idx: u32,
-    pub reassignable: bool,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
@@ -404,6 +405,7 @@ pub struct Param {
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
+    // TODO: induction, unroll, simulate
     StmtAssert(StmtAssertType),
     StmtAssume(StmtAssumeType),
     StmtCall(StmtCallType),
