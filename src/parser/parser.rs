@@ -140,7 +140,7 @@ impl<'a> Parser<'a> {
             functions: Vec::new(),
             procedures: Vec::new(),
             
-            invariants: Vec::new(),
+            propertys: Vec::new(),
             
             init: None,
             next: None,
@@ -217,11 +217,18 @@ impl<'a> Parser<'a> {
                     module.procedures.push(fct);
                 }
 
-                TokenKind::Invariant => {
+                TokenKind::Theorem => {
                     self.ban_modifiers(&modifiers)?;
 
-                    let spec = self.parse_invariant()?;
-                    module.invariants.push(spec);
+                    let spec = self.parse_theorem()?;
+                    module.propertys.push(spec);
+                }
+
+                TokenKind::Lemma => {
+                    self.ban_modifiers(&modifiers)?;
+
+                    let spec = self.parse_lemma()?;
+                    module.propertys.push(spec);
                 }
 
                 TokenKind::Init => {
@@ -313,24 +320,20 @@ impl<'a> Parser<'a> {
     fn parse_field(&mut self) -> Result<Field, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.token.position;
-        let reassignable = if self.token.is(TokenKind::Var) {
-            self.expect_token(TokenKind::Var)?;
 
-            true
+        if self.token.is(TokenKind::Var) {
+            self.expect_token(TokenKind::Var)?;
         } else if self.token.is(TokenKind::Input) {
             self.expect_token(TokenKind::Input)?;
-
-            false
         } else if self.token.is(TokenKind::Output) {
             self.expect_token(TokenKind::Output)?;
-
-            false
         } else if self.token.is(TokenKind::Const) {
             self.expect_token(TokenKind::Const)?;
-
-            false
         } else {
-            false
+            return Err(ParseErrorAndPos::new(
+                self.token.position,
+                ParseError::ExpectedToken("input, output, var, or const".into(), self.token.name()),
+            ));
         };
 
         let name = self.expect_identifier()?;
@@ -353,16 +356,14 @@ impl<'a> Parser<'a> {
             pos,
             span,
             data_type,
-            primary_ctor: false,
             expr,
-            reassignable,
         })
     }
 
-    fn parse_invariant(&mut self) -> Result<Invariant, ParseErrorAndPos> {
+    fn parse_theorem(&mut self) -> Result<Property, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.token.position;
-        self.expect_token(TokenKind::Invariant)?;
+        self.expect_token(TokenKind::Theorem)?;
         let name = self.expect_identifier()?;
         self.expect_token(TokenKind::Colon)?;
         let expr = self.parse_expression()?;
@@ -370,7 +371,7 @@ impl<'a> Parser<'a> {
         self.expect_semicolon()?;
         let span = self.span_from(start);
 
-        Ok(Invariant {
+        Ok(Property {
             id: self.generate_id(),
             name,
             pos,
@@ -379,6 +380,25 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_lemma(&mut self) -> Result<Property, ParseErrorAndPos> {
+        let start = self.token.span.start();
+        let pos = self.token.position;
+        self.expect_token(TokenKind::Lemma)?;
+        let name = self.expect_identifier()?;
+        self.expect_token(TokenKind::Colon)?;
+        let expr = self.parse_expression()?;
+
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(Property {
+            id: self.generate_id(),
+            name,
+            pos,
+            span,
+            expr,
+        })
+    }
     fn parse_procedure(&mut self, _modifiers: &Modifiers) -> Result<Procedure, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Procedure)?.position;
@@ -390,6 +410,7 @@ impl<'a> Parser<'a> {
         let mut modifies = Vec::new();
         // let mut ensures = Vec::new();
 
+        // TODO requires and ensures
         while self.token.is(TokenKind::Returns) || self.token.is(TokenKind::Modifies) {//|| self.token.is(TokenKind::Requires) || self.token.is(TokenKind::Ensures) {
             let tmp_returns = self.parse_procedure_returns()?;
             if !tmp_returns.is_empty() {
@@ -718,15 +739,11 @@ impl<'a> Parser<'a> {
 
     fn parse_var(&mut self) -> StmtResult {
         let start = self.token.span.start();
-        // TODO: how to deal with outputs?
-        let reassignable = if self.token.is(TokenKind::Input) || self.token.is(TokenKind::Const) {
+        let reassignable = if self.token.is(TokenKind::Const) {
             false
-        } else if self.token.is(TokenKind::Var) {
-            true
         } else {
-            panic!("input, output, var, or const expected")
+            true
         };
-
         let pos = self.advance_token()?.position;
         let ident = self.expect_identifier()?;
         let data_type = self.parse_var_type()?;
@@ -846,12 +863,14 @@ impl<'a> Parser<'a> {
 
     fn parse_statement(&mut self) -> StmtResult {
         match self.token.kind {
-            // TODO deal with call, assert, assume, so on 
             TokenKind::Assert => self.parse_assert(),
             TokenKind::Assume => self.parse_assume(),
             TokenKind::Havoc => self.parse_havoc(),
             TokenKind::Call => self.parse_call(),
-            TokenKind::Input | TokenKind::Var | TokenKind::Const => self.parse_var(),
+            TokenKind::Input 
+            | TokenKind::Output 
+            | TokenKind::Var 
+            | TokenKind::Const => self.parse_var(),
             TokenKind::While => self.parse_while(),
             TokenKind::Break => self.parse_break(),
             TokenKind::Continue => self.parse_continue(),

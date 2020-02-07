@@ -16,11 +16,10 @@ module main {
   @synthesis function h(x : integer, y : integer) : boolean;
 
   // Part 2: system specification.
-  invariant a_le_b: a <= b && h(a, b);
+  theorem a_le_b: a <= b && h(a, b);
 
   // Part 3: proof script.
   control {
     induction;
-    check;
   }
 }

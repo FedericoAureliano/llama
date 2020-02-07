@@ -41,7 +41,7 @@ impl ParseError {
                 format!("expected module but got {}.", token)
             }
             ParseError::ExpectedModuleElement(ref token) => {
-                format!("expected input, var, function, procedure, invariant, init, next, or control, but got {}.", token)
+                format!("expected input, var, function, procedure, property, init, next, or control, but got {}.", token)
             }
             ParseError::MisplacedAnnotation(ref modifier) => {
                 format!("misplaced annotation `{}`.", modifier)

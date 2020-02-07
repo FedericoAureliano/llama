@@ -15,11 +15,10 @@ module main
     c' = max2(a, b);
   }
   
-  invariant bigger_than_a : (c >= a);
-  invariant bigger_than_b : (c >= b);
+  theorem bigger_than_a : (c >= a);
+  lemma bigger_than_b : (c >= b);
   
   control {
     induction;
-    check;
   }
 }

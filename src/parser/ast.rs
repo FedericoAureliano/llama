@@ -282,7 +282,7 @@ pub struct Module {
     pub functions: Vec<Function>,
     pub procedures: Vec<Procedure>,
 
-    pub invariants: Vec<Invariant>,
+    pub propertys: Vec<Property>,
 
     pub init: Option<Box<Init>>,
     pub next: Option<Box<Next>>,
@@ -298,56 +298,17 @@ pub struct TypeParam {
 }
 
 #[derive(Clone, Debug)]
-pub struct ConstructorParam {
-    pub name: Name,
-    pub pos: Position,
-    pub span: Span,
-    pub data_type: Type,
-    pub field: bool,
-    pub reassignable: bool,
-}
-
-#[derive(Clone, Debug)]
-pub struct ParentClass {
-    pub name: Name,
-    pub pos: Position,
-    pub span: Span,
-    pub type_params: Vec<Type>,
-    pub params: Vec<Box<Expr>>,
-}
-
-impl ParentClass {
-    pub fn new(
-        name: Name,
-        pos: Position,
-        span: Span,
-        type_params: Vec<Type>,
-        params: Vec<Box<Expr>>,
-    ) -> ParentClass {
-        ParentClass {
-            name,
-            pos,
-            span,
-            type_params,
-            params,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
 pub struct Field {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
     pub data_type: Type,
-    pub primary_ctor: bool,
     pub expr: Option<Box<Expr>>,
-    pub reassignable: bool,
 }
 
 #[derive(Clone, Debug)]
-pub struct Invariant {
+pub struct Property {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,

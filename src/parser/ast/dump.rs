@@ -170,11 +170,11 @@ impl<'a> AstDumper<'a> {
                 d.indent(|d| d.dump_next(next));
             };
 
-            if !modu.invariants.is_empty() {
+            if !modu.propertys.is_empty() {
                 dump!(d, "specification");
                 d.indent(|d| {
-                    for prcd in &modu.invariants {
-                        d.dump_invariant(prcd);
+                    for prcd in &modu.propertys {
+                        d.dump_property(prcd);
                     }
                 });
             };
@@ -196,7 +196,7 @@ impl<'a> AstDumper<'a> {
         );
     }
 
-    fn dump_invariant(&mut self, inv: &Invariant) {
+    fn dump_property(&mut self, inv: &Property) {
         dump!(
             self,
             "{} @ {} {}",
