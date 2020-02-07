@@ -1,6 +1,6 @@
 module queue
 {
-  type op_t = enum { push, pop, search };
+  enum op_t { push, pop, search };
   type index_t = integer;
   type count_t = integer;
   type data_t = integer;
