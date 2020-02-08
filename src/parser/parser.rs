@@ -773,6 +773,50 @@ impl<'a> Parser<'a> {
         )))
     }
 
+    fn parse_simulate(&mut self) -> StmtResult {
+        let start = self.token.span.start();
+        let pos = self.advance_token()?.position;
+        self.expect_token(TokenKind::LParen)?;
+
+        let mut steps : u64 = 0;
+
+        if let TokenKind::LitInt(value, base, suffix) = &self.token.kind {
+            let filtered = value.chars().filter(|&ch| ch != '_').collect::<String>();
+            let parsed = u64::from_str_radix(&filtered, base.num());
+
+            match parsed {
+                Ok(num) => {
+                    steps = num;
+                }
+                _ => {
+                    let bits = match suffix {
+                        IntSuffix::Byte => "byte",
+                        IntSuffix::Int => "int",
+                        IntSuffix::Long => "long",
+                    };
+                    return Err(ParseErrorAndPos::new(
+                        pos,
+                        ParseError::NumberOverflow(bits.into()),
+                    ));
+                }
+            }
+        } else {
+            self.expect_token(TokenKind::LitInt("Some integer".into(), IntBase::Dec, IntSuffix::Int))?;
+        }
+
+        self.advance_token()?;
+        self.expect_token(TokenKind::RParen)?;
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(Box::new(Stmt::create_simulate(
+            self.generate_id(),
+            pos,
+            span,
+            steps,
+        )))
+    }
+
     fn parse_call(&mut self) -> StmtResult {
         let start = self.token.span.start();
         let pos = self.advance_token()?.position;
@@ -856,6 +900,7 @@ impl<'a> Parser<'a> {
 
     fn parse_statement(&mut self) -> StmtResult {
         match self.token.kind {
+            TokenKind::Simulate => self.parse_simulate(),
             TokenKind::Assert => self.parse_assert(),
             TokenKind::Assume => self.parse_assume(),
             TokenKind::Havoc => self.parse_havoc(),

@@ -292,6 +292,7 @@ impl<'a> AstDumper<'a> {
 
     fn dump_stmt(&mut self, stmt: &Stmt) {
         match *stmt {
+            StmtSimulate(ref sim) => self.dump_stmt_simulate(sim),
             StmtAssert(ref ass) => self.dump_stmt_assert(ass),
             StmtAssume(ref ass) => self.dump_stmt_assume(ass),
             StmtCall(ref cal) => self.dump_stmt_call(cal),
@@ -396,6 +397,17 @@ impl<'a> AstDumper<'a> {
             let ref expr = stmt.expr;
             d.dump_expr(expr);
         });
+    }
+
+    fn dump_stmt_simulate(&mut self, stmt: &StmtSimulateType) {
+        dump!(
+            self,
+            "simulate {} {} @ {} {}",
+            stmt.steps,
+            if stmt.steps > 1 {"steps"} else {"step"},
+            stmt.pos,
+            stmt.id,
+        );
     }
 
     fn dump_stmt_for(&mut self, stmt: &StmtForType) {

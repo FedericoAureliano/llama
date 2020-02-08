@@ -406,6 +406,7 @@ pub struct Param {
 #[derive(Clone, Debug)]
 pub enum Stmt {
     // TODO: induction, unroll, simulate
+    StmtSimulate(StmtSimulateType),
     StmtAssert(StmtAssertType),
     StmtAssume(StmtAssumeType),
     StmtCall(StmtCallType),
@@ -481,6 +482,20 @@ impl Stmt {
             span,
 
             name,
+        })
+    }
+
+    pub fn create_simulate(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        steps: u64,
+    ) -> Stmt {
+        Stmt::StmtSimulate(StmtSimulateType {
+            id,
+            pos,
+            span,
+            steps,
         })
     }
 
@@ -568,6 +583,7 @@ impl Stmt {
 
     pub fn id(&self) -> NodeId {
         match *self {
+            Stmt::StmtSimulate(ref stmt) => stmt.id,
             Stmt::StmtAssert(ref stmt) => stmt.id,
             Stmt::StmtAssume(ref stmt) => stmt.id,
             Stmt::StmtCall(ref stmt) => stmt.id,
@@ -585,6 +601,7 @@ impl Stmt {
     pub fn pos(&self) -> Position {
         match *self {
             Stmt::StmtAssert(ref stmt) => stmt.pos,
+            Stmt::StmtSimulate(ref stmt) => stmt.pos,
             Stmt::StmtAssume(ref stmt) => stmt.pos,
             Stmt::StmtCall(ref stmt) => stmt.pos,
             Stmt::StmtHavoc(ref stmt) => stmt.pos,
@@ -600,6 +617,7 @@ impl Stmt {
 
     pub fn span(&self) -> Span {
         match *self {
+            Stmt::StmtSimulate(ref stmt) => stmt.span,
             Stmt::StmtAssert(ref stmt) => stmt.span,
             Stmt::StmtAssume(ref stmt) => stmt.span,
             Stmt::StmtCall(ref stmt) => stmt.span,
@@ -748,6 +766,14 @@ pub struct StmtAssertType {
     pub pos: Position,
     pub span: Span,
     pub expr: Box<Expr>,
+}
+
+#[derive(Clone, Debug)]
+pub struct StmtSimulateType {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+    pub steps: u64,
 }
 
 #[derive(Clone, Debug)]
