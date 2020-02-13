@@ -103,6 +103,7 @@ pub enum TokenKind {
     Assume,
     Assert,
 
+    Induction,
     Simulate,
 }
 
@@ -213,6 +214,7 @@ impl TokenKind {
             TokenKind::Ensures => "ensures",
 
             TokenKind::Simulate => "simulate",
+            TokenKind::Induction => "induction",
         }
     }
 }

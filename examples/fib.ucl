@@ -20,6 +20,6 @@ module main {
 
   // Part 3: proof script.
   control {
-    induction;
+    induction(1);
   }
 }

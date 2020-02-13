@@ -340,6 +340,7 @@ impl<'a> AstDumper<'a> {
 
     fn dump_stmt(&mut self, stmt: &Stmt) {
         match *stmt {
+            StmtInduction(ref sim) => self.dump_stmt_induction(sim),
             StmtSimulate(ref sim) => self.dump_stmt_simulate(sim),
             StmtAssert(ref ass) => self.dump_stmt_assert(ass),
             StmtAssume(ref ass) => self.dump_stmt_assume(ass),
@@ -451,6 +452,17 @@ impl<'a> AstDumper<'a> {
         dump!(
             self,
             "simulate {} {} @ {} {}",
+            stmt.steps,
+            if stmt.steps > 1 {"steps"} else {"step"},
+            stmt.pos,
+            stmt.id,
+        );
+    }
+
+    fn dump_stmt_induction(&mut self, stmt: &StmtInductionType) {
+        dump!(
+            self,
+            "induction {} {} @ {} {}",
             stmt.steps,
             if stmt.steps > 1 {"steps"} else {"step"},
             stmt.pos,

@@ -422,7 +422,7 @@ pub struct Param {
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
-    // TODO: induction, unroll, simulate
+    StmtInduction(StmtInductionType),
     StmtSimulate(StmtSimulateType),
     StmtAssert(StmtAssertType),
     StmtAssume(StmtAssumeType),
@@ -516,6 +516,20 @@ impl Stmt {
         })
     }
 
+    pub fn create_induction(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        steps: u64,
+    ) -> Stmt {
+        Stmt::StmtInduction(StmtInductionType {
+            id,
+            pos,
+            span,
+            steps,
+        })
+    }
+
     pub fn create_call(
         id: NodeId,
         pos: Position,
@@ -600,6 +614,7 @@ impl Stmt {
 
     pub fn id(&self) -> NodeId {
         match *self {
+            Stmt::StmtInduction(ref stmt) => stmt.id,
             Stmt::StmtSimulate(ref stmt) => stmt.id,
             Stmt::StmtAssert(ref stmt) => stmt.id,
             Stmt::StmtAssume(ref stmt) => stmt.id,
@@ -617,8 +632,9 @@ impl Stmt {
 
     pub fn pos(&self) -> Position {
         match *self {
-            Stmt::StmtAssert(ref stmt) => stmt.pos,
+            Stmt::StmtInduction(ref stmt) => stmt.pos,
             Stmt::StmtSimulate(ref stmt) => stmt.pos,
+            Stmt::StmtAssert(ref stmt) => stmt.pos,
             Stmt::StmtAssume(ref stmt) => stmt.pos,
             Stmt::StmtCall(ref stmt) => stmt.pos,
             Stmt::StmtHavoc(ref stmt) => stmt.pos,
@@ -634,6 +650,7 @@ impl Stmt {
 
     pub fn span(&self) -> Span {
         match *self {
+            Stmt::StmtInduction(ref stmt) => stmt.span,
             Stmt::StmtSimulate(ref stmt) => stmt.span,
             Stmt::StmtAssert(ref stmt) => stmt.span,
             Stmt::StmtAssume(ref stmt) => stmt.span,
@@ -783,6 +800,14 @@ pub struct StmtAssertType {
     pub pos: Position,
     pub span: Span,
     pub expr: Box<Expr>,
+}
+
+#[derive(Clone, Debug)]
+pub struct StmtInductionType {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+    pub steps: u64,
 }
 
 #[derive(Clone, Debug)]

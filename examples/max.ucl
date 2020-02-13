@@ -19,6 +19,6 @@ module main
   lemma bigger_than_b : (c >= b);
   
   control {
-    induction;
+    induction(1);
   }
 }

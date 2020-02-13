@@ -590,6 +590,7 @@ fn keywords_in_map() -> HashMap<&'static str, TokenKind> {
     keywords.insert("assume", TokenKind::Assume);
     keywords.insert("assert", TokenKind::Assert);
     keywords.insert("simulate", TokenKind::Simulate);
+    keywords.insert("induction", TokenKind::Induction);
 
     keywords
 }
