@@ -140,6 +140,15 @@ impl<'a> AstDumper<'a> {
                 });
             };
 
+            if !modu.definitions.is_empty() {
+                dump!(d, "definitions");
+                d.indent(|d| {
+                    for func in &modu.definitions {
+                        d.dump_definition(func);
+                    }
+                });
+            };
+
             if !modu.functions.is_empty() {
                 dump!(d, "functions");
                 d.indent(|d| {
@@ -215,6 +224,31 @@ impl<'a> AstDumper<'a> {
         });
     }
 
+    fn dump_definition(&mut self, fct: &Define) {
+        dump!(self, "{} @ {} {}", self.str(fct.name), fct.pos, fct.id);
+
+        self.indent(|d| {
+            dump!(d, "params");
+            d.indent(|d| {
+                if !fct.params.is_empty() {
+                    for param in &fct.params {
+                        d.dump_param(param);
+                    }
+                }
+            });
+
+            if let Some(ref ty) = fct.return_type {
+                let name = ty.to_string(d.interner);
+                let pos = ty.pos();
+                let id = ty.id();
+                dump!(d, "returns `{}` @ {} {}", name, pos, id);
+            };
+
+            dump!(d, "expr");
+            d.dump_expr(&fct.expr);
+        });
+    }
+
     fn dump_function(&mut self, fct: &Function) {
         dump!(self, "{} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
@@ -260,6 +294,20 @@ impl<'a> AstDumper<'a> {
             if !fct.modifies.is_empty() {
                 let str_mods : Vec<ArcStr> = fct.modifies.iter().map(|p| d.str(*p)).collect();
                 dump!(d, "modifies {}", str_mods.join(", "));
+            };
+
+            if !fct.requires.is_empty() {
+                dump!(d, "requires");
+                for p in &fct.requires {
+                    d.indent(|d| d.dump_stmt_assume(p));
+                }
+            };
+
+            if !fct.ensures.is_empty() {
+                dump!(d, "ensures");
+                for p in &fct.ensures {
+                    d.indent(|d| d.dump_stmt_assert(p));
+                }
             };
 
             dump!(d, "executes");

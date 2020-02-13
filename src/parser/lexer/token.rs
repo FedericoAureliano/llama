@@ -25,9 +25,6 @@ pub enum TokenKind {
     True,
     False,
     At,
-    
-    Enum,
-    Type,
 
     Underscore,
     
@@ -74,14 +71,23 @@ pub enum TokenKind {
     
     // UCLID5
     Module,
+
+    Enum,
+    Type,
+
     Input,
     Output,
     Var,
     Const,
+
+    Define,
+    
     Function,
     Procedure,
+    
     Theorem,
     Lemma,
+    
     Init,
     Next,
     Control,
@@ -122,6 +128,7 @@ impl TokenKind {
             TokenKind::End => "<<EOF>>",
 
             // Keywords
+            TokenKind::Define => "define",
             TokenKind::Function => "function",
             TokenKind::Procedure => "procedure",
             TokenKind::Input => "input",

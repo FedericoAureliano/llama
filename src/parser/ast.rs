@@ -272,14 +272,17 @@ pub struct Module {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
+    
+    pub enums: Vec<Enum>,
+    pub types: Vec<(Name, Type)>,
 
     pub inputs: Vec<Field>,
     pub outputs: Vec<Field>,
     pub variables: Vec<Field>,
     pub constants: Vec<Field>,
 
-    pub enums: Vec<Enum>,
-    
+    pub definitions: Vec<Define>,
+
     pub functions: Vec<Function>,
     pub procedures: Vec<Procedure>,
 
@@ -330,6 +333,17 @@ pub struct Function {
 }
 
 #[derive(Clone, Debug)]
+pub struct Define {
+    pub id: NodeId,
+    pub name: Name,
+    pub pos: Position,
+    pub span: Span,
+    pub params: Vec<Param>,
+    pub return_type: Option<Type>,
+    pub expr: Box<Expr>,
+}
+
+#[derive(Clone, Debug)]
 pub struct Procedure {
     pub id: NodeId,
     pub name: Name,
@@ -339,6 +353,9 @@ pub struct Procedure {
 
     pub returns: Vec<Param>,
     pub modifies: Vec<Name>,
+    pub requires: Vec<StmtAssumeType>,
+    pub ensures: Vec<StmtAssertType>,
+
     pub block: Option<Box<ExprBlockType>>,
 }
 

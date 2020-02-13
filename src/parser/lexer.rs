@@ -556,9 +556,11 @@ fn is_identifier(ch: Option<char>) -> bool {
 
 fn keywords_in_map() -> HashMap<&'static str, TokenKind> {
     let mut keywords = HashMap::new();
+    keywords.insert("define", TokenKind::Define);
     keywords.insert("function", TokenKind::Function);
     keywords.insert("procedure", TokenKind::Procedure);
     keywords.insert("input", TokenKind::Input);
+    keywords.insert("output", TokenKind::Output);
     keywords.insert("var", TokenKind::Var);
     keywords.insert("while", TokenKind::While);
     keywords.insert("if", TokenKind::If);

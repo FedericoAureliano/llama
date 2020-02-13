@@ -131,13 +131,15 @@ impl<'a> Parser<'a> {
             name: ident,
             pos: pos,
 
+            enums: Vec::new(),
+            types: Vec::new(),
+
             inputs: Vec::new(),
             outputs: Vec::new(),
             variables: Vec::new(),
             constants: Vec::new(),
             
-            enums: Vec::new(),
-            
+            definitions: Vec::new(),            
             functions: Vec::new(),
             procedures: Vec::new(),
             
@@ -198,6 +200,23 @@ impl<'a> Parser<'a> {
                     self.ban_modifiers(&modifiers)?;
                     let xenum = self.parse_enum()?;
                     module.enums.push(xenum);
+                }
+    
+                TokenKind::Type => {
+                    self.ban_modifiers(&modifiers)?;
+                    self.advance_token()?;
+                    let name = self.expect_identifier()?;
+                    self.expect_token(TokenKind::Eq)?;
+                    let xtype = self.parse_type()?;
+                    self.expect_semicolon()?;
+                    module.types.push((name, xtype));
+                }
+
+
+                TokenKind::Define => {
+                    self.ban_modifiers(&modifiers)?;
+                    let def = self.parse_define()?;
+                    module.definitions.push(def);
                 }
 
                 TokenKind::Function => {
@@ -408,28 +427,30 @@ impl<'a> Parser<'a> {
         let params = self.parse_procedure_params()?;
 
         let mut returns = Vec::new();
-        // let mut requires = Vec::new();
+        let mut requires = Vec::new();
         let mut modifies = Vec::new();
-        // let mut ensures = Vec::new();
+        let mut ensures = Vec::new();
 
-        // TODO requires and ensures
-        while self.token.is(TokenKind::Returns) || self.token.is(TokenKind::Modifies) {//|| self.token.is(TokenKind::Requires) || self.token.is(TokenKind::Ensures) {
-            let tmp_returns = self.parse_procedure_returns()?;
-            if !tmp_returns.is_empty() {
-                returns = tmp_returns;
+        while self.token.is(TokenKind::Returns) || self.token.is(TokenKind::Modifies) || self.token.is(TokenKind::Requires) || self.token.is(TokenKind::Ensures) {
+            if self.token.is(TokenKind::Returns) {
+                let mut tmp_returns = self.parse_procedure_returns()?;
+                returns.append(&mut tmp_returns);
             }
-            // let tmp_requires = self.parse_procedure_requires()?;
-            // if !tmp_requires.is_empty() {
-            //     requires = tmp_requires;
-            // }
-            let tmp_modifies = self.parse_procedure_modifies()?;
-            if !tmp_modifies.is_empty() {
-                modifies = tmp_modifies;
+
+            if self.token.is(TokenKind::Modifies) {
+                let mut tmp_modifies = self.parse_procedure_modifies()?;
+                modifies.append(&mut tmp_modifies);
             }
-            // let tmp_ensures = self.parse_procedure_ensures()?;
-            // if !tmp_ensures.is_empty() {
-            //     ensures = tmp_ensures;
-            // }
+
+            if self.token.is(TokenKind::Requires) {
+                let tmp_requires = self.parse_procedure_requires()?;
+                requires.push(tmp_requires);
+            }
+
+            if self.token.is(TokenKind::Ensures) {
+                let tmp_ensures = self.parse_procedure_ensures()?;
+                ensures.push(tmp_ensures);
+            }
         };
         
         let block = self.parse_procedure_block()?;
@@ -443,6 +464,8 @@ impl<'a> Parser<'a> {
             params,
             returns,
             modifies,
+            requires,
+            ensures,
             block,
         })
     }
@@ -464,6 +487,28 @@ impl<'a> Parser<'a> {
             to_synthesize: modifiers.contains(Modifier::Synthesis),
             params,
             return_type,
+        })
+    }
+
+    fn parse_define(&mut self) -> Result<Define, ParseErrorAndPos> {
+        let start = self.token.span.start();
+        let pos = self.expect_token(TokenKind::Define)?.position;
+        let ident = self.expect_identifier()?;
+        let params = self.parse_procedure_params()?;
+        let return_type = self.parse_function_type()?;
+        self.expect_token(TokenKind::Eq)?;
+        let expr = self.parse_expression()?;
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(Define {
+            id: self.generate_id(),
+            name: ident,
+            pos,
+            span,
+            params,
+            return_type,
+            expr,
         })
     }
 
@@ -696,6 +741,38 @@ impl<'a> Parser<'a> {
                 ParseError::ExpectedType(self.token.name()),
             )),
         }
+    }
+
+    fn parse_procedure_requires(&mut self) -> Result<StmtAssumeType, ParseErrorAndPos> {
+        let start = self.token.span.start();
+        let pos = self.expect_token(TokenKind::Requires)?.position;
+        let expr = self.parse_expression()?;
+
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(StmtAssumeType {
+            id : self.generate_id(),
+            pos,
+            span,
+            expr,
+        })
+    }
+
+    fn parse_procedure_ensures(&mut self) -> Result<StmtAssertType, ParseErrorAndPos> {
+        let start = self.token.span.start();
+        let pos = self.expect_token(TokenKind::Ensures)?.position;
+        let expr = self.parse_expression()?;
+
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        Ok(StmtAssertType {
+            id : self.generate_id(),
+            pos,
+            span,
+            expr,
+        })
     }
 
     fn parse_assert(&mut self) -> StmtResult {
