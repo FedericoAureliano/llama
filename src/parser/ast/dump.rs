@@ -81,6 +81,15 @@ impl<'a> AstDumper<'a> {
         );
 
         self.indent(|d| {
+            if !modu.types.is_empty() {
+                dump!(d, "types");
+                d.indent(|d| {
+                    for typ in &modu.types {
+                        d.dump_type(typ);
+                    }
+                });
+            };
+
             if !modu.inputs.is_empty() {
                 dump!(d, "inputs");
                 d.indent(|d| {
@@ -308,7 +317,7 @@ impl<'a> AstDumper<'a> {
     fn dump_type(&mut self, ty: &Type) {
         dump!(
             self,
-            "type `{}` @ {} {}",
+            "{} @ {} {}",
             ty.to_string(self.interner),
             ty.pos(),
             ty.id()

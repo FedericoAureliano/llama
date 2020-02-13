@@ -224,13 +224,20 @@ impl Type {
 
     pub fn to_string(&self, interner: &Interner) -> String {
         match *self {
-            Type::BasicType(ref val) => format!("{}", *interner.str(val.name)),
+            Type::BasicType(ref val) => {
+                if val.params.len() > 0 {
+                    let types: Vec<String> = val.params.iter().map(|t| format!("{}", t.to_string(interner))).collect();
+                    format!("[{}]{}", types.join(", "),  *interner.str(val.name))
+                } else {
+                    format!("{}", *interner.str(val.name))
+                }
+            }
 
-            Type::TypeAlias(ref val) => format!("{}", *interner.str(val.name)),
+            Type::TypeAlias(ref val) => format!("`{}` := `{}`", *interner.str(val.name), val.alias.to_string(interner)),
 
             Type::EnumType(ref val) => {
                 let types: Vec<String> = val.variants.iter().map(|t| format!("{}", *interner.str(*t))).collect();
-                format!("({})", types.join(", "))
+                format!("enum {{{}}}", types.join(", "))
             }
 
             Type::TupleType(ref val) => {
