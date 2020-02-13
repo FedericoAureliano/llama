@@ -66,32 +66,9 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_file(&mut self, f: &File) {
-        for el in &f.elements {
-            match *el {
-                ElemProcedure(ref fct) => self.dump_procedure(fct),
-                ElemModule(ref module) => self.dump_module(module),
-                ElemEnum(ref xenum) => self.dump_enum(xenum),
-                ElemInit(ref xinit) => self.dump_init(xinit),
-                ElemNext(ref xnext) => self.dump_next(xnext),
-                ElemControl(ref xcontrol) => self.dump_control(xcontrol),
-            }
+        for m in &f.modules {
+            self.dump_module(m)
         }
-    }
-
-    fn dump_enum(&mut self, xenum: &Enum) {
-        dump!(
-            self,
-            "enum {} @ {} {}",
-            self.str(xenum.name),
-            xenum.pos,
-            xenum.id
-        );
-
-        self.indent(|d| {
-            for value in &xenum.values {
-                d.dump_expr(value)
-            }
-        });
     }
 
     fn dump_module(&mut self, modu: &Module) {

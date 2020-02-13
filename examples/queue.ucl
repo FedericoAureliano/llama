@@ -1,6 +1,6 @@
 module queue
 {
-  enum op_t { push, pop, search };
+  type op_t = enum { push, pop, search };
   type index_t = integer;
   type count_t = integer;
   type data_t = integer;
@@ -9,7 +9,8 @@ module queue
   const SIZE : integer = 4;
 
   var contents      : queue_t;
-  var head, tail    : index_t;
+  var head          : index_t;
+  var tail          : index_t;
   var count         : count_t;
   var inited        : boolean;
 

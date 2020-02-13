@@ -28,10 +28,6 @@ pub trait Visitor<'v>: Sized {
         walk_control(self, m);
     }
 
-    fn visit_enum(&mut self, e: &'v Enum) {
-        walk_enum(self, e);
-    }
-
     fn visit_method(&mut self, m: &'v Procedure) {
         walk_procedure(self, m);
     }
@@ -72,15 +68,8 @@ pub fn walk_ast<'v, V: Visitor<'v>>(v: &mut V, a: &'v Ast) {
 }
 
 pub fn walk_file<'v, V: Visitor<'v>>(v: &mut V, f: &'v File) {
-    for e in &f.elements {
-        match *e {
-            ElemProcedure(ref f) => v.visit_procedure(f),
-            ElemModule(ref m) => v.visit_module(m),
-            ElemEnum(ref e) => v.visit_enum(e),
-            ElemInit(ref e) => v.visit_init(e),
-            ElemNext(ref e) => v.visit_next(e),
-            ElemControl(ref e) => v.visit_control(e),
-        }
+    for m in &f.modules {
+        v.visit_module(m)
     }
 }
 
@@ -127,10 +116,6 @@ pub fn walk_control<'v, V: Visitor<'v>>(v: &mut V, m: &'v Control) {
     }
 }
 
-pub fn walk_enum<'v, V: Visitor<'v>>(_v: &mut V, _e: &'v Enum) {
-    // nothing to do
-}
-
 pub fn walk_field<'v, V: Visitor<'v>>(v: &mut V, f: &'v Field) {
     v.visit_type(&f.data_type);
 }
@@ -161,14 +146,22 @@ pub fn walk_return<'v, V: Visitor<'v>>(v: &mut V, p: &'v Param) {
 
 pub fn walk_type<'v, V: Visitor<'v>>(v: &mut V, t: &'v Type) {
     match *t {
-        TypeBasic(_) => {}
-        TypeTuple(ref tuple) => {
+        BasicType(_) => {}
+
+        TypeAlias(ref alias) => {
+            v.visit_type(&alias.alias);
+        }
+
+        // TODO what to do when walking enum type?
+        EnumType(_) => {}
+
+        TupleType(ref tuple) => {
             for ty in &tuple.subtypes {
                 v.visit_type(ty);
             }
         }
 
-        TypeLambda(ref fct) => {
+        LambdaType(ref fct) => {
             for ty in &fct.params {
                 v.visit_type(ty);
             }

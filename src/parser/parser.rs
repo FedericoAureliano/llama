@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::mem;
 
 use crate::parser::ast;
-use crate::parser::ast::Elem::*;
 use crate::parser::ast::*;
 use crate::parser::error::{ParseError, ParseErrorAndPos};
 
@@ -60,17 +59,17 @@ impl<'a> Parser<'a> {
 
     pub fn parse(mut self) -> Result<LexerFile, ParseErrorAndPos> {
         self.init()?;
-        let mut elements = vec![];
+        let mut modules = vec![];
 
         while !self.token.is_eof() {
-            self.parse_top_level_element(&mut elements)?;
+            self.parse_top_level_element(&mut modules)?;
         }
 
         let file = self.lexer.file();
 
         self.ast.files.push(ast::File {
             path: file.name.clone(),
-            elements,
+            modules,
         });
 
         Ok(file)
@@ -84,7 +83,7 @@ impl<'a> Parser<'a> {
 
     fn parse_top_level_element(
         &mut self,
-        elements: &mut Vec<Elem>,
+        modules: &mut Vec<Module>,
     ) -> Result<(), ParseErrorAndPos> {
         let modifiers = self.parse_annotations()?;
 
@@ -92,7 +91,7 @@ impl<'a> Parser<'a> {
             TokenKind::Module => {
                 self.ban_modifiers(&modifiers)?;
                 let module = self.parse_module()?;
-                elements.push(ElemModule(module));
+                modules.push(module);
             }
 
             _ => {
@@ -104,25 +103,6 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn parse_enum(&mut self) -> Result<Enum, ParseErrorAndPos> {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Enum)?.position;
-        let name = self.expect_identifier()?;
-
-        self.expect_token(TokenKind::LBrace)?;
-        let values = self.parse_comma_list(TokenKind::RBrace, |p| p.parse_identifier())?;
-        self.expect_semicolon()?;
-        let span = self.span_from(start);
-
-        Ok(Enum {
-            id: self.generate_id(),
-            pos,
-            span,
-            name,
-            values,
-        })
-    }
-
     fn parse_module(&mut self) -> Result<Module, ParseErrorAndPos> {
         let pos = self.expect_token(TokenKind::Module)?.position;
         let ident = self.expect_identifier()?;
@@ -131,7 +111,6 @@ impl<'a> Parser<'a> {
             name: ident,
             pos: pos,
 
-            enums: Vec::new(),
             types: Vec::new(),
 
             inputs: Vec::new(),
@@ -196,20 +175,29 @@ impl<'a> Parser<'a> {
                     module.constants.push(xconst);
                 }
     
-                TokenKind::Enum => {
-                    self.ban_modifiers(&modifiers)?;
-                    let xenum = self.parse_enum()?;
-                    module.enums.push(xenum);
-                }
-    
                 TokenKind::Type => {
+                    // this is a type alias declaration
                     self.ban_modifiers(&modifiers)?;
                     self.advance_token()?;
+
+                    let pos = self.token.position;
+                    let start = self.token.span.start();
                     let name = self.expect_identifier()?;
+
                     self.expect_token(TokenKind::Eq)?;
-                    let xtype = self.parse_type()?;
+                    let alias = self.parse_type()?;
                     self.expect_semicolon()?;
-                    module.types.push((name, xtype));
+                    let span = self.span_from(start);
+
+                    let ty = Type::create_alias(
+                        self.generate_id(),
+                        pos,
+                        span,
+                        name,
+                        Box::new(alias),
+                    );
+
+                    module.types.push(ty);
                 }
 
 
@@ -682,10 +670,30 @@ impl<'a> Parser<'a> {
 
     fn parse_type(&mut self) -> Result<Type, ParseErrorAndPos> {
         match self.token.kind {
-            TokenKind::Identifier(_) => {
+            TokenKind::Enum => {
+                let pos = self.expect_token(TokenKind::Enum)?.position;
+                let start = self.token.span.start();
+
+                let variants = if self.token.is(TokenKind::LBrace) {
+                    self.advance_token()?;
+                    self.parse_comma_list(TokenKind::RBrace, |p| Ok(p.expect_identifier()?))?
+                } else {
+                    Vec::new()
+                };
+
+                let span = self.span_from(start);
+                Ok(Type::create_enum(
+                    self.generate_id(),
+                    pos,
+                    span,
+                    variants,
+                ))                
+            }
+
+                                        // This gives us arrays
+            TokenKind::Identifier(_) | TokenKind::LBracket => {
                 let pos = self.token.position;
                 let start = self.token.span.start();
-                let name = self.expect_identifier()?;
 
                 let params = if self.token.is(TokenKind::LBracket) {
                     self.advance_token()?;
@@ -693,6 +701,8 @@ impl<'a> Parser<'a> {
                 } else {
                     Vec::new()
                 };
+
+                let name = self.expect_identifier()?;
 
                 let span = self.span_from(start);
                 Ok(Type::create_basic(

@@ -1,7 +1,6 @@
 use std::fmt;
 use std::slice::Iter;
 
-use crate::parser::ast::Elem::*;
 use crate::parser::interner::{Interner, Name};
 use crate::parser::lexer::position::{Position, Span};
 use crate::parser::lexer::token::{FloatSuffix, IntBase, IntSuffix};
@@ -18,38 +17,12 @@ impl Ast {
     pub fn new() -> Ast {
         Ast { files: Vec::new() }
     }
-
-    #[cfg(test)]
-    pub fn fct0(&self) -> &Procedure {
-        self.files.last().unwrap().elements[0]
-            .to_procedure()
-            .unwrap()
-    }
-
-    #[cfg(test)]
-    pub fn fct(&self, index: usize) -> &Procedure {
-        self.files.last().unwrap().elements[index]
-            .to_procedure()
-            .unwrap()
-    }
-
-    #[cfg(test)]
-    pub fn mod0(&self) -> &Module {
-        self.files.last().unwrap().elements[0].to_module().unwrap()
-    }
-
-    #[cfg(test)]
-    pub fn modu(&self, index: usize) -> &Module {
-        self.files.last().unwrap().elements[index]
-            .to_module()
-            .unwrap()
-    }
 }
 
 #[derive(Clone, Debug)]
 pub struct File {
     pub path: String,
-    pub elements: Vec<Elem>,
+    pub modules: Vec<Module>,
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
@@ -62,60 +35,46 @@ impl fmt::Display for NodeId {
 }
 
 #[derive(Clone, Debug)]
-pub enum Elem {
-    ElemProcedure(Procedure),
-    ElemModule(Module),
-    ElemEnum(Enum),
-    ElemInit(Init),
-    ElemNext(Next),
-    ElemControl(Control),
-}
-
-impl Elem {
-    pub fn id(&self) -> NodeId {
-        match self {
-            &ElemProcedure(ref fct) => fct.id,
-            &ElemModule(ref m) => m.id,
-            &ElemEnum(ref e) => e.id,
-            &ElemInit(ref e) => e.id,
-            &ElemNext(ref e) => e.id,
-            &ElemControl(ref e) => e.id,
-        }
-    }
-
-    pub fn to_procedure(&self) -> Option<&Procedure> {
-        match self {
-            &ElemProcedure(ref fct) => Some(fct),
-            _ => None,
-        }
-    }
-
-    pub fn to_module(&self) -> Option<&Module> {
-        match self {
-            &ElemModule(ref module) => Some(module),
-            _ => None,
-        }
-    }
+pub enum Type {
+    BasicType(BasicType),
+    TypeAlias(TypeAlias),
+    EnumType(EnumType),
+    TupleType(TupleType),
+    LambdaType(LambdaType),
 }
 
 #[derive(Clone, Debug)]
-pub struct Enum {
+pub struct BasicType {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
+
     pub name: Name,
-    pub values: Vec<Box<Expr>>,
+    // Params are for arrays
+    pub params: Vec<Box<Type>>,
 }
 
 #[derive(Clone, Debug)]
-pub enum Type {
-    TypeBasic(TypeBasicType),
-    TypeTuple(TypeTupleType),
-    TypeLambda(TypeLambdaType),
+pub struct TypeAlias {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+
+    pub name: Name,
+    pub alias: Box<Type>,
 }
 
 #[derive(Clone, Debug)]
-pub struct TypeTupleType {
+pub struct EnumType {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+
+    pub variants: Vec<Name>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TupleType {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -124,23 +83,13 @@ pub struct TypeTupleType {
 }
 
 #[derive(Clone, Debug)]
-pub struct TypeLambdaType {
+pub struct LambdaType {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub params: Vec<Box<Type>>,
     pub ret: Box<Type>,
-}
-
-#[derive(Clone, Debug)]
-pub struct TypeBasicType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-
-    pub name: Name,
-    pub params: Vec<Box<Type>>,
 }
 
 impl Type {
@@ -152,12 +101,42 @@ impl Type {
         name: Name,
         params: Vec<Box<Type>>,
     ) -> Type {
-        Type::TypeBasic(TypeBasicType {
+        Type::BasicType(BasicType {
             id,
             pos,
             span,
             name,
             params,
+        })
+    }
+
+    pub fn create_alias(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        name: Name,
+        alias: Box<Type>,
+    ) -> Type {
+        Type::TypeAlias(TypeAlias {
+            id,
+            pos,
+            span,
+            name,
+            alias,
+        })
+    }
+
+    pub fn create_enum(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        variants: Vec<Name>,
+    ) -> Type {
+        Type::EnumType(EnumType {
+            id,
+            pos,
+            span,
+            variants,
         })
     }
 
@@ -168,7 +147,7 @@ impl Type {
         params: Vec<Box<Type>>,
         ret: Box<Type>,
     ) -> Type {
-        Type::TypeLambda(TypeLambdaType {
+        Type::LambdaType(LambdaType {
             id,
             pos,
             span,
@@ -178,7 +157,7 @@ impl Type {
     }
 
     pub fn create_tuple(id: NodeId, pos: Position, span: Span, subtypes: Vec<Box<Type>>) -> Type {
-        Type::TypeTuple(TypeTupleType {
+        Type::TupleType(TupleType {
             id,
             pos,
             span,
@@ -186,16 +165,30 @@ impl Type {
         })
     }
 
-    pub fn to_basic(&self) -> Option<&TypeBasicType> {
+    pub fn to_basic(&self) -> Option<&BasicType> {
         match *self {
-            Type::TypeBasic(ref val) => Some(val),
+            Type::BasicType(ref val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn to_alias(&self) -> Option<&TypeAlias> {
+        match *self {
+            Type::TypeAlias(ref val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn to_enum(&self) -> Option<&EnumType> {
+        match *self {
+            Type::EnumType(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn to_basic_without_type_params(&self) -> Option<Name> {
         match *self {
-            Type::TypeBasic(ref basic) => {
+            Type::BasicType(ref basic) => {
                 if basic.params.len() == 0 {
                     Some(basic.name)
                 } else {
@@ -207,16 +200,16 @@ impl Type {
         }
     }
 
-    pub fn to_tuple(&self) -> Option<&TypeTupleType> {
+    pub fn to_tuple(&self) -> Option<&TupleType> {
         match *self {
-            Type::TypeTuple(ref val) => Some(val),
+            Type::TupleType(ref val) => Some(val),
             _ => None,
         }
     }
 
-    pub fn to_lambda(&self) -> Option<&TypeLambdaType> {
+    pub fn to_lambda(&self) -> Option<&LambdaType> {
         match *self {
-            Type::TypeLambda(ref val) => Some(val),
+            Type::LambdaType(ref val) => Some(val),
             _ => None,
         }
     }
@@ -224,23 +217,30 @@ impl Type {
     #[cfg(test)]
     pub fn is_unit(&self) -> bool {
         match self {
-            &Type::TypeTuple(ref val) if val.subtypes.len() == 0 => true,
+            &Type::TupleType(ref val) if val.subtypes.len() == 0 => true,
             _ => false,
         }
     }
 
     pub fn to_string(&self, interner: &Interner) -> String {
         match *self {
-            Type::TypeBasic(ref val) => format!("{}", *interner.str(val.name)),
+            Type::BasicType(ref val) => format!("{}", *interner.str(val.name)),
 
-            Type::TypeTuple(ref val) => {
+            Type::TypeAlias(ref val) => format!("{}", *interner.str(val.name)),
+
+            Type::EnumType(ref val) => {
+                let types: Vec<String> = val.variants.iter().map(|t| format!("{}", *interner.str(*t))).collect();
+                format!("({})", types.join(", "))
+            }
+
+            Type::TupleType(ref val) => {
                 let types: Vec<String> =
                     val.subtypes.iter().map(|t| t.to_string(interner)).collect();
 
                 format!("({})", types.join(", "))
             }
 
-            Type::TypeLambda(ref val) => {
+            Type::LambdaType(ref val) => {
                 let types: Vec<String> = val.params.iter().map(|t| t.to_string(interner)).collect();
                 let ret = val.ret.to_string(interner);
 
@@ -251,30 +251,33 @@ impl Type {
 
     pub fn pos(&self) -> Position {
         match *self {
-            Type::TypeBasic(ref val) => val.pos,
-            Type::TypeTuple(ref val) => val.pos,
-            Type::TypeLambda(ref val) => val.pos,
+            Type::BasicType(ref val) => val.pos,
+            Type::TypeAlias(ref val) => val.pos,
+            Type::EnumType(ref val) => val.pos,
+            Type::TupleType(ref val) => val.pos,
+            Type::LambdaType(ref val) => val.pos,
         }
     }
 
     pub fn id(&self) -> NodeId {
         match *self {
-            Type::TypeBasic(ref val) => val.id,
-            Type::TypeTuple(ref val) => val.id,
-            Type::TypeLambda(ref val) => val.id,
+            Type::BasicType(ref val) => val.id,
+            Type::TypeAlias(ref val) => val.id,
+            Type::EnumType(ref val) => val.id,
+            Type::TupleType(ref val) => val.id,
+            Type::LambdaType(ref val) => val.id,
         }
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct Module {
-    // TODO: types, defines, instances
+    // TODO: instances of other modules
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     
-    pub enums: Vec<Enum>,
-    pub types: Vec<(Name, Type)>,
+    pub types: Vec<Type>,
 
     pub inputs: Vec<Field>,
     pub outputs: Vec<Field>,
