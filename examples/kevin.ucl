@@ -4,7 +4,7 @@ module main {
   define loadHalf_macro (mem: [bv64]bv8, addr: bv64): bv16 = (loadByte_macro(mem, (addr + 1bv64)) ++ loadByte_macro(mem, addr));
   define loadWord_macro (mem: [bv64]bv8, addr: bv64): bv32 = (loadHalf_macro(mem, (addr + 2bv64)) ++ loadHalf_macro(mem, addr));
   define loadDouble_macro (mem: [bv64]bv8, addr: bv64): bv64 = (loadWord_macro(mem, (addr + 4bv64)) ++ loadWord_macro(mem, addr));
-  define mem_update_byte(memP: [bv64]bv8, index: bv64, value: bv8): [bv64]bv8 = memP[index -> value];
+  define mem_update_byte(memP: [bv64]bv8, index: bv64, value: bv8): [bv64]bv8 = memP[index] = value;
   define mem_update_half(memP: [bv64]bv8, index: bv64, value: bv16): [bv64]bv8 = mem_update_byte(mem_update_byte(memP, index, value[7:0]), index+1bv64, value[15:8]);
   define mem_update_word(memP: [bv64]bv8, index: bv64, value: bv32): [bv64]bv8 = mem_update_half(mem_update_half(memP, index, value[15:0]), index+2bv64, value[31:16]);
   define mem_update_double(memP: [bv64]bv8, index: bv64, value: bv64): [bv64]bv8 = mem_update_word(mem_update_word(memP, index, value[31:0]), index+4bv64, value[63:32]);

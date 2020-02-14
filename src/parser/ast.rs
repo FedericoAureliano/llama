@@ -410,12 +410,14 @@ pub struct ModifierElement {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Modifier {
+    Inline,
     Synthesis,
 }
 
 impl Modifier {
     pub fn name(&self) -> &'static str {
         match *self {
+            Modifier::Inline => "inline",
             Modifier::Synthesis => "synthesis",
         }
     }
@@ -849,6 +851,7 @@ pub enum BinOp {
     ShiftL,
     ArithShiftR,
     LogicalShiftR,
+    Extract
 }
 
 impl BinOp {
@@ -869,6 +872,7 @@ impl BinOp {
             BinOp::ShiftL => "<<",
             BinOp::ArithShiftR => ">>",
             BinOp::LogicalShiftR => ">>>",
+            BinOp::Extract => ":",
         }
     }
 
@@ -897,6 +901,7 @@ pub enum Expr {
     ExprLitBool(ExprLitBoolType),
     ExprIdent(ExprIdentType),
     ExprCall(ExprCallType),
+    ExprDeref(ExprDerefType),
     ExprTypeParam(ExprTypeParamType),
     ExprDot(ExprDotType),
     ExprLambda(ExprLambdaType),
@@ -1059,6 +1064,23 @@ impl Expr {
             span,
 
             callee,
+            args,
+        })
+    }
+
+    pub fn create_deref(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        array: Box<Expr>,
+        args: Vec<Box<Expr>>,
+    ) -> Expr {
+        Expr::ExprDeref(ExprDerefType {
+            id,
+            pos,
+            span,
+
+            array,
             args,
         })
     }
@@ -1346,6 +1368,7 @@ impl Expr {
             Expr::ExprLitBool(ref val) => val.pos,
             Expr::ExprIdent(ref val) => val.pos,
             Expr::ExprCall(ref val) => val.pos,
+            Expr::ExprDeref(ref val) => val.pos,
             Expr::ExprTypeParam(ref val) => val.pos,
             Expr::ExprDot(ref val) => val.pos,
             Expr::ExprLambda(ref val) => val.pos,
@@ -1365,6 +1388,7 @@ impl Expr {
             Expr::ExprLitBool(ref val) => val.span,
             Expr::ExprIdent(ref val) => val.span,
             Expr::ExprCall(ref val) => val.span,
+            Expr::ExprDeref(ref val) => val.span,
             Expr::ExprTypeParam(ref val) => val.span,
             Expr::ExprDot(ref val) => val.span,
             Expr::ExprLambda(ref val) => val.span,
@@ -1384,6 +1408,7 @@ impl Expr {
             Expr::ExprLitBool(ref val) => val.id,
             Expr::ExprIdent(ref val) => val.id,
             Expr::ExprCall(ref val) => val.id,
+            Expr::ExprDeref(ref val) => val.id,
             Expr::ExprTypeParam(ref val) => val.id,
             Expr::ExprDot(ref val) => val.id,
             Expr::ExprLambda(ref val) => val.id,
@@ -1511,6 +1536,16 @@ pub struct ExprLambdaType {
     pub params: Vec<Param>,
     pub ret: Option<Box<Type>>,
     pub block: Box<Stmt>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ExprDerefType {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+
+    pub array: Box<Expr>,
+    pub args: Vec<Box<Expr>>,
 }
 
 #[derive(Clone, Debug)]

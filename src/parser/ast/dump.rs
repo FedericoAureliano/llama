@@ -505,6 +505,7 @@ impl<'a> AstDumper<'a> {
             ExprLitBool(ref lit) => self.dump_expr_lit_bool(lit),
             ExprIdent(ref ident) => self.dump_expr_ident(ident),
             ExprCall(ref call) => self.dump_expr_call(call),
+            ExprDeref(ref deref) => self.dump_expr_deref(deref),
             ExprTypeParam(ref expr) => self.dump_expr_type_param(expr),
             ExprLambda(ref expr) => self.dump_expr_lambda(expr),
             ExprBlock(ref expr) => self.dump_expr_block(expr),
@@ -625,6 +626,21 @@ impl<'a> AstDumper<'a> {
         self.indent(|d| d.dump_expr(&expr.rhs));
         dump!(self, "dot @ {} {}", expr.pos, expr.id);
         self.indent(|d| d.dump_expr(&expr.lhs));
+    }
+
+    fn dump_expr_deref(&mut self, expr: &ExprDerefType) {
+        dump!(self, "array deref @ {} {}", expr.pos, expr.id);
+
+        self.indent(|d| {
+            d.indent(|d| {
+                d.dump_expr(&expr.array);
+                d.indent(|d| {
+                    for arg in &expr.args {
+                        d.dump_expr(arg);
+                    }
+                })
+            });
+        });
     }
 
     fn dump_expr_call(&mut self, expr: &ExprCallType) {

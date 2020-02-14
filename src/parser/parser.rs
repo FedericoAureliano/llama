@@ -220,6 +220,7 @@ impl<'a> Parser<'a> {
 
                 TokenKind::Procedure => {
                     let mods = &[
+                        Modifier::Inline,
                     ];
                     self.restrict_modifiers(&modifiers, mods)?;
 
@@ -284,6 +285,7 @@ impl<'a> Parser<'a> {
             self.advance_token()?;
             let ident = self.expect_identifier()?;
             let modifier = match self.interner.str(ident).as_str() {
+                "inline" => Modifier::Inline,
                 "synthesis" => Modifier::Synthesis,
                 _ => {
                     return Err(ParseErrorAndPos::new(
@@ -1199,6 +1201,7 @@ impl<'a> Parser<'a> {
                 TokenKind::LtLt | TokenKind::GtGt | TokenKind::GtGtGt => 6,
                 TokenKind::Add | TokenKind::Sub => 7,
                 TokenKind::Mul | TokenKind::Div | TokenKind::Mod => 8,
+                TokenKind::Colon => 9,
                 _ => {
                     return Ok(left);
                 }
@@ -1283,15 +1286,15 @@ impl<'a> Parser<'a> {
 
                 TokenKind::LBracket => {
                     let tok = self.advance_token()?;
-                    let types = self.parse_comma_list(TokenKind::RBracket, |p| p.parse_type())?;
+                    let args = self.parse_comma_list(TokenKind::RBracket, |p| p.parse_expression())?;
                     let span = self.span_from(start);
 
-                    Box::new(Expr::create_type_param(
+                    Box::new(Expr::create_deref(
                         self.generate_id(),
                         tok.position,
                         span,
                         left,
-                        types,
+                        args,
                     ))
                 }
 
@@ -1330,6 +1333,7 @@ impl<'a> Parser<'a> {
             TokenKind::LtLt => BinOp::ShiftL,
             TokenKind::GtGt => BinOp::ArithShiftR,
             TokenKind::GtGtGt => BinOp::LogicalShiftR,
+            TokenKind::Colon => BinOp::Extract,
             _ => panic!("unimplemented token {:?}", tok),
         };
 
