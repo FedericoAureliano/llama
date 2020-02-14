@@ -272,10 +272,11 @@ impl Lexer {
                 }
 
                 Some('b') => {
-                    self.read_char();
-                    self.read_char();
-
-                    IntBase::Bin
+                    if let Some('v') = self.next() {
+                        IntBase::Dec
+                    } else {
+                        IntBase::Bin
+                    }
                 }
 
                 _ => IntBase::Dec,
@@ -342,6 +343,18 @@ impl Lexer {
             Some('F') if base == IntBase::Dec => {
                 self.read_char();
                 TokenKind::LitFloat(value, FloatSuffix::Float)
+            }
+
+            Some('b') => {
+                self.read_char();
+                if let Some('v') = self.curr() {
+                    self.read_char();
+                    let mut width = String::new();
+                    self.read_digits(&mut width, IntBase::Dec);
+                    TokenKind::LitBitVec(value, width)
+                } else {
+                    return Err(ParseErrorAndPos::new(pos, ParseError::ExpectedBitVec));
+                }
             }
 
             _ => TokenKind::LitInt(value, base, IntSuffix::Int),
@@ -630,6 +643,23 @@ mod tests {
             5,
         );
         assert_end(&mut reader, 1, 6);
+    }
+
+    #[test]
+    fn test_bitvec_numbers() {
+        let mut reader = Lexer::from_str("0bv32 1bv4");
+        assert_tok(
+            &mut reader,
+            TokenKind::LitBitVec("0".into(), "32".into()),
+            1,
+            1,
+        );
+        assert_tok(
+            &mut reader,
+            TokenKind::LitBitVec("1".into(), "4".into()),
+            1,
+            7,
+        );
     }
 
     #[test]

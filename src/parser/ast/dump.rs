@@ -501,6 +501,7 @@ impl<'a> AstDumper<'a> {
             ExprDot(ref field) => self.dump_expr_dot(field),
             ExprLitInt(ref lit) => self.dump_expr_lit_int(lit),
             ExprLitFloat(ref lit) => self.dump_expr_lit_float(lit),
+            ExprLitBitVec(ref lit) => self.dump_expr_lit_bitvec(lit),
             ExprLitBool(ref lit) => self.dump_expr_lit_bool(lit),
             ExprIdent(ref ident) => self.dump_expr_ident(ident),
             ExprCall(ref call) => self.dump_expr_call(call),
@@ -573,6 +574,12 @@ impl<'a> AstDumper<'a> {
 
     fn dump_expr_lit_float(&mut self, lit: &ExprLitFloatType) {
         dump!(self, "lit float {} @ {} {}", lit.value, lit.pos, lit.id);
+    }
+
+    fn dump_expr_lit_bitvec(&mut self, lit: &ExprLitBitVecType) {
+        let mut val : Vec<String> = lit.value.iter().map(|v| format!("{}", if v {1} else {0})).collect();
+        val.reverse();
+        dump!(self, "lit bitvec {} @ {} {}", val.join(""), lit.pos, lit.id);
     }
 
     fn dump_expr_lit_bool(&mut self, lit: &ExprLitBoolType) {

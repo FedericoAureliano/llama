@@ -1,5 +1,6 @@
 use std::fmt;
 use std::slice::Iter;
+use bit_vec::BitVec;
 
 use crate::parser::interner::{Interner, Name};
 use crate::parser::lexer::position::{Position, Span};
@@ -892,6 +893,7 @@ pub enum Expr {
     ExprBin(ExprBinType),
     ExprLitInt(ExprLitIntType),
     ExprLitFloat(ExprLitFloatType),
+    ExprLitBitVec(ExprLitBitVecType),
     ExprLitBool(ExprLitBoolType),
     ExprIdent(ExprIdentType),
     ExprCall(ExprCallType),
@@ -1000,6 +1002,20 @@ impl Expr {
             span,
             value,
             suffix,
+        })
+    }
+
+    pub fn create_lit_bitvec(
+        id: NodeId,
+        pos: Position,
+        span: Span,
+        value: BitVec,
+    ) -> Expr {
+        Expr::ExprLitBitVec(ExprLitBitVecType {
+            id,
+            pos,
+            span,
+            value,
         })
     }
 
@@ -1207,6 +1223,20 @@ impl Expr {
         }
     }
 
+    pub fn to_lit_bitvec(&self) -> Option<&ExprLitBitVecType> {
+        match *self {
+            Expr::ExprLitBitVec(ref val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn is_lit_bitvec(&self) -> bool {
+        match *self {
+            Expr::ExprLitBitVec(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn to_lit_bool(&self) -> Option<&ExprLitBoolType> {
         match *self {
             Expr::ExprLitBool(ref val) => Some(val),
@@ -1312,6 +1342,7 @@ impl Expr {
             Expr::ExprBin(ref val) => val.pos,
             Expr::ExprLitInt(ref val) => val.pos,
             Expr::ExprLitFloat(ref val) => val.pos,
+            Expr::ExprLitBitVec(ref val) => val.pos,
             Expr::ExprLitBool(ref val) => val.pos,
             Expr::ExprIdent(ref val) => val.pos,
             Expr::ExprCall(ref val) => val.pos,
@@ -1330,6 +1361,7 @@ impl Expr {
             Expr::ExprBin(ref val) => val.span,
             Expr::ExprLitInt(ref val) => val.span,
             Expr::ExprLitFloat(ref val) => val.span,
+            Expr::ExprLitBitVec(ref val) => val.span,
             Expr::ExprLitBool(ref val) => val.span,
             Expr::ExprIdent(ref val) => val.span,
             Expr::ExprCall(ref val) => val.span,
@@ -1348,6 +1380,7 @@ impl Expr {
             Expr::ExprBin(ref val) => val.id,
             Expr::ExprLitInt(ref val) => val.id,
             Expr::ExprLitFloat(ref val) => val.id,
+            Expr::ExprLitBitVec(ref val) => val.id,
             Expr::ExprLitBool(ref val) => val.id,
             Expr::ExprIdent(ref val) => val.id,
             Expr::ExprCall(ref val) => val.id,
@@ -1421,6 +1454,15 @@ pub struct ExprLitFloatType {
 
     pub value: f64,
     pub suffix: FloatSuffix,
+}
+
+#[derive(Clone, Debug)]
+pub struct ExprLitBitVecType {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+
+    pub value: BitVec,
 }
 
 #[derive(Clone, Debug)]

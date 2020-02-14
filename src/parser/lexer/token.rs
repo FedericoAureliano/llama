@@ -7,6 +7,7 @@ use crate::parser::lexer::position::{Position, Span};
 pub enum TokenKind {
     LitInt(String, IntBase, IntSuffix),
     LitFloat(String, FloatSuffix),
+    LitBitVec(String, String),
     Identifier(String),
     End,
 
@@ -109,6 +110,8 @@ impl TokenKind {
                 FloatSuffix::Float => "float number",
                 FloatSuffix::Double => "double number",
             },
+
+            TokenKind::LitBitVec(_, _) => "bitvec number",
 
             TokenKind::Identifier(_) => "identifier",
             TokenKind::End => "<<EOF>>",

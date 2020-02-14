@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::mem;
+use bit_vec::BitVec;
 
 use crate::parser::ast;
 use crate::parser::ast::*;
@@ -1351,6 +1352,7 @@ impl<'a> Parser<'a> {
             TokenKind::If => self.parse_if(),
             TokenKind::LitInt(_, _, _) => self.parse_lit_int(),
             TokenKind::LitFloat(_, _) => self.parse_lit_float(),
+            TokenKind::LitBitVec(_, _) => self.parse_lit_bitvec(),
             TokenKind::Identifier(_) => self.parse_identifier(),
             TokenKind::True => self.parse_bool_literal(),
             TokenKind::False => self.parse_bool_literal(),
@@ -1464,6 +1466,35 @@ impl<'a> Parser<'a> {
             if let Ok(num) = parsed {
                 let expr = Expr::create_lit_float(self.generate_id(), pos, span, num, suffix);
                 return Ok(Box::new(expr));
+            }
+        }
+
+        unreachable!()
+    }
+
+    fn parse_lit_bitvec(&mut self) -> ExprResult {
+        let span = self.token.span;
+        let tok = self.advance_token()?;
+        let pos = tok.position;
+
+        if let TokenKind::LitBitVec(value, width) = tok.kind {
+            let filtered_value = value.chars().filter(|&ch| ch != '_').collect::<String>();
+            let parsed_value = filtered_value.parse::<usize>();
+
+            let filtered_width = width.chars().filter(|&ch| ch != '_').collect::<String>();
+            let parsed_width = filtered_width.parse::<usize>();
+
+            if let Ok(mut v) = parsed_value {
+                if let Ok(w) = parsed_width {
+                    let bv = BitVec::from_fn(w, |_| { 
+                        let res = v % 2 == 1;
+                        v = v / 2;
+                        res 
+                    });
+
+                    let expr = Expr::create_lit_bitvec(self.generate_id(), pos, span, bv);
+                    return Ok(Box::new(expr));
+                }
             }
         }
 

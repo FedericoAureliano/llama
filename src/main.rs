@@ -13,6 +13,8 @@ use crate::parser::parser::Parser;
 use std::default::Default;
 use docopt::Docopt;
 
+extern crate bit_vec;
+
 pub fn parse() -> Args {
     Docopt::new(USAGE)
         .and_then(|d| d.decode())

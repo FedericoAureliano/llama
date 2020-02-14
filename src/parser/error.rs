@@ -4,6 +4,7 @@ use crate::parser::lexer::position::Position;
 pub enum ParseError {
     // Lexer errors
     UnknownChar(char),
+    ExpectedBitVec,
     UnclosedComment,
     InvalidEscapeSequence(char),
 
@@ -26,6 +27,9 @@ pub enum ParseError {
 impl ParseError {
     pub fn message(&self) -> String {
         match self {
+            ParseError::ExpectedBitVec => {
+                format!("expected bitvector.")
+            }
             ParseError::UnknownChar(ch) => {
                 format!("unknown character {} (codepoint {}).", ch, *ch as usize)
             }

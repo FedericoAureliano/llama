@@ -1,0 +1,3123 @@
+module main {
+  //define sp_preconditions(): boolean = (stack_low_const <= sp && sp <= stack_high_const);
+  define loadByte_macro (mem: [bv64]bv8, addr: bv64): bv8 = (mem)[addr];
+  define loadHalf_macro (mem: [bv64]bv8, addr: bv64): bv16 = (loadByte_macro(mem, (addr + 1bv64)) ++ loadByte_macro(mem, addr));
+  define loadWord_macro (mem: [bv64]bv8, addr: bv64): bv32 = (loadHalf_macro(mem, (addr + 2bv64)) ++ loadHalf_macro(mem, addr));
+  define loadDouble_macro (mem: [bv64]bv8, addr: bv64): bv64 = (loadWord_macro(mem, (addr + 4bv64)) ++ loadWord_macro(mem, addr));
+  define mem_update_byte(memP: [bv64]bv8, index: bv64, value: bv8): [bv64]bv8 = memP[index -> value];
+  define mem_update_half(memP: [bv64]bv8, index: bv64, value: bv16): [bv64]bv8 = mem_update_byte(mem_update_byte(memP, index, value[7:0]), index+1bv64, value[15:8]);
+  define mem_update_word(memP: [bv64]bv8, index: bv64, value: bv32): [bv64]bv8 = mem_update_half(mem_update_half(memP, index, value[15:0]), index+2bv64, value[31:16]);
+  define mem_update_double(memP: [bv64]bv8, index: bv64, value: bv64): [bv64]bv8 = mem_update_word(mem_update_word(memP, index, value[31:0]), index+4bv64, value[63:32]);
+  @inline procedure add_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (rs1 + rs2); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sub_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (rs1 - rs2); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sll_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_left_shift((rs2 & 63bv64), rs1); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure slt_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      if((rs1 < rs2))
+        {
+          ret = 1bv64; // line 0
+        }
+      else
+        {
+          ret = 0bv64; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sltu_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      if((rs1 <_u rs2))
+        {
+          ret = 1bv64; // line 0
+        }
+      else
+        {
+          ret = 0bv64; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure xor_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (rs1 ^ rs2); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure srl_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_l_right_shift((rs2 & 63bv64), rs1); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sra_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_a_right_shift((rs2 & 63bv64), rs1); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure or_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (rs1 | rs2); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure and_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (rs1 & rs2); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure addw_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, ((rs1 + rs2))[31:0]); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure subw_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, ((rs1 - rs2))[31:0]); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sllw_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, bv_left_shift(bv_zero_extend(27, (rs2)[4:0]), (rs1)[31:0])); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure srlw_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, bv_l_right_shift(bv_zero_extend(27, (rs2)[4:0]), (rs1)[31:0])); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sraw_proc(rs1: bv64, rs2: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, bv_a_right_shift(bv_zero_extend(27, (rs2)[4:0]), (rs1)[31:0])); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure jalr_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (pc + 4bv64); // line 0
+      pc = ((rs1 + imm)[63:1] ++ 0bv1); // line 0
+    }
+  @inline procedure lb_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(56, loadByte_macro(mem, rs1 + imm)); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure lh_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(48, loadHalf_macro(mem, rs1 + imm)); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure lw_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, loadWord_macro(mem, rs1 + imm)); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure lbu_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_zero_extend(56, loadByte_macro(mem, rs1 + imm)); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure lhu_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_zero_extend(48, loadHalf_macro(mem, rs1 + imm)); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure addi_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (rs1 + imm); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure slti_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      if((rs1 < imm))
+        {
+          ret = 1bv64; // line 0
+        }
+      else
+        {
+          ret = 0bv64; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sltiu_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      if((rs1 <_u imm))
+        {
+          ret = 1bv64; // line 0
+        }
+      else
+        {
+          ret = 0bv64; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure xori_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (rs1 ^ imm); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure ori_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (rs1 | imm); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure andi_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (rs1 & imm); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure slli_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc, exception;
+    {
+      if(!((imm <_u 64bv64)))
+        {
+          exception = 2bv64; // line 0
+        }
+      else
+        {
+          ret = bv_left_shift(imm, rs1); // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure srli_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc, exception;
+    {
+      if(!((imm <_u 64bv64)))
+        {
+          exception = 2bv64; // line 0
+        }
+      else
+        {
+          ret = bv_l_right_shift(imm, rs1); // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure srai_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc, exception;
+    {
+      if(!((imm <_u 64bv64)))
+        {
+          exception = 2bv64; // line 0
+        }
+      else
+        {
+          ret = bv_a_right_shift(imm, rs1); // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure fence_proc()
+    modifies pc;
+    {
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sfence_vma_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = 0bv64; // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure lwu_proc(addr: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_zero_extend(32, loadWord_macro(mem, addr)); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure ld_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = loadDouble_macro(mem, rs1 + imm); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure addiw_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, ((rs1[31:0] + imm[31:0]))[31:0]); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure slliw_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, bv_left_shift((imm)[31:0], (rs1)[31:0])); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure srliw_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, bv_l_right_shift((imm)[31:0], (rs1)[31:0])); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sraiw_proc(rs1: bv64, imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = bv_sign_extend(32, bv_a_right_shift((imm)[31:0], (rs1)[31:0])); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure sb_proc(rs1: bv64, imm: bv64, rs2: bv64) returns ()
+    modifies pc, mem;
+    {
+      pc = (pc + 4bv64); // line 0
+      mem[rs1 + imm] = rs2[7:0]; // line 0
+    }
+  @inline procedure sh_proc(rs1: bv64, imm: bv64, rs2: bv64) returns ()
+    modifies pc, mem;
+    {
+      pc = (pc - 4bv64); // line 0
+      call () = sb_proc(rs1, imm, rs2); // line 0
+      call () = sb_proc(rs1, imm + 1bv64, 0bv8 ++ rs2[63:8]); // line 0
+    }
+  @inline procedure sw_proc(rs1: bv64, imm: bv64, rs2: bv64) returns ()
+    modifies pc, mem;
+    {
+      pc = (pc - 4bv64); // line 0
+      call () = sh_proc(rs1, imm, rs2); // line 0
+      call () = sh_proc(rs1, imm + 2bv64, 0bv16 ++ rs2[63:16]); // line 0
+    }
+  @inline procedure sd_proc(rs1: bv64, imm: bv64, rs2: bv64) returns ()
+    modifies pc, mem;
+    {
+      pc = (pc - 4bv64); // line 0
+      call () = sw_proc(rs1, imm, rs2); // line 0
+      call () = sw_proc(rs1, imm + 4bv64, 0bv32 ++ rs2[63:32]); // line 0
+    }
+  @inline procedure beq_proc(rs1: bv64, rs2: bv64, imm: bv64) returns ()
+    modifies pc;
+    {
+      if((rs1 == rs2))
+        {
+          pc = imm; // line 0
+        }
+      else
+        {
+          pc = (pc + 4bv64); // line 0
+        }
+    }
+  @inline procedure bne_proc(rs1: bv64, rs2: bv64, imm: bv64) returns ()
+    modifies pc;
+    {
+      if(!((rs1 == rs2)))
+        {
+          pc = imm; // line 0
+        }
+      else
+        {
+          pc = (pc + 4bv64); // line 0
+        }
+    }
+  @inline procedure blt_proc(rs1: bv64, rs2: bv64, imm: bv64) returns ()
+    modifies pc;
+    {
+      if((rs1 < rs2))
+        {
+          pc = imm; // line 0
+        }
+      else
+        {
+          pc = (pc + 4bv64); // line 0
+        }
+    }
+  @inline procedure bge_proc(rs1: bv64, rs2: bv64, imm: bv64) returns ()
+    modifies pc;
+    {
+      if(!((rs1 < rs2)))
+        {
+          pc = imm; // line 0
+        }
+      else
+        {
+          pc = (pc + 4bv64); // line 0
+        }
+    }
+  @inline procedure bltu_proc(rs1: bv64, rs2: bv64, imm: bv64) returns ()
+    modifies pc;
+    {
+      if((rs1 <_u rs2))
+        {
+          pc = imm; // line 0
+        }
+      else
+        {
+          pc = (pc + 4bv64); // line 0
+        }
+    }
+  @inline procedure bgeu_proc(rs1: bv64, rs2: bv64, imm: bv64) returns ()
+    modifies pc;
+    {
+      if(!((rs1 <_u rs2)))
+        {
+          pc = imm; // line 0
+        }
+      else
+        {
+          pc = (pc + 4bv64); // line 0
+        }
+    }
+  @inline procedure lui_proc(imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret =  bv_sign_extend(32, bv_left_shift(12, 0bv12 ++ imm[19:0])); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure auipc_proc(imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (pc + bv_left_shift(12bv64, imm)); // line 0
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure jal_proc(imm: bv64) returns (ret: bv64)
+    modifies pc;
+    {
+      ret = (pc + 4bv64); // line 0
+      pc = imm; // line 0
+    }
+  @inline procedure csrrw_proc(csr: bv64, rs1: bv64) returns (csr_ret: bv64, rd_ret: bv64)
+    modifies pc, exception;
+    {
+      if(((current_priv <_u (csr)[9:8]) || ((0bv64 <_u rs1) && !(((csr)[11:10] <_u 3bv2)))))
+        {
+          exception = 2bv64; // line 0
+        }
+      else
+        {
+          csr_ret, rd_ret = rs1, csr; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure csrrs_proc(csr: bv64, rs1: bv64) returns (csr_ret: bv64, rd_ret: bv64)
+    modifies pc, exception;
+    {
+      if(((current_priv <_u (csr)[9:8]) || ((0bv64 <_u rs1) && !(((csr)[11:10] <_u 3bv2)))))
+        {
+          exception = 2bv64; // line 0
+        }
+      else
+        {
+          csr_ret, rd_ret = (rs1 | csr), csr; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure csrrc_proc(csr: bv64, rs1: bv64) returns (csr_ret: bv64, rd_ret: bv64)
+    modifies pc, exception;
+    {
+      if(((current_priv <_u (csr)[9:8]) || ((0bv64 <_u rs1) && !(((csr)[11:10] <_u 3bv2)))))
+        {
+          exception = 2bv64; // line 0
+        }
+      else
+        {
+          csr_ret, rd_ret = ((rs1) & csr), csr; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure csrrwi_proc(csr: bv64, imm: bv5) returns (csr_ret: bv64, rd_ret: bv64)
+    modifies pc, exception;
+    {
+      if(((current_priv <_u (csr)[9:8]) || (true && !(((csr)[11:10] <_u 3bv2)))))
+        {
+          exception = 2bv64; // line 0
+        }
+      else
+        {
+          csr_ret, rd_ret = bv_zero_extend(59, imm), csr; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure csrrsi_proc(csr: bv64, imm: bv5) returns (csr_ret: bv64, rd_ret: bv64)
+    modifies pc, exception;
+    {
+      if(((current_priv <_u (csr)[9:8]) || (true && !(((csr)[11:10] <_u 3bv2)))))
+        {
+          exception = 2bv64; // line 0
+        }
+      else
+        {
+          csr_ret, rd_ret = (bv_zero_extend(59, imm) | csr), csr; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+  @inline procedure csrrci_proc(csr: bv64, imm: bv5) returns (csr_ret: bv64, rd_ret: bv64)
+    modifies pc, exception;
+    {
+      if(((current_priv <_u (csr)[9:8]) || (true && !(((csr)[11:10] <_u 3bv2)))))
+        {
+          exception = 2bv64; // line 0
+        }
+      else
+        {
+          csr_ret, rd_ret = ((bv_zero_extend(59, imm)) & csr), csr; // line 0
+        }
+      pc = (pc + 4bv64); // line 0
+    }
+    
+
+    
+    var a0: bv64;
+    var a1: bv64;
+    var a2: bv64;
+    var a3: bv64;
+    var a4: bv64;
+    var a5: bv64;
+    var current_priv: bv2;
+    var exception: bv64;
+    var mem: [bv64]bv8;
+    var mtvec: bv64;
+    var pc: bv64;
+    var pmpaddr0: bv64;
+    var pmpaddr1: bv64;
+    var pmpaddr10: bv64;
+    var pmpaddr11: bv64;
+    var pmpaddr12: bv64;
+    var pmpaddr13: bv64;
+    var pmpaddr14: bv64;
+    var pmpaddr15: bv64;
+    var pmpaddr2: bv64;
+    var pmpaddr3: bv64;
+    var pmpaddr4: bv64;
+    var pmpaddr5: bv64;
+    var pmpaddr6: bv64;
+    var pmpaddr7: bv64;
+    var pmpaddr8: bv64;
+    var pmpaddr9: bv64;
+    var pmpcfg0: bv64;
+    var pmpcfg2: bv64;
+    var ra: bv64;
+    var s0: bv64;
+    var sp: bv64;
+    var t0: bv64;
+    var zero: bv64;
+
+
+
+    @inline procedure bb_0x8000d058()
+        modifies a5, exception, ra, sp, pc, mem, s0, a0, a4;
+    {
+        call (sp) = addi_proc(sp, -576bv64);
+        call () = sd_proc(sp, 568bv64, ra);
+        call () = sd_proc(sp, 560bv64, s0);
+        call (s0) = addi_proc(sp, 576bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call (a4) = addi_proc(a1, 0bv64);
+        call () = sw_proc(s0, -564bv64, a5);
+        call (a5) = addi_proc(a4, 0bv64);
+        call () = sb_proc(s0, -565bv64, a5);
+        call (a5) = lw_proc(s0, -564bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147534896bv64);
+    }
+    
+    @inline procedure bb_0x8000d85c()
+        modifies exception, pc, a5, a4;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 11bv64);
+        call () = blt_proc(a5, a4, 2147539088bv64);
+    }
+    
+    @inline procedure bb_0x8000dad0()
+        modifies zero, pmpcfg0, a5, mem, mtvec, pmpaddr6, pc, a4, exception, t0;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -408bv64, a5);
+        call (a5) = ld_proc(s0, -408bv64);
+        call () = sd_proc(s0, -416bv64, a5);
+        call (a4) = ld_proc(s0, -416bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 48bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr6) = csrrw_proc(a5, pmpaddr6);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000dcc8()
+        modifies pmpcfg2, mem, mtvec, pmpaddr12, a5, exception, pc, t0, a4, zero;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -504bv64, a5);
+        call (a5) = ld_proc(s0, -504bv64);
+        call () = sd_proc(s0, -512bv64, a5);
+        call (a4) = ld_proc(s0, -512bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 32bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr12) = csrrw_proc(a5, pmpaddr12);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000ddd0()
+        modifies zero, pmpcfg2, a4, a5, pc, t0, exception, mem, mtvec, pmpaddr15;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -552bv64, a5);
+        call (a5) = ld_proc(s0, -552bv64);
+        call () = sd_proc(s0, -560bv64, a5);
+        call (a4) = ld_proc(s0, -560bv64);
+        call (a5) = addi_proc(zero, -1bv64);
+        call (a5) = srli_proc(a5, 8bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr15) = csrrw_proc(a5, pmpaddr15);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d184()
+        modifies a5, pc, exception, a4;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 5bv64);
+        call () = blt_proc(a5, a4, 2147537948bv64);
+    }
+    
+    @inline procedure bb_0x8000d920()
+        modifies pmpaddr1, exception, mtvec, pmpcfg0, t0, pc, a4, a5, mem, zero;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -328bv64, a5);
+        call (a5) = ld_proc(s0, -328bv64);
+        call () = sd_proc(s0, -336bv64, a5);
+        call (a4) = ld_proc(s0, -336bv64);
+        call (a5) = lui_proc(1048560bv64);
+        call (a5) = addi_proc(a5, 255bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr1) = csrrw_proc(a5, pmpaddr1);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d568()
+        modifies a5, pmpaddr10, t0, exception, zero, pmpcfg2, mem, a4, mtvec, pc;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -216bv64, a5);
+        call (a5) = ld_proc(s0, -216bv64);
+        call () = sd_proc(s0, -224bv64, a5);
+        call (a4) = ld_proc(s0, -224bv64);
+        call (a5) = lui_proc(1044496bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr10) = csrrw_proc(a5, pmpaddr10);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d088()
+        modifies exception, a5, pc;
+    {
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = bne_proc(a5, zero, 2147537068bv64);
+    }
+    
+    @inline procedure bb_0x8000d8a0()
+        modifies exception, a5, pc, a4;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 13bv64);
+        call () = blt_proc(a4, a5, 2147540168bv64);
+    }
+    
+    @inline procedure bb_0x8000d9c8()
+        modifies exception, pmpcfg0, pc, mem, a4, a5, mtvec, pmpaddr3, zero, t0;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -360bv64, a5);
+        call (a5) = ld_proc(s0, -360bv64);
+        call () = sd_proc(s0, -368bv64, a5);
+        call (a4) = ld_proc(s0, -368bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 24bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr3) = csrrw_proc(a5, pmpaddr3);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000de24()
+        modifies ra, pc, a5, exception, a0;
+    {
+        call (a5) = lui_proc(16bv64);
+        call (a0) = addi_proc(a5, -1bv64);
+        call (ra) = jal_proc(2147509228bv64);
+    }
+    
+    @inline procedure bb_0x8000d0e8()
+        modifies a5, mem, a0, ra, pc, exception;
+    {
+        call () = sd_proc(s0, -32bv64, a0);
+        call (a5) = lw_proc(s0, -564bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147534092bv64);
+    }
+    
+    @inline procedure bb_0x8000db28()
+        modifies mtvec, exception, t0, pmpaddr7, pc, pmpcfg0, a5, a4, zero, mem;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -424bv64, a5);
+        call (a5) = ld_proc(s0, -424bv64);
+        call () = sd_proc(s0, -432bv64, a5);
+        call (a4) = ld_proc(s0, -432bv64);
+        call (a5) = addi_proc(zero, -1bv64);
+        call (a5) = srli_proc(a5, 8bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr7) = csrrw_proc(a5, pmpaddr7);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d790()
+        modifies mem, pc, exception, a5, a0, ra;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a5) = addiw_proc(a5, -1bv64);
+        call () = sw_proc(s0, -44bv64, a5);
+        call () = sd_proc(s0, -32bv64, zero);
+        call (a5) = lw_proc(s0, -564bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147533592bv64);
+    }
+    
+    @inline procedure bb_0x8000de38()
+        modifies pc, ra, a0, s0, sp, exception, zero;
+    {
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = ld_proc(sp, 568bv64);
+        call (s0) = ld_proc(sp, 560bv64);
+        call (sp) = addi_proc(sp, 576bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    @inline procedure bb_0x8000d1a8()
+        modifies exception, a4, a5, pc;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 11bv64);
+        call () = blt_proc(a5, a4, 2147537372bv64);
+    }
+    
+    @inline procedure bb_0x8000d848()
+        modifies exception, pc, zero;
+    {
+        call (zero) = jal_proc(2147539488bv64);
+    }
+    
+    @inline procedure bb_0x8000d1c8()
+        modifies pc, a4, exception, a5;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 9bv64);
+        call () = blt_proc(a5, a4, 2147538280bv64);
+    }
+    
+    @inline procedure bb_0x8000d88c()
+        modifies zero, pc, exception;
+    {
+        call (zero) = jal_proc(2147539836bv64);
+    }
+    
+    @inline procedure bb_0x8000d1ec()
+        modifies a4, exception, pc, a5;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 13bv64);
+        call () = blt_proc(a4, a5, 2147538452bv64);
+    }
+    
+    @inline procedure bb_0x8000d6c4()
+        modifies a5, mtvec, exception, pmpaddr14, mem, pc, pmpcfg2, a4, t0, zero;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -280bv64, a5);
+        call (a5) = ld_proc(s0, -280bv64);
+        call () = sd_proc(s0, -288bv64, a5);
+        call (a4) = ld_proc(s0, -288bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 48bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr14) = csrrw_proc(a5, pmpaddr14);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d808()
+        modifies a4, exception, a5, pc;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 1bv64);
+        call () = blt_proc(a5, a4, 2147539316bv64);
+    }
+    
+    @inline procedure bb_0x8000d134()
+        modifies a4, pc, a5, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 3bv64);
+        call () = blt_proc(a5, a4, 2147537268bv64);
+    }
+    
+    @inline procedure bb_0x8000d1d8()
+        modifies pc, exception, zero;
+    {
+        call (zero) = jal_proc(2147538120bv64);
+    }
+    
+    @inline procedure bb_0x8000d0a4()
+        modifies a5, zero, pc, exception;
+    {
+        call (a5) = addi_proc(zero, 24bv64);
+        call (zero) = jal_proc(2147540536bv64);
+    }
+    
+    @inline procedure bb_0x8000da20()
+        modifies a4, pmpaddr4, a5, zero, mem, exception, pc, pmpcfg0, mtvec, t0;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -376bv64, a5);
+        call (a5) = ld_proc(s0, -376bv64);
+        call () = sd_proc(s0, -384bv64, a5);
+        call (a4) = ld_proc(s0, -384bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 32bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr4) = csrrw_proc(a5, pmpaddr4);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d314()
+        modifies mtvec, pmpaddr3, a5, zero, mem, t0, exception, pc, pmpcfg0, a4;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -104bv64, a5);
+        call (a5) = ld_proc(s0, -104bv64);
+        call () = sd_proc(s0, -112bv64, a5);
+        call (a4) = ld_proc(s0, -112bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 24bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr3) = csrrw_proc(a5, pmpaddr3);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d5bc()
+        modifies t0, a4, pmpcfg2, zero, exception, a5, pmpaddr11, pc, mem, mtvec;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -232bv64, a5);
+        call (a5) = ld_proc(s0, -232bv64);
+        call () = sd_proc(s0, -240bv64, a5);
+        call (a4) = ld_proc(s0, -240bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 24bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr11) = csrrw_proc(a5, pmpaddr11);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d4c8()
+        modifies exception, pmpcfg2, a4, pc, zero, a5, pmpaddr8, mem, mtvec, t0;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -184bv64, a5);
+        call (a5) = ld_proc(s0, -184bv64);
+        call () = sd_proc(s0, -192bv64, a5);
+        call (a5) = ld_proc(s0, -192bv64);
+        call (a5) = andi_proc(a5, -256bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr8) = csrrw_proc(a5, pmpaddr8);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000dbc8()
+        modifies pc, pmpcfg2, a5, exception, mem, t0, pmpaddr9, mtvec, zero, a4;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -456bv64, a5);
+        call (a5) = ld_proc(s0, -456bv64);
+        call () = sd_proc(s0, -464bv64, a5);
+        call (a4) = ld_proc(s0, -464bv64);
+        call (a5) = lui_proc(1048560bv64);
+        call (a5) = addi_proc(a5, 255bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr9) = csrrw_proc(a5, pmpaddr9);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d3c4()
+        modifies a5, pmpcfg0, exception, mem, t0, zero, pmpaddr5, pc, a4, mtvec;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -136bv64, a5);
+        call (a5) = ld_proc(s0, -136bv64);
+        call () = sd_proc(s0, -144bv64, a5);
+        call (a4) = ld_proc(s0, -144bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 40bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr5) = csrrw_proc(a5, pmpaddr5);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d8d0()
+        modifies exception, zero, pc;
+    {
+        call (zero) = jal_proc(2147540516bv64);
+    }
+    
+    @inline procedure bb_0x8000d7ac()
+        modifies a5, mem, pc, a4, exception;
+    {
+        call (a5) = addi_proc(a0, 0bv64);
+        call (a5) = srli_proc(a5, 2bv64);
+        call () = sd_proc(s0, -40bv64, a5);
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 7bv64);
+        call () = beq_proc(a4, a5, 2147539752bv64);
+    }
+    
+    @inline procedure bb_0x8000d124()
+        modifies a5, exception, a4, pc;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 3bv64);
+        call () = beq_proc(a4, a5, 2147537684bv64);
+    }
+    
+    @inline procedure bb_0x8000d7e8()
+        modifies exception, pc, a4, a5;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 3bv64);
+        call () = blt_proc(a5, a4, 2147538984bv64);
+    }
+    
+    @inline procedure bb_0x8000d1dc()
+        modifies a4, exception, a5, pc;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 13bv64);
+        call () = beq_proc(a4, a5, 2147538540bv64);
+    }
+    
+    @inline procedure bb_0x8000d8b0()
+        modifies a4, pc, exception, a5;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 14bv64);
+        call () = beq_proc(a4, a5, 2147540344bv64);
+    }
+    
+    @inline procedure bb_0x8000d21c()
+        modifies pc, exception, zero;
+    {
+        call (zero) = jal_proc(2147538800bv64);
+    }
+    
+    @inline procedure bb_0x8000d84c()
+        modifies a5, pc, exception, a4;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 11bv64);
+        call () = beq_proc(a4, a5, 2147540080bv64);
+    }
+    
+    @inline procedure bb_0x8000d838()
+        modifies a5, pc, exception, a4;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 5bv64);
+        call () = blt_proc(a5, a4, 2147539664bv64);
+    }
+    
+    @inline procedure bb_0x8000dc70()
+        modifies exception, mem, t0, pmpaddr11, zero, pmpcfg2, a4, mtvec, a5, pc;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -488bv64, a5);
+        call (a5) = ld_proc(s0, -488bv64);
+        call () = sd_proc(s0, -496bv64, a5);
+        call (a4) = ld_proc(s0, -496bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 24bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr11) = csrrw_proc(a5, pmpaddr11);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000de30()
+        modifies zero, pc, exception;
+    {
+        call (zero) = addi_proc(zero, 0bv64);
+    }
+    
+    @inline procedure bb_0x8000d20c()
+        modifies a4, pc, exception, a5;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 15bv64);
+        call () = beq_proc(a4, a5, 2147538716bv64);
+    }
+    
+    @inline procedure bb_0x8000da78()
+        modifies a4, exception, pmpcfg0, zero, mem, pc, t0, pmpaddr5, a5, mtvec;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -392bv64, a5);
+        call (a5) = ld_proc(s0, -392bv64);
+        call () = sd_proc(s0, -400bv64, a5);
+        call (a4) = ld_proc(s0, -400bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 40bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr5) = csrrw_proc(a5, pmpaddr5);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d2c0()
+        modifies pc, t0, pmpcfg0, a5, mem, a4, pmpaddr2, mtvec, zero, exception;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -88bv64, a5);
+        call (a5) = ld_proc(s0, -88bv64);
+        call () = sd_proc(s0, -96bv64, a5);
+        call (a4) = ld_proc(s0, -96bv64);
+        call (a5) = lui_proc(1044496bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr2) = csrrw_proc(a5, pmpaddr2);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d77c()
+        modifies a5, pc, exception, a0, ra;
+    {
+        call (a5) = lw_proc(s0, -564bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147533880bv64);
+    }
+    
+    @inline procedure bb_0x8000d824()
+        modifies zero, exception, pc;
+    {
+        call (zero) = jal_proc(2147540516bv64);
+    }
+    
+    @inline procedure bb_0x8000d114()
+        modifies exception, pc, a4, a5;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 7bv64);
+        call () = blt_proc(a5, a4, 2147537304bv64);
+    }
+    
+    @inline procedure bb_0x8000d0c4()
+        modifies a5, a1, pc, a2, mem, a4, exception, ra, a0, a3;
+    {
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = sw_proc(s0, -24bv64, a5);
+        call (a3) = lbu_proc(s0, -17bv64);
+        call (a4) = lw_proc(s0, -24bv64);
+        call (a5) = lw_proc(s0, -564bv64);
+        call (a2) = addi_proc(a3, 0bv64);
+        call (a1) = addi_proc(a4, 0bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147534336bv64);
+    }
+    
+    @inline procedure bb_0x8000d7d8()
+        modifies a5, a4, pc, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 3bv64);
+        call () = beq_proc(a4, a5, 2147539400bv64);
+    }
+    
+    @inline procedure bb_0x8000d7c8()
+        modifies a5, pc, a4, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 7bv64);
+        call () = blt_proc(a5, a4, 2147539020bv64);
+    }
+    
+    @inline procedure bb_0x8000d0ac()
+        modifies pc, mem, ra, a0, a5, exception;
+    {
+        call (a5) = lbu_proc(s0, -565bv64);
+        call (a5) = andi_proc(a5, 7bv64);
+        call () = sb_proc(s0, -17bv64, a5);
+        call (a5) = lw_proc(s0, -564bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147533472bv64);
+    }
+    
+    @inline procedure bb_0x8000dd78()
+        modifies exception, mtvec, mem, a4, pmpcfg2, pmpaddr14, t0, zero, pc, a5;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -536bv64, a5);
+        call (a5) = ld_proc(s0, -536bv64);
+        call () = sd_proc(s0, -544bv64, a5);
+        call (a4) = ld_proc(s0, -544bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 48bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr14) = csrrw_proc(a5, pmpaddr14);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d1fc()
+        modifies pc, a5, exception, a4;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 14bv64);
+        call () = beq_proc(a4, a5, 2147538628bv64);
+    }
+    
+    @inline procedure bb_0x8000d8c0()
+        modifies a4, a5, exception, pc;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 15bv64);
+        call () = beq_proc(a4, a5, 2147540432bv64);
+    }
+    
+    @inline procedure bb_0x8000de34()
+        modifies pc, exception, a5;
+    {
+        call (a5) = addi_proc(zero, 0bv64);
+    }
+    
+    @inline procedure bb_0x8000d144()
+        modifies a4, a5, pc, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 1bv64);
+        call () = beq_proc(a4, a5, 2147537516bv64);
+    }
+    
+    @inline procedure bb_0x8000dd20()
+        modifies mtvec, a4, t0, zero, mem, pc, pmpcfg2, exception, pmpaddr13, a5;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -520bv64, a5);
+        call (a5) = ld_proc(s0, -520bv64);
+        call () = sd_proc(s0, -528bv64, a5);
+        call (a4) = ld_proc(s0, -528bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 40bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr13) = csrrw_proc(a5, pmpaddr13);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d26c()
+        modifies pmpaddr1, pmpcfg0, pc, exception, mtvec, mem, a5, t0, a4, zero;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -72bv64, a5);
+        call (a5) = ld_proc(s0, -72bv64);
+        call () = sd_proc(s0, -80bv64, a5);
+        call (a4) = ld_proc(s0, -80bv64);
+        call (a5) = lui_proc(1048560bv64);
+        call (a5) = addi_proc(a5, 255bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr1) = csrrw_proc(a5, pmpaddr1);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d788()
+        modifies a5, exception, pc;
+    {
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = beq_proc(a5, zero, 2147540528bv64);
+    }
+    
+    @inline procedure bb_0x8000d8d4()
+        modifies mem, a5, a4, exception, pmpcfg0, mtvec, zero, t0, pmpaddr0, pc;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -312bv64, a5);
+        call (a5) = ld_proc(s0, -312bv64);
+        call () = sd_proc(s0, -320bv64, a5);
+        call (a5) = ld_proc(s0, -320bv64);
+        call (a5) = andi_proc(a5, -256bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr0) = csrrw_proc(a5, pmpaddr0);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000db7c()
+        modifies pc, t0, mtvec, pmpcfg2, zero, pmpaddr8, exception, mem, a4, a5;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -440bv64, a5);
+        call (a5) = ld_proc(s0, -440bv64);
+        call () = sd_proc(s0, -448bv64, a5);
+        call (a5) = ld_proc(s0, -448bv64);
+        call (a5) = andi_proc(a5, -256bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr8) = csrrw_proc(a5, pmpaddr8);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d164()
+        modifies a5, exception, pc;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a5) = addiw_proc(a5, 0bv64);
+        call () = beq_proc(a5, zero, 2147537440bv64);
+    }
+    
+    @inline procedure bb_0x8000d170()
+        modifies zero, exception, pc;
+    {
+        call (zero) = jal_proc(2147538800bv64);
+    }
+    
+    @inline procedure bb_0x8000d71c()
+        modifies exception, pmpcfg2, mem, a5, pmpaddr15, mtvec, zero, a4, t0, pc;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -296bv64, a5);
+        call (a5) = ld_proc(s0, -296bv64);
+        call () = sd_proc(s0, -304bv64, a5);
+        call (a4) = ld_proc(s0, -304bv64);
+        call (a5) = addi_proc(zero, -1bv64);
+        call (a5) = srli_proc(a5, 8bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr15) = csrrw_proc(a5, pmpaddr15);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d7f8()
+        modifies pc, a5, a4, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 1bv64);
+        call () = beq_proc(a4, a5, 2147539232bv64);
+    }
+    
+    @inline procedure bb_0x8000d198()
+        modifies a4, pc, a5, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 11bv64);
+        call () = beq_proc(a4, a5, 2147538364bv64);
+    }
+    
+    @inline procedure bb_0x8000d474()
+        modifies zero, pmpaddr7, pmpcfg0, t0, mtvec, pc, exception, a5, mem, a4;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -168bv64, a5);
+        call (a5) = ld_proc(s0, -168bv64);
+        call () = sd_proc(s0, -176bv64, a5);
+        call (a4) = ld_proc(s0, -176bv64);
+        call (a5) = addi_proc(zero, -1bv64);
+        call (a5) = srli_proc(a5, 8bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr7) = csrrw_proc(a5, pmpaddr7);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d818()
+        modifies a5, exception, pc;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a5) = addiw_proc(a5, 0bv64);
+        call () = beq_proc(a5, zero, 2147539156bv64);
+    }
+    
+    @inline procedure bb_0x8000d974()
+        modifies a4, mem, pmpcfg0, exception, t0, a5, mtvec, pmpaddr2, pc, zero;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -344bv64, a5);
+        call (a5) = ld_proc(s0, -344bv64);
+        call () = sd_proc(s0, -352bv64, a5);
+        call (a4) = ld_proc(s0, -352bv64);
+        call (a5) = lui_proc(1044496bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr2) = csrrw_proc(a5, pmpaddr2);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d514()
+        modifies t0, a4, mem, pmpcfg2, a5, pmpaddr9, pc, zero, exception, mtvec;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -200bv64, a5);
+        call (a5) = ld_proc(s0, -200bv64);
+        call () = sd_proc(s0, -208bv64, a5);
+        call (a4) = ld_proc(s0, -208bv64);
+        call (a5) = lui_proc(1048560bv64);
+        call (a5) = addi_proc(a5, 255bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr9) = csrrw_proc(a5, pmpaddr9);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d1b8()
+        modifies a5, pc, exception, a4;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 9bv64);
+        call () = beq_proc(a4, a5, 2147538196bv64);
+    }
+    
+    @inline procedure bb_0x8000d41c()
+        modifies a5, mem, a4, mtvec, zero, pmpcfg0, pc, exception, pmpaddr6, t0;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -152bv64, a5);
+        call (a5) = ld_proc(s0, -152bv64);
+        call () = sd_proc(s0, -160bv64, a5);
+        call (a4) = ld_proc(s0, -160bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 48bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr6) = csrrw_proc(a5, pmpaddr6);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d090()
+        modifies pc, ra, exception, a0, a1;
+    {
+        call (a1) = auipc_proc(29bv64);
+        call (a1) = addi_proc(a1, -456bv64);
+        call (a0) = auipc_proc(18bv64);
+        call (a0) = addi_proc(a0, 800bv64);
+        call (ra) = jal_proc(2147506796bv64);
+    }
+    
+    @inline procedure bb_0x8000d614()
+        modifies mtvec, t0, pc, zero, exception, pmpaddr12, a4, pmpcfg2, mem, a5;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -248bv64, a5);
+        call (a5) = ld_proc(s0, -248bv64);
+        call () = sd_proc(s0, -256bv64, a5);
+        call (a4) = ld_proc(s0, -256bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 32bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr12) = csrrw_proc(a5, pmpaddr12);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000dc1c()
+        modifies exception, a4, pmpaddr10, mtvec, t0, a5, pc, pmpcfg2, mem, zero;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -472bv64, a5);
+        call (a5) = ld_proc(s0, -472bv64);
+        call () = sd_proc(s0, -480bv64, a5);
+        call (a4) = ld_proc(s0, -480bv64);
+        call (a5) = lui_proc(1044496bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr10) = csrrw_proc(a5, pmpaddr10);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147540532bv64);
+    }
+    
+    @inline procedure bb_0x8000d66c()
+        modifies t0, mtvec, pc, pmpcfg2, a4, zero, mem, pmpaddr13, exception, a5;
+    {
+        call (a5, pmpcfg2) = csrrs_proc(zero, pmpcfg2);
+        call () = sd_proc(s0, -264bv64, a5);
+        call (a5) = ld_proc(s0, -264bv64);
+        call () = sd_proc(s0, -272bv64, a5);
+        call (a4) = ld_proc(s0, -272bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 40bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr13) = csrrw_proc(a5, pmpaddr13);
+        call (zero, pmpcfg2) = csrrw_proc(a4, pmpcfg2);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d36c()
+        modifies pc, pmpcfg0, a5, mem, a4, zero, exception, t0, mtvec, pmpaddr4;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -120bv64, a5);
+        call (a5) = ld_proc(s0, -120bv64);
+        call () = sd_proc(s0, -128bv64, a5);
+        call (a4) = ld_proc(s0, -128bv64);
+        call (a5) = addi_proc(zero, -255bv64);
+        call (a5) = slli_proc(a5, 32bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr4) = csrrw_proc(a5, pmpaddr4);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d86c()
+        modifies a5, pc, a4, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 9bv64);
+        call () = beq_proc(a4, a5, 2147539912bv64);
+    }
+    
+    @inline procedure bb_0x8000d890()
+        modifies pc, a4, a5, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 13bv64);
+        call () = beq_proc(a4, a5, 2147540256bv64);
+    }
+    
+    @inline procedure bb_0x8000d194()
+        modifies exception, pc, zero;
+    {
+        call (zero) = jal_proc(2147537772bv64);
+    }
+    
+    @inline procedure bb_0x8000d770()
+        modifies exception, pc, a5, a0, ra;
+    {
+        call (a5) = lui_proc(16bv64);
+        call (a0) = addi_proc(a5, -1bv64);
+        call (ra) = jal_proc(2147509228bv64);
+    }
+    
+    @inline procedure bb_0x8000d828()
+        modifies a4, a5, pc, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 5bv64);
+        call () = beq_proc(a4, a5, 2147539576bv64);
+    }
+    
+    @inline procedure bb_0x8000d87c()
+        modifies pc, a4, exception, a5;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 9bv64);
+        call () = blt_proc(a5, a4, 2147539996bv64);
+    }
+    
+    @inline procedure bb_0x8000d154()
+        modifies a4, a5, pc, exception;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 1bv64);
+        call () = blt_proc(a5, a4, 2147537600bv64);
+    }
+    
+    @inline procedure bb_0x8000d220()
+        modifies exception, pmpaddr0, pc, mem, pmpcfg0, mtvec, t0, a5, a4, zero;
+    {
+        call (a5, pmpcfg0) = csrrs_proc(zero, pmpcfg0);
+        call () = sd_proc(s0, -56bv64, a5);
+        call (a5) = ld_proc(s0, -56bv64);
+        call () = sd_proc(s0, -64bv64, a5);
+        call (a5) = ld_proc(s0, -64bv64);
+        call (a5) = andi_proc(a5, -256bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (a5) = or_proc(a4, a5);
+        call () = sd_proc(s0, -32bv64, a5);
+        call (a5) = ld_proc(s0, -40bv64);
+        call (a4) = ld_proc(s0, -32bv64);
+        call (t0) = auipc_proc(0bv64);
+        call (t0) = addi_proc(t0, 24bv64);
+        call (t0, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero, pmpaddr0) = csrrw_proc(a5, pmpaddr0);
+        call (zero, pmpcfg0) = csrrw_proc(a4, pmpcfg0);
+        call () = fence_proc();
+        call (zero, mtvec) = csrrw_proc(t0, mtvec);
+        call (zero) = jal_proc(2147538812bv64);
+    }
+    
+    @inline procedure bb_0x8000d0f8()
+        modifies a5, exception, a4, pc, mem;
+    {
+        call () = sd_proc(s0, -40bv64, a0);
+        call (a5) = lw_proc(s0, -24bv64);
+        call () = sw_proc(s0, -44bv64, a5);
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 7bv64);
+        call () = beq_proc(a4, a5, 2147538036bv64);
+    }
+    
+    @inline procedure bb_0x8000d174()
+        modifies a4, exception, a5, pc;
+    {
+        call (a5) = lw_proc(s0, -44bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 5bv64);
+        call () = beq_proc(a4, a5, 2147537860bv64);
+    }
+    
+    @inline procedure bb_0x8000c5e8()
+        modifies pc, exception, a5;
+    {
+        call (a5) = addi_proc(zero, 0bv64);
+    }
+    
+    @inline procedure bb_0x8000c598()
+        modifies pc, ra, exception, a5, a0;
+    {
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147533796bv64);
+    }
+    
+    @inline procedure bb_0x8000c50c()
+        modifies a5, a0, pc, s0, sp, mem, exception, ra;
+    {
+        call (sp) = addi_proc(sp, -32bv64);
+        call () = sd_proc(sp, 24bv64, ra);
+        call () = sd_proc(sp, 16bv64, s0);
+        call (s0) = addi_proc(sp, 32bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = sw_proc(s0, -20bv64, a5);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147533984bv64);
+    }
+    
+    @inline procedure bb_0x8000c540()
+        modifies pc, ra, a0, exception, a5;
+    {
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147533712bv64);
+    }
+    
+    @inline procedure bb_0x8000c5ac()
+        modifies a3, a5, zero, exception, pc, a4;
+    {
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -1060bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a4) = ld_proc(a5, 16bv64);
+        call (a3) = auipc_proc(39bv64);
+        call (a3) = addi_proc(a3, -1084bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a3, a5);
+        call (a5) = ld_proc(a5, 0bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a5) = srli_proc(a5, 2bv64);
+        call (zero) = jal_proc(2147534316bv64);
+    }
+    
+    @inline procedure bb_0x8000c54c()
+        modifies pc, exception, a5;
+    {
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = beq_proc(a5, zero, 2147534232bv64);
+    }
+    
+    @inline procedure bb_0x8000c5a4()
+        modifies pc, a5, exception;
+    {
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = beq_proc(a5, zero, 2147534312bv64);
+    }
+    
+    @inline procedure bb_0x8000c538()
+        modifies pc, exception, a5, zero;
+    {
+        call (a5) = addi_proc(zero, -1bv64);
+        call (zero) = jal_proc(2147534316bv64);
+    }
+    
+    @inline procedure bb_0x8000c5ec()
+        modifies a0, exception, ra, pc, s0, sp, zero;
+    {
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = ld_proc(sp, 24bv64);
+        call (s0) = ld_proc(sp, 16bv64);
+        call (sp) = addi_proc(sp, 32bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    @inline procedure bb_0x8000c554()
+        modifies pc, a4, a5, zero, exception, a3;
+    {
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -972bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a4) = ld_proc(a5, 16bv64);
+        call (a3) = auipc_proc(39bv64);
+        call (a3) = addi_proc(a3, -996bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a3, a5);
+        call (a5) = ld_proc(a5, 0bv64);
+        call (a5) = srli_proc(a5, 1bv64);
+        call (a5) = addi_proc(a5, -1bv64);
+        call (a5) = or_proc(a4, a5);
+        call (a5) = srli_proc(a5, 2bv64);
+        call (zero) = jal_proc(2147534316bv64);
+    }
+    
+    @inline procedure bb_0x8000c530()
+        modifies pc, exception, a5;
+    {
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = beq_proc(a5, zero, 2147534144bv64);
+    }
+    
+    @inline procedure bb_0x8000c3e4()
+        modifies a5, zero, mem, exception, s0, a0, sp, pc, a4;
+    {
+        call (sp) = addi_proc(sp, -32bv64);
+        call () = sd_proc(sp, 24bv64, s0);
+        call (s0) = addi_proc(sp, 32bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = sw_proc(s0, -20bv64, a5);
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -624bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a5) = lbu_proc(a5, 8bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 8bv64);
+        call (a5) = sub_proc(a4, a5);
+        call (a5) = sltiu_proc(a5, 1bv64);
+        call (a5) = andi_proc(a5, 255bv64);
+        call (a5) = addiw_proc(a5, 0bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (s0) = ld_proc(sp, 24bv64);
+        call (sp) = addi_proc(sp, 32bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    procedure region_is_tor()
+        modifies zero, a4, a0, mem, exception, sp, a5, pc, s0;
+    {
+        
+    }
+    
+    @inline procedure bb_0x8000c390()
+        modifies a4, sp, a0, mem, zero, exception, a5, s0, pc;
+    {
+        call (sp) = addi_proc(sp, -32bv64);
+        call () = sd_proc(sp, 24bv64, s0);
+        call (s0) = addi_proc(sp, 32bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = sw_proc(s0, -20bv64, a5);
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -540bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a5) = lbu_proc(a5, 8bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, 24bv64);
+        call (a5) = sub_proc(a4, a5);
+        call (a5) = sltiu_proc(a5, 1bv64);
+        call (a5) = andi_proc(a5, 255bv64);
+        call (a5) = addiw_proc(a5, 0bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (s0) = ld_proc(sp, 24bv64);
+        call (sp) = addi_proc(sp, 32bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    procedure region_is_napot()
+        modifies a4, a0, pc, exception, s0, mem, sp, a5, zero;
+    {
+        
+    }
+    
+    @inline procedure bb_0x8000c4d0()
+        modifies a5, exception, pc, a4;
+    {
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -840bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a4) = ld_proc(a5, 0bv64);
+        call (a5) = addi_proc(zero, -1bv64);
+        call () = bne_proc(a4, a5, 2147534072bv64);
+    }
+    
+    @inline procedure bb_0x8000c4a0()
+        modifies a5, a4, exception, sp, pc, mem, s0;
+    {
+        call (sp) = addi_proc(sp, -32bv64);
+        call () = sd_proc(sp, 24bv64, s0);
+        call (s0) = addi_proc(sp, 32bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = sw_proc(s0, -20bv64, a5);
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -812bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a5) = ld_proc(a5, 16bv64);
+        call () = bne_proc(a5, zero, 2147534072bv64);
+    }
+    
+    @inline procedure bb_0x8000c4fc()
+        modifies pc, exception, zero, sp, a0, s0;
+    {
+        call (a0) = addi_proc(a5, 0bv64);
+        call (s0) = ld_proc(sp, 24bv64);
+        call (sp) = addi_proc(sp, 32bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    @inline procedure bb_0x8000c4f0()
+        modifies zero, exception, a5, pc;
+    {
+        call (a5) = addi_proc(zero, 1bv64);
+        call (zero) = jal_proc(2147534076bv64);
+    }
+    
+    @inline procedure bb_0x8000c4f8()
+        modifies pc, a5, exception;
+    {
+        call (a5) = addi_proc(zero, 0bv64);
+    }
+    
+    procedure region_is_napot_all()
+        modifies pc, a0, a4, s0, a5, sp, mem, exception, zero;
+    {
+        if (pc == 2147533984bv64) {
+            {
+                call () = bb_0x8000c4a0();
+                assert (pc == 2147534032bv64 || pc == 2147534072bv64);
+            }
+        }
+        if (pc == 2147534032bv64) {
+            {
+                call () = bb_0x8000c4d0();
+                assert (pc == 2147534064bv64 || pc == 2147534072bv64);
+            }
+        }
+        if (pc == 2147534064bv64) {
+            {
+                call () = bb_0x8000c4f0();
+                assert (pc == 2147534072bv64 || pc == 2147534076bv64);
+            }
+        }
+        if (pc == 2147534072bv64) {
+            {
+                call () = bb_0x8000c4f8();
+            }
+        }
+        if (pc == 2147534076bv64) {
+            {
+                call () = bb_0x8000c4fc();
+            }
+        }
+    }
+    
+    procedure region_pmpaddr_val()
+        modifies a5, zero, a4, a0, s0, a3, pc, exception, ra, sp, mem;
+    {
+        if (pc == 2147534092bv64) {
+            {
+                call () = bb_0x8000c50c();
+                assert (pc == 2147533984bv64);
+                call () = region_is_napot_all();
+                assert (pc == 2147534128bv64);
+            }
+        }
+        if (pc == 2147534128bv64) {
+            {
+                call () = bb_0x8000c530();
+                assert (pc == 2147534136bv64 || pc == 2147534144bv64);
+            }
+        }
+        if (pc == 2147534136bv64) {
+            {
+                call () = bb_0x8000c538();
+                assert (pc == 2147534144bv64 || pc == 2147534316bv64);
+            }
+        }
+        if (pc == 2147534144bv64) {
+            {
+                call () = bb_0x8000c540();
+                assert (pc == 2147533712bv64);
+                call () = region_is_napot();
+                assert (pc == 2147534156bv64);
+            }
+        }
+        if (pc == 2147534156bv64) {
+            {
+                call () = bb_0x8000c54c();
+                assert (pc == 2147534164bv64 || pc == 2147534232bv64);
+            }
+        }
+        if (pc == 2147534164bv64) {
+            {
+                call () = bb_0x8000c554();
+                assert (pc == 2147534232bv64 || pc == 2147534316bv64);
+            }
+        }
+        if (pc == 2147534232bv64) {
+            {
+                call () = bb_0x8000c598();
+                assert (pc == 2147533796bv64);
+                call () = region_is_tor();
+                assert (pc == 2147534244bv64);
+            }
+        }
+        if (pc == 2147534244bv64) {
+            {
+                call () = bb_0x8000c5a4();
+                assert (pc == 2147534252bv64 || pc == 2147534312bv64);
+            }
+        }
+        if (pc == 2147534252bv64) {
+            {
+                call () = bb_0x8000c5ac();
+                assert (pc == 2147534312bv64 || pc == 2147534316bv64);
+            }
+        }
+        if (pc == 2147534312bv64) {
+            {
+                call () = bb_0x8000c5e8();
+            }
+        }
+        if (pc == 2147534316bv64) {
+            {
+                call () = bb_0x8000c5ec();
+            }
+        }
+    }
+    
+    @inline procedure bb_0x8000c600()
+        modifies a0, pc, mem, a4, a3, a5, sp, s0, zero, exception;
+    {
+        call (sp) = addi_proc(sp, -32bv64);
+        call () = sd_proc(sp, 24bv64, s0);
+        call (s0) = addi_proc(sp, 32bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call (a3) = addi_proc(a1, 0bv64);
+        call (a4) = addi_proc(a2, 0bv64);
+        call () = sw_proc(s0, -20bv64, a5);
+        call (a5) = addi_proc(a3, 0bv64);
+        call () = sw_proc(s0, -24bv64, a5);
+        call (a5) = addi_proc(a4, 0bv64);
+        call () = sb_proc(s0, -25bv64, a5);
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -1188bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a4) = lbu_proc(a5, 8bv64);
+        call (a5) = lbu_proc(s0, -25bv64);
+        call (a5) = or_proc(a4, a5);
+        call (a5) = andi_proc(a5, 255bv64);
+        call (a3) = addi_proc(a5, 0bv64);
+        call (a4) = lw_proc(s0, -24bv64);
+        call (a5) = sraiw_proc(a4, 31bv64);
+        call (a5) = srliw_proc(a5, 29bv64);
+        call (a4) = addw_proc(a4, a5);
+        call (a4) = andi_proc(a4, 7bv64);
+        call (a5) = subw_proc(a4, a5);
+        call (a5) = addiw_proc(a5, 0bv64);
+        call (a5) = slliw_proc(a5, 3bv64);
+        call (a5) = addiw_proc(a5, 0bv64);
+        call (a5) = sll_proc(a3, a5);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (s0) = ld_proc(sp, 24bv64);
+        call (sp) = addi_proc(sp, 32bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    procedure region_pmpcfg_val()
+        modifies a4, mem, a3, a0, a5, sp, s0, zero, exception, pc;
+    {
+        
+    }
+    
+    @inline procedure bb_0x8000c830()
+        modifies a0, mem, exception, a4, s0, sp, zero, pc, a5;
+    {
+        call (sp) = addi_proc(sp, -32bv64);
+        call () = sd_proc(sp, 24bv64, s0);
+        call (s0) = addi_proc(sp, 32bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = sw_proc(s0, -20bv64, a5);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a4) = addi_proc(zero, 1bv64);
+        call (a5) = sllw_proc(a4, a5);
+        call (a5) = addiw_proc(a5, 0bv64);
+        call (a4) = addiw_proc(a5, 0bv64);
+        call (a5) = auipc_proc(39bv64);
+        call (a5) = addi_proc(a5, -1228bv64);
+        call (a5) = lw_proc(a5, 0bv64);
+        call (a5) = and_proc(a4, a5);
+        call (a5) = addiw_proc(a5, 0bv64);
+        call (a5) = addiw_proc(a5, 0bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (s0) = ld_proc(sp, 24bv64);
+        call (sp) = addi_proc(sp, 32bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    procedure is_pmp_region_valid()
+        modifies s0, a5, a0, exception, mem, a4, sp, pc, zero;
+    {
+        
+    }
+    
+    procedure poweroff()
+    {
+        
+    }
+    
+    @inline procedure bb_0x8000c318()
+        modifies mem, s0, zero, sp, a5, a4, pc, a0, exception;
+    {
+        call (sp) = addi_proc(sp, -32bv64);
+        call () = sd_proc(sp, 24bv64, s0);
+        call (s0) = addi_proc(sp, 32bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = sw_proc(s0, -20bv64, a5);
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -420bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a5) = ld_proc(a5, 16bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (s0) = ld_proc(sp, 24bv64);
+        call (sp) = addi_proc(sp, 32bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    procedure region_get_addr()
+        modifies mem, pc, s0, zero, a4, sp, a0, a5, exception;
+    {
+        
+    }
+    
+    @inline procedure bb_0x8000c438()
+        modifies s0, a5, ra, sp, exception, pc, mem, a0;
+    {
+        call (sp) = addi_proc(sp, -32bv64);
+        call () = sd_proc(sp, 24bv64, ra);
+        call () = sd_proc(sp, 16bv64, s0);
+        call (s0) = addi_proc(sp, 32bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = sw_proc(s0, -20bv64, a5);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = jal_proc(2147533796bv64);
+    }
+    
+    @inline procedure bb_0x8000c488()
+        modifies exception, pc, a5;
+    {
+        call (a5) = addi_proc(zero, 0bv64);
+    }
+    
+    @inline procedure bb_0x8000c45c()
+        modifies exception, a5, pc;
+    {
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = beq_proc(a5, zero, 2147533960bv64);
+    }
+    
+    @inline procedure bb_0x8000c464()
+        modifies exception, a4, a5, pc;
+    {
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -732bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a5) = lw_proc(a5, 28bv64);
+        call () = bge_proc(zero, a5, 2147533960bv64);
+    }
+    
+    @inline procedure bb_0x8000c480()
+        modifies pc, exception, a5, zero;
+    {
+        call (a5) = addi_proc(zero, 1bv64);
+        call (zero) = jal_proc(2147533964bv64);
+    }
+    
+    @inline procedure bb_0x8000c48c()
+        modifies zero, a0, s0, pc, exception, ra, sp;
+    {
+        call (a0) = addi_proc(a5, 0bv64);
+        call (ra) = ld_proc(sp, 24bv64);
+        call (s0) = ld_proc(sp, 16bv64);
+        call (sp) = addi_proc(sp, 32bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    procedure region_needs_two_entries()
+        modifies a4, s0, exception, a5, zero, mem, sp, pc, a0, ra;
+    {
+        if (pc == 2147533880bv64) {
+            {
+                call () = bb_0x8000c438();
+                assert (pc == 2147533796bv64);
+                call () = region_is_tor();
+                assert (pc == 2147533916bv64);
+            }
+        }
+        if (pc == 2147533916bv64) {
+            {
+                call () = bb_0x8000c45c();
+                assert (pc == 2147533924bv64 || pc == 2147533960bv64);
+            }
+        }
+        if (pc == 2147533924bv64) {
+            {
+                call () = bb_0x8000c464();
+                assert (pc == 2147533952bv64 || pc == 2147533960bv64);
+            }
+        }
+        if (pc == 2147533952bv64) {
+            {
+                call () = bb_0x8000c480();
+                assert (pc == 2147533960bv64 || pc == 2147533964bv64);
+            }
+        }
+        if (pc == 2147533960bv64) {
+            {
+                call () = bb_0x8000c488();
+            }
+        }
+        if (pc == 2147533964bv64) {
+            {
+                call () = bb_0x8000c48c();
+            }
+        }
+    }
+    
+    procedure printm()
+    {
+        
+    }
+    
+    @inline procedure bb_0x8000c2a0()
+        modifies sp, mem, a0, pc, a5, exception, s0, zero, a4;
+    {
+        call (sp) = addi_proc(sp, -32bv64);
+        call () = sd_proc(sp, 24bv64, s0);
+        call (s0) = addi_proc(sp, 32bv64);
+        call (a5) = addi_proc(a0, 0bv64);
+        call () = sw_proc(s0, -20bv64, a5);
+        call (a4) = auipc_proc(39bv64);
+        call (a4) = addi_proc(a4, -300bv64);
+        call (a5) = lw_proc(s0, -20bv64);
+        call (a5) = slli_proc(a5, 5bv64);
+        call (a5) = add_proc(a4, a5);
+        call (a5) = lw_proc(a5, 28bv64);
+        call (a0) = addi_proc(a5, 0bv64);
+        call (s0) = ld_proc(sp, 24bv64);
+        call (sp) = addi_proc(sp, 32bv64);
+        call (zero) = jalr_proc(ra, 0bv64);
+    }
+    
+    procedure region_register_idx()
+        modifies exception, zero, a5, sp, s0, pc, a0, mem, a4;
+    {
+        
+    }
+    
+    procedure pmp_set()
+        modifies pmpaddr4, t0, s0, pmpcfg2, pmpaddr6, exception, pmpcfg0, a0, a4, pmpaddr1, pmpaddr2, pmpaddr11, pmpaddr3, zero, pmpaddr12, mem, a1, pmpaddr0, sp, a5, mtvec, pmpaddr5, a3, pmpaddr7, pc, ra, pmpaddr13, pmpaddr14, pmpaddr8, pmpaddr9, pmpaddr15, pmpaddr10, a2;
+    {
+        if (pc == 2147536984bv64) {
+            {
+                call () = bb_0x8000d058();
+                assert (pc == 2147534896bv64);
+                call () = is_pmp_region_valid();
+                assert (pc == 2147537032bv64);
+            }
+        }
+        if (pc == 2147537032bv64) {
+            {
+                call () = bb_0x8000d088();
+                assert (pc == 2147537040bv64 || pc == 2147537068bv64);
+            }
+        }
+        if (pc == 2147537040bv64) {
+            {
+                call () = bb_0x8000d090();
+                assert (pc == 2147506796bv64);
+                call () = printm();
+                assert (pc == 2147537060bv64);
+            }
+        }
+        if (pc == 2147537060bv64) {
+            {
+                call () = bb_0x8000d0a4();
+                assert (pc == 2147537068bv64 || pc == 2147540536bv64);
+            }
+        }
+        if (pc == 2147537068bv64) {
+            {
+                call () = bb_0x8000d0ac();
+                assert (pc == 2147533472bv64);
+                call () = region_register_idx();
+                assert (pc == 2147537092bv64);
+            }
+        }
+        if (pc == 2147540536bv64) {
+            {
+                call () = bb_0x8000de38();
+            }
+        }
+        if (pc == 2147537092bv64) {
+            {
+                call () = bb_0x8000d0c4();
+                assert (pc == 2147534336bv64);
+                call () = region_pmpcfg_val();
+                assert (pc == 2147537128bv64);
+            }
+        }
+        if (pc == 2147537128bv64) {
+            {
+                call () = bb_0x8000d0e8();
+                assert (pc == 2147534092bv64);
+                call () = region_pmpaddr_val();
+                assert (pc == 2147537144bv64);
+            }
+        }
+        if (pc == 2147537144bv64) {
+            {
+                call () = bb_0x8000d0f8();
+                assert (pc == 2147537172bv64 || pc == 2147538036bv64);
+            }
+        }
+        if (pc == 2147537172bv64) {
+            {
+                call () = bb_0x8000d114();
+                assert (pc == 2147537188bv64 || pc == 2147537304bv64);
+            }
+        }
+        if (pc == 2147537188bv64) {
+            {
+                call () = bb_0x8000d124();
+                assert (pc == 2147537204bv64 || pc == 2147537684bv64);
+            }
+        }
+        if (pc == 2147537204bv64) {
+            {
+                call () = bb_0x8000d134();
+                assert (pc == 2147537220bv64 || pc == 2147537268bv64);
+            }
+        }
+        if (pc == 2147537220bv64) {
+            {
+                call () = bb_0x8000d144();
+                assert (pc == 2147537236bv64 || pc == 2147537516bv64);
+            }
+        }
+        if (pc == 2147537236bv64) {
+            {
+                call () = bb_0x8000d154();
+                assert (pc == 2147537252bv64 || pc == 2147537600bv64);
+            }
+        }
+        if (pc == 2147537252bv64) {
+            {
+                call () = bb_0x8000d164();
+                assert (pc == 2147537264bv64 || pc == 2147537440bv64);
+            }
+        }
+        if (pc == 2147537264bv64) {
+            {
+                call () = bb_0x8000d170();
+                assert (pc == 2147537268bv64 || pc == 2147538800bv64);
+            }
+        }
+        if (pc == 2147537268bv64) {
+            {
+                call () = bb_0x8000d174();
+                assert (pc == 2147537284bv64 || pc == 2147537860bv64);
+            }
+        }
+        if (pc == 2147537284bv64) {
+            {
+                call () = bb_0x8000d184();
+                assert (pc == 2147537300bv64 || pc == 2147537948bv64);
+            }
+        }
+        if (pc == 2147537300bv64) {
+            {
+                call () = bb_0x8000d194();
+                assert (pc == 2147537304bv64 || pc == 2147537772bv64);
+            }
+        }
+        if (pc == 2147537304bv64) {
+            {
+                call () = bb_0x8000d198();
+                assert (pc == 2147537320bv64 || pc == 2147538364bv64);
+            }
+        }
+        if (pc == 2147537320bv64) {
+            {
+                call () = bb_0x8000d1a8();
+                assert (pc == 2147537336bv64 || pc == 2147537372bv64);
+            }
+        }
+        if (pc == 2147537336bv64) {
+            {
+                call () = bb_0x8000d1b8();
+                assert (pc == 2147537352bv64 || pc == 2147538196bv64);
+            }
+        }
+        if (pc == 2147537352bv64) {
+            {
+                call () = bb_0x8000d1c8();
+                assert (pc == 2147537368bv64 || pc == 2147538280bv64);
+            }
+        }
+        if (pc == 2147537368bv64) {
+            {
+                call () = bb_0x8000d1d8();
+                assert (pc == 2147537372bv64 || pc == 2147538120bv64);
+            }
+        }
+        if (pc == 2147537372bv64) {
+            {
+                call () = bb_0x8000d1dc();
+                assert (pc == 2147537388bv64 || pc == 2147538540bv64);
+            }
+        }
+        if (pc == 2147537388bv64) {
+            {
+                call () = bb_0x8000d1ec();
+                assert (pc == 2147537404bv64 || pc == 2147538452bv64);
+            }
+        }
+        if (pc == 2147537404bv64) {
+            {
+                call () = bb_0x8000d1fc();
+                assert (pc == 2147537420bv64 || pc == 2147538628bv64);
+            }
+        }
+        if (pc == 2147537420bv64) {
+            {
+                call () = bb_0x8000d20c();
+                assert (pc == 2147537436bv64 || pc == 2147538716bv64);
+            }
+        }
+        if (pc == 2147537436bv64) {
+            {
+                call () = bb_0x8000d21c();
+                assert (pc == 2147537440bv64 || pc == 2147538800bv64);
+            }
+        }
+        if (pc == 2147537440bv64) {
+            {
+                call () = bb_0x8000d220();
+                assert (pc == 2147537516bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147537516bv64) {
+            {
+                call () = bb_0x8000d26c();
+                assert (pc == 2147537600bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147537600bv64) {
+            {
+                call () = bb_0x8000d2c0();
+                assert (pc == 2147537684bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147537684bv64) {
+            {
+                call () = bb_0x8000d314();
+                assert (pc == 2147537772bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147537772bv64) {
+            {
+                call () = bb_0x8000d36c();
+                assert (pc == 2147537860bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147537860bv64) {
+            {
+                call () = bb_0x8000d3c4();
+                assert (pc == 2147537948bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147537948bv64) {
+            {
+                call () = bb_0x8000d41c();
+                assert (pc == 2147538036bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538036bv64) {
+            {
+                call () = bb_0x8000d474();
+                assert (pc == 2147538120bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538120bv64) {
+            {
+                call () = bb_0x8000d4c8();
+                assert (pc == 2147538196bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538196bv64) {
+            {
+                call () = bb_0x8000d514();
+                assert (pc == 2147538280bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538280bv64) {
+            {
+                call () = bb_0x8000d568();
+                assert (pc == 2147538364bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538364bv64) {
+            {
+                call () = bb_0x8000d5bc();
+                assert (pc == 2147538452bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538452bv64) {
+            {
+                call () = bb_0x8000d614();
+                assert (pc == 2147538540bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538540bv64) {
+            {
+                call () = bb_0x8000d66c();
+                assert (pc == 2147538628bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538628bv64) {
+            {
+                call () = bb_0x8000d6c4();
+                assert (pc == 2147538716bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538716bv64) {
+            {
+                call () = bb_0x8000d71c();
+                assert (pc == 2147538800bv64 || pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538800bv64) {
+            {
+                call () = bb_0x8000d770();
+                assert (pc == 2147509228bv64);
+                call () = poweroff();
+                assert (pc == 2147538812bv64);
+            }
+        }
+        if (pc == 2147538812bv64) {
+            {
+                call () = bb_0x8000d77c();
+                assert (pc == 2147533880bv64);
+                call () = region_needs_two_entries();
+                assert (pc == 2147538824bv64);
+            }
+        }
+        if (pc == 2147538824bv64) {
+            {
+                call () = bb_0x8000d788();
+                assert (pc == 2147538832bv64 || pc == 2147540528bv64);
+            }
+        }
+        if (pc == 2147538832bv64) {
+            {
+                call () = bb_0x8000d790();
+                assert (pc == 2147533592bv64);
+                call () = region_get_addr();
+                assert (pc == 2147538860bv64);
+            }
+        }
+        if (pc == 2147538860bv64) {
+            {
+                call () = bb_0x8000d7ac();
+                assert (pc == 2147538888bv64 || pc == 2147539752bv64);
+            }
+        }
+        if (pc == 2147538888bv64) {
+            {
+                call () = bb_0x8000d7c8();
+                assert (pc == 2147538904bv64 || pc == 2147539020bv64);
+            }
+        }
+        if (pc == 2147538904bv64) {
+            {
+                call () = bb_0x8000d7d8();
+                assert (pc == 2147538920bv64 || pc == 2147539400bv64);
+            }
+        }
+        if (pc == 2147538920bv64) {
+            {
+                call () = bb_0x8000d7e8();
+                assert (pc == 2147538936bv64 || pc == 2147538984bv64);
+            }
+        }
+        if (pc == 2147538936bv64) {
+            {
+                call () = bb_0x8000d7f8();
+                assert (pc == 2147538952bv64 || pc == 2147539232bv64);
+            }
+        }
+        if (pc == 2147538952bv64) {
+            {
+                call () = bb_0x8000d808();
+                assert (pc == 2147538968bv64 || pc == 2147539316bv64);
+            }
+        }
+        if (pc == 2147538968bv64) {
+            {
+                call () = bb_0x8000d818();
+                assert (pc == 2147538980bv64 || pc == 2147539156bv64);
+            }
+        }
+        if (pc == 2147538980bv64) {
+            {
+                call () = bb_0x8000d824();
+                assert (pc == 2147538984bv64 || pc == 2147540516bv64);
+            }
+        }
+        if (pc == 2147538984bv64) {
+            {
+                call () = bb_0x8000d828();
+                assert (pc == 2147539000bv64 || pc == 2147539576bv64);
+            }
+        }
+        if (pc == 2147539000bv64) {
+            {
+                call () = bb_0x8000d838();
+                assert (pc == 2147539016bv64 || pc == 2147539664bv64);
+            }
+        }
+        if (pc == 2147539016bv64) {
+            {
+                call () = bb_0x8000d848();
+                assert (pc == 2147539020bv64 || pc == 2147539488bv64);
+            }
+        }
+        if (pc == 2147539020bv64) {
+            {
+                call () = bb_0x8000d84c();
+                assert (pc == 2147539036bv64 || pc == 2147540080bv64);
+            }
+        }
+        if (pc == 2147539036bv64) {
+            {
+                call () = bb_0x8000d85c();
+                assert (pc == 2147539052bv64 || pc == 2147539088bv64);
+            }
+        }
+        if (pc == 2147539052bv64) {
+            {
+                call () = bb_0x8000d86c();
+                assert (pc == 2147539068bv64 || pc == 2147539912bv64);
+            }
+        }
+        if (pc == 2147539068bv64) {
+            {
+                call () = bb_0x8000d87c();
+                assert (pc == 2147539084bv64 || pc == 2147539996bv64);
+            }
+        }
+        if (pc == 2147539084bv64) {
+            {
+                call () = bb_0x8000d88c();
+                assert (pc == 2147539088bv64 || pc == 2147539836bv64);
+            }
+        }
+        if (pc == 2147539088bv64) {
+            {
+                call () = bb_0x8000d890();
+                assert (pc == 2147539104bv64 || pc == 2147540256bv64);
+            }
+        }
+        if (pc == 2147539104bv64) {
+            {
+                call () = bb_0x8000d8a0();
+                assert (pc == 2147539120bv64 || pc == 2147540168bv64);
+            }
+        }
+        if (pc == 2147539120bv64) {
+            {
+                call () = bb_0x8000d8b0();
+                assert (pc == 2147539136bv64 || pc == 2147540344bv64);
+            }
+        }
+        if (pc == 2147539136bv64) {
+            {
+                call () = bb_0x8000d8c0();
+                assert (pc == 2147539152bv64 || pc == 2147540432bv64);
+            }
+        }
+        if (pc == 2147539152bv64) {
+            {
+                call () = bb_0x8000d8d0();
+                assert (pc == 2147539156bv64 || pc == 2147540516bv64);
+            }
+        }
+        if (pc == 2147539156bv64) {
+            {
+                call () = bb_0x8000d8d4();
+                assert (pc == 2147539232bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539232bv64) {
+            {
+                call () = bb_0x8000d920();
+                assert (pc == 2147539316bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539316bv64) {
+            {
+                call () = bb_0x8000d974();
+                assert (pc == 2147539400bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539400bv64) {
+            {
+                call () = bb_0x8000d9c8();
+                assert (pc == 2147539488bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539488bv64) {
+            {
+                call () = bb_0x8000da20();
+                assert (pc == 2147539576bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539576bv64) {
+            {
+                call () = bb_0x8000da78();
+                assert (pc == 2147539664bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539664bv64) {
+            {
+                call () = bb_0x8000dad0();
+                assert (pc == 2147539752bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539752bv64) {
+            {
+                call () = bb_0x8000db28();
+                assert (pc == 2147539836bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539836bv64) {
+            {
+                call () = bb_0x8000db7c();
+                assert (pc == 2147539912bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539912bv64) {
+            {
+                call () = bb_0x8000dbc8();
+                assert (pc == 2147539996bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147539996bv64) {
+            {
+                call () = bb_0x8000dc1c();
+                assert (pc == 2147540080bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147540080bv64) {
+            {
+                call () = bb_0x8000dc70();
+                assert (pc == 2147540168bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147540168bv64) {
+            {
+                call () = bb_0x8000dcc8();
+                assert (pc == 2147540256bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147540256bv64) {
+            {
+                call () = bb_0x8000dd20();
+                assert (pc == 2147540344bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147540344bv64) {
+            {
+                call () = bb_0x8000dd78();
+                assert (pc == 2147540432bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147540432bv64) {
+            {
+                call () = bb_0x8000ddd0();
+                assert (pc == 2147540516bv64 || pc == 2147540532bv64);
+            }
+        }
+        if (pc == 2147540516bv64) {
+            {
+                call () = bb_0x8000de24();
+                assert (pc == 2147509228bv64);
+                call () = poweroff();
+                assert (pc == 2147540528bv64);
+            }
+        }
+        if (pc == 2147540532bv64) {
+            {
+                call () = bb_0x8000de34();
+            }
+        }
+        if (pc == 2147540528bv64) {
+            {
+                call () = bb_0x8000de30();
+            }
+        }
+    }
+
+    control {
+        // fbb_0x8000d058 = verify(bb_0x8000d058);
+        // fbb_0x8000d85c = verify(bb_0x8000d85c);
+        // fbb_0x8000dad0 = verify(bb_0x8000dad0);
+        // fbb_0x8000dcc8 = verify(bb_0x8000dcc8);
+        // fbb_0x8000ddd0 = verify(bb_0x8000ddd0);
+        // fbb_0x8000d184 = verify(bb_0x8000d184);
+        // fbb_0x8000d920 = verify(bb_0x8000d920);
+        // fbb_0x8000d568 = verify(bb_0x8000d568);
+        // fbb_0x8000d088 = verify(bb_0x8000d088);
+        // fbb_0x8000d8a0 = verify(bb_0x8000d8a0);
+        // fbb_0x8000d9c8 = verify(bb_0x8000d9c8);
+        // fbb_0x8000de24 = verify(bb_0x8000de24);
+        // fbb_0x8000d0e8 = verify(bb_0x8000d0e8);
+        // fbb_0x8000db28 = verify(bb_0x8000db28);
+        // fbb_0x8000d790 = verify(bb_0x8000d790);
+        // fbb_0x8000de38 = verify(bb_0x8000de38);
+        // fbb_0x8000d1a8 = verify(bb_0x8000d1a8);
+        // fbb_0x8000d848 = verify(bb_0x8000d848);
+        // fbb_0x8000d1c8 = verify(bb_0x8000d1c8);
+        // fbb_0x8000d88c = verify(bb_0x8000d88c);
+        // fbb_0x8000d1ec = verify(bb_0x8000d1ec);
+        // fbb_0x8000d6c4 = verify(bb_0x8000d6c4);
+        // fbb_0x8000d808 = verify(bb_0x8000d808);
+        // fbb_0x8000d134 = verify(bb_0x8000d134);
+        // fbb_0x8000d1d8 = verify(bb_0x8000d1d8);
+        // fbb_0x8000d0a4 = verify(bb_0x8000d0a4);
+        // fbb_0x8000da20 = verify(bb_0x8000da20);
+        // fbb_0x8000d314 = verify(bb_0x8000d314);
+        // fbb_0x8000d5bc = verify(bb_0x8000d5bc);
+        // fbb_0x8000d4c8 = verify(bb_0x8000d4c8);
+        // fbb_0x8000dbc8 = verify(bb_0x8000dbc8);
+        // fbb_0x8000d3c4 = verify(bb_0x8000d3c4);
+        // fbb_0x8000d8d0 = verify(bb_0x8000d8d0);
+        // fbb_0x8000d7ac = verify(bb_0x8000d7ac);
+        // fbb_0x8000d124 = verify(bb_0x8000d124);
+        // fbb_0x8000d7e8 = verify(bb_0x8000d7e8);
+        // fbb_0x8000d1dc = verify(bb_0x8000d1dc);
+        // fbb_0x8000d8b0 = verify(bb_0x8000d8b0);
+        // fbb_0x8000d21c = verify(bb_0x8000d21c);
+        // fbb_0x8000d84c = verify(bb_0x8000d84c);
+        // fbb_0x8000d838 = verify(bb_0x8000d838);
+        // fbb_0x8000dc70 = verify(bb_0x8000dc70);
+        // fbb_0x8000de30 = verify(bb_0x8000de30);
+        // fbb_0x8000d20c = verify(bb_0x8000d20c);
+        // fbb_0x8000da78 = verify(bb_0x8000da78);
+        // fbb_0x8000d2c0 = verify(bb_0x8000d2c0);
+        // fbb_0x8000d77c = verify(bb_0x8000d77c);
+        // fbb_0x8000d824 = verify(bb_0x8000d824);
+        // fbb_0x8000d114 = verify(bb_0x8000d114);
+        // fbb_0x8000d0c4 = verify(bb_0x8000d0c4);
+        // fbb_0x8000d7d8 = verify(bb_0x8000d7d8);
+        // fbb_0x8000d7c8 = verify(bb_0x8000d7c8);
+        // fbb_0x8000d0ac = verify(bb_0x8000d0ac);
+        // fbb_0x8000dd78 = verify(bb_0x8000dd78);
+        // fbb_0x8000d1fc = verify(bb_0x8000d1fc);
+        // fbb_0x8000d8c0 = verify(bb_0x8000d8c0);
+        // fbb_0x8000de34 = verify(bb_0x8000de34);
+        // fbb_0x8000d144 = verify(bb_0x8000d144);
+        // fbb_0x8000dd20 = verify(bb_0x8000dd20);
+        // fbb_0x8000d26c = verify(bb_0x8000d26c);
+        // fbb_0x8000d788 = verify(bb_0x8000d788);
+        // fbb_0x8000d8d4 = verify(bb_0x8000d8d4);
+        // fbb_0x8000db7c = verify(bb_0x8000db7c);
+        // fbb_0x8000d164 = verify(bb_0x8000d164);
+        // fbb_0x8000d170 = verify(bb_0x8000d170);
+        // fbb_0x8000d71c = verify(bb_0x8000d71c);
+        // fbb_0x8000d7f8 = verify(bb_0x8000d7f8);
+        // fbb_0x8000d198 = verify(bb_0x8000d198);
+        // fbb_0x8000d474 = verify(bb_0x8000d474);
+        // fbb_0x8000d818 = verify(bb_0x8000d818);
+        // fbb_0x8000d974 = verify(bb_0x8000d974);
+        // fbb_0x8000d514 = verify(bb_0x8000d514);
+        // fbb_0x8000d1b8 = verify(bb_0x8000d1b8);
+        // fbb_0x8000d41c = verify(bb_0x8000d41c);
+        // fbb_0x8000d090 = verify(bb_0x8000d090);
+        // fbb_0x8000d614 = verify(bb_0x8000d614);
+        // fbb_0x8000dc1c = verify(bb_0x8000dc1c);
+        // fbb_0x8000d66c = verify(bb_0x8000d66c);
+        // fbb_0x8000d36c = verify(bb_0x8000d36c);
+        // fbb_0x8000d86c = verify(bb_0x8000d86c);
+        // fbb_0x8000d890 = verify(bb_0x8000d890);
+        // fbb_0x8000d194 = verify(bb_0x8000d194);
+        // fbb_0x8000d770 = verify(bb_0x8000d770);
+        // fbb_0x8000d828 = verify(bb_0x8000d828);
+        // fbb_0x8000d87c = verify(bb_0x8000d87c);
+        // fbb_0x8000d154 = verify(bb_0x8000d154);
+        // fbb_0x8000d220 = verify(bb_0x8000d220);
+        // fbb_0x8000d0f8 = verify(bb_0x8000d0f8);
+        // fbb_0x8000d174 = verify(bb_0x8000d174);
+        // fbb_0x8000c5e8 = verify(bb_0x8000c5e8);
+        // fbb_0x8000c598 = verify(bb_0x8000c598);
+        // fbb_0x8000c50c = verify(bb_0x8000c50c);
+        // fbb_0x8000c540 = verify(bb_0x8000c540);
+        // fbb_0x8000c5ac = verify(bb_0x8000c5ac);
+        // fbb_0x8000c54c = verify(bb_0x8000c54c);
+        // fbb_0x8000c5a4 = verify(bb_0x8000c5a4);
+        // fbb_0x8000c538 = verify(bb_0x8000c538);
+        // fbb_0x8000c5ec = verify(bb_0x8000c5ec);
+        // fbb_0x8000c554 = verify(bb_0x8000c554);
+        // fbb_0x8000c530 = verify(bb_0x8000c530);
+        // fbb_0x8000c3e4 = verify(bb_0x8000c3e4);
+        // fregion_is_tor = verify(region_is_tor);
+        // fbb_0x8000c390 = verify(bb_0x8000c390);
+        // fregion_is_napot = verify(region_is_napot);
+        // fbb_0x8000c4d0 = verify(bb_0x8000c4d0);
+        // fbb_0x8000c4a0 = verify(bb_0x8000c4a0);
+        // fbb_0x8000c4fc = verify(bb_0x8000c4fc);
+        // fbb_0x8000c4f0 = verify(bb_0x8000c4f0);
+        // fbb_0x8000c4f8 = verify(bb_0x8000c4f8);
+        // fregion_is_napot_all = verify(region_is_napot_all);
+        // fregion_pmpaddr_val = verify(region_pmpaddr_val);
+        // fbb_0x8000c600 = verify(bb_0x8000c600);
+        // fregion_pmpcfg_val = verify(region_pmpcfg_val);
+        // fbb_0x8000c830 = verify(bb_0x8000c830);
+        // fis_pmp_region_valid = verify(is_pmp_region_valid);
+        // fpoweroff = verify(poweroff);
+        // fbb_0x8000c318 = verify(bb_0x8000c318);
+        // fregion_get_addr = verify(region_get_addr);
+        // fbb_0x8000c438 = verify(bb_0x8000c438);
+        // fbb_0x8000c488 = verify(bb_0x8000c488);
+        // fbb_0x8000c45c = verify(bb_0x8000c45c);
+        // fbb_0x8000c464 = verify(bb_0x8000c464);
+        // fbb_0x8000c480 = verify(bb_0x8000c480);
+        // fbb_0x8000c48c = verify(bb_0x8000c48c);
+        // fregion_needs_two_entries = verify(region_needs_two_entries);
+        // fprintm = verify(printm);
+        // fbb_0x8000c2a0 = verify(bb_0x8000c2a0);
+        // fregion_register_idx = verify(region_register_idx);
+        // fpmp_set = verify(pmp_set);
+        check;
+        print_results;
+    }
+}
