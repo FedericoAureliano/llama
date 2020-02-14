@@ -145,6 +145,9 @@ impl Lexer {
                 if nch == '=' {
                     self.read_char();
                     TokenKind::AddEq
+                } else if nch == '+' {
+                    self.read_char();
+                    TokenKind::Concat
                 } else {
                     TokenKind::Add
                 }

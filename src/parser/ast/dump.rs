@@ -57,7 +57,7 @@ struct AstDumper<'a> {
 impl<'a> AstDumper<'a> {
     fn dump_ast(&mut self, ast: &Ast) {
         for f in &ast.files {
-            dump!(self, "file {}", &f.path);
+            dump!(self, "file: {}", &f.path);
 
             self.indent(|d| {
                 d.dump_file(f);
@@ -74,7 +74,7 @@ impl<'a> AstDumper<'a> {
     fn dump_module(&mut self, modu: &Module) {
         dump!(
             self,
-            "module {} @ {} {}",
+            "module: {} @ {} {}",
             self.str(modu.name),
             modu.pos,
             modu.id
@@ -82,7 +82,7 @@ impl<'a> AstDumper<'a> {
 
         self.indent(|d| {
             if !modu.types.is_empty() {
-                dump!(d, "types");
+                dump!(d, "types:");
                 d.indent(|d| {
                     for typ in &modu.types {
                         d.dump_type(typ);
@@ -91,7 +91,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if !modu.inputs.is_empty() {
-                dump!(d, "inputs");
+                dump!(d, "inputs:");
                 d.indent(|d| {
                     for input in &modu.inputs {
                         d.dump_field(input);
@@ -100,7 +100,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if !modu.outputs.is_empty() {
-                dump!(d, "outputs");
+                dump!(d, "outputs:");
                 d.indent(|d| {
                     for input in &modu.outputs {
                         d.dump_field(input);
@@ -109,7 +109,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if !modu.variables.is_empty() {
-                dump!(d, "variables");
+                dump!(d, "variables:");
                 d.indent(|d| {
                     for var in &modu.variables {
                         d.dump_field(var);
@@ -118,7 +118,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if !modu.constants.is_empty() {
-                dump!(d, "constants");
+                dump!(d, "constants:");
                 d.indent(|d| {
                     for input in &modu.constants {
                         d.dump_field(input);
@@ -127,7 +127,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if !modu.definitions.is_empty() {
-                dump!(d, "definitions");
+                dump!(d, "definitions:");
                 d.indent(|d| {
                     for func in &modu.definitions {
                         d.dump_definition(func);
@@ -136,7 +136,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if !modu.functions.is_empty() {
-                dump!(d, "functions");
+                dump!(d, "functions:");
                 d.indent(|d| {
                     for func in &modu.functions {
                         d.dump_function(func);
@@ -145,7 +145,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if !modu.procedures.is_empty() {
-                dump!(d, "procedures");
+                dump!(d, "procedures:");
                 d.indent(|d| {
                     for prcd in &modu.procedures {
                         d.dump_procedure(prcd);
@@ -154,7 +154,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if modu.init.is_some() || modu.next.is_some() {
-                dump!(d, "transition system");
+                dump!(d, "transition system:");
             };
 
             if let Some(ref init) = &modu.init {
@@ -166,7 +166,7 @@ impl<'a> AstDumper<'a> {
             };
 
             if !modu.theorems.is_empty() || !modu.lemmas.is_empty() {
-                dump!(d, "specification");
+                dump!(d, "specification:");
                 d.indent(|d| {
                     for prcd in &modu.theorems {
                         d.dump_property(prcd);
@@ -219,7 +219,7 @@ impl<'a> AstDumper<'a> {
         dump!(self, "{} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
-            dump!(d, "params");
+            dump!(d, "parameters:");
             d.indent(|d| {
                 if !fct.params.is_empty() {
                     for param in &fct.params {
@@ -232,11 +232,13 @@ impl<'a> AstDumper<'a> {
                 let name = ty.to_string(d.interner);
                 let pos = ty.pos();
                 let id = ty.id();
-                dump!(d, "returns `{}` @ {} {}", name, pos, id);
+                dump!(d, "return type: `{}` @ {} {}", name, pos, id);
             };
 
-            dump!(d, "expr");
-            d.dump_expr(&fct.expr);
+            dump!(d, "body:");
+            d.indent(|d| {
+                d.dump_expr(&fct.expr);
+            })
         });
     }
 
@@ -245,7 +247,7 @@ impl<'a> AstDumper<'a> {
 
         self.indent(|d| {
             dump!(d, "to synthesize = {}", fct.to_synthesize);
-            dump!(d, "params");
+            dump!(d, "parameters:");
             d.indent(|d| {
                 if !fct.params.is_empty() {
                     for param in &fct.params {
@@ -258,7 +260,7 @@ impl<'a> AstDumper<'a> {
                 let name = ty.to_string(d.interner);
                 let pos = ty.pos();
                 let id = ty.id();
-                dump!(d, "returns `{}` @ {} {}", name, pos, id);
+                dump!(d, "return type: `{}` @ {} {}", name, pos, id);
             };
         });
     }
@@ -269,14 +271,14 @@ impl<'a> AstDumper<'a> {
         self.indent(|d| {
 
             if !fct.params.is_empty() {
-                dump!(d, "params");
+                dump!(d, "parameters:");
                 for param in &fct.params {
                     d.indent(|d| d.dump_param(param));
                 }
             };
 
             if !fct.returns.is_empty() {
-                dump!(d, "returns");
+                dump!(d, "returns:");
                 for p in &fct.returns {
                     d.indent(|d| d.dump_param(p));
                 }
@@ -284,11 +286,11 @@ impl<'a> AstDumper<'a> {
 
             if !fct.modifies.is_empty() {
                 let str_mods : Vec<ArcStr> = fct.modifies.iter().map(|p| d.str(*p)).collect();
-                dump!(d, "modifies {}", str_mods.join(", "));
+                dump!(d, "modifies: {}", str_mods.join(", "));
             };
 
             if !fct.requires.is_empty() {
-                dump!(d, "requires");
+                dump!(d, "requires:");
                 for p in &fct.requires {
                     d.indent(|d| d.dump_stmt_assume(p));
                 }
@@ -301,7 +303,7 @@ impl<'a> AstDumper<'a> {
                 }
             };
 
-            dump!(d, "executes");
+            dump!(d, "executes:");
             if let Some(ref block) = fct.block {
                 d.indent(|d| d.dump_expr_block(block));
             }
@@ -388,7 +390,7 @@ impl<'a> AstDumper<'a> {
         );
 
         self.indent(|d| {
-            dump!(d, "type");
+            dump!(d, "type:");
             d.indent(|d| {
                 if let Some(ref ty) = stmt.data_type {
                     d.dump_type(ty);
@@ -397,7 +399,7 @@ impl<'a> AstDumper<'a> {
                 }
             });
 
-            dump!(d, "expr");
+            dump!(d, "expr:");
             d.indent(|d| {
                 if let Some(ref expr) = stmt.expr {
                     d.dump_expr(expr);
@@ -411,7 +413,7 @@ impl<'a> AstDumper<'a> {
     fn dump_stmt_assume(&mut self, stmt: &StmtPredicateType) {
         dump!(
             self,
-            "assume @ {} {}",
+            "assume: @ {} {}",
             stmt.pos,
             stmt.id
         );
@@ -425,7 +427,7 @@ impl<'a> AstDumper<'a> {
     fn dump_stmt_assert(&mut self, stmt: &StmtPredicateType) {
         dump!(
             self,
-            "assert @ {} {}",
+            "assert: @ {} {}",
             stmt.pos,
             stmt.id
         );
@@ -629,7 +631,7 @@ impl<'a> AstDumper<'a> {
     }
 
     fn dump_expr_deref(&mut self, expr: &ExprDerefType) {
-        dump!(self, "array deref @ {} {}", expr.pos, expr.id);
+        dump!(self, "dereference @ {} {}", expr.pos, expr.id);
 
         self.indent(|d| {
             d.indent(|d| {

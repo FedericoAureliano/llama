@@ -846,6 +846,7 @@ impl CmpOp {
 pub enum BinOp {
     Assign,
     Add,
+    Concat,
     Sub,
     Mul,
     Div,
@@ -867,6 +868,7 @@ impl BinOp {
         match *self {
             BinOp::Assign => "=",
             BinOp::Add => "+",
+            BinOp::Concat => "++",
             BinOp::Sub => "-",
             BinOp::Mul => "*",
             BinOp::Div => "/",

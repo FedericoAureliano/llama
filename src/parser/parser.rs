@@ -1205,7 +1205,8 @@ impl<'a> Parser<'a> {
                 TokenKind::LtLt | TokenKind::GtGt | TokenKind::GtGtGt => 6,
                 TokenKind::Add | TokenKind::Sub => 7,
                 TokenKind::Mul | TokenKind::Div | TokenKind::Mod => 8,
-                TokenKind::Colon => 9,
+                TokenKind::Concat => 9,
+                TokenKind::Colon => 10,
                 _ => {
                     return Ok(left);
                 }
@@ -1334,6 +1335,7 @@ impl<'a> Parser<'a> {
             TokenKind::BitAnd => BinOp::BitAnd,
             TokenKind::Caret => BinOp::BitXor,
             TokenKind::Add => BinOp::Add,
+            TokenKind::Concat => BinOp::Concat,
             TokenKind::Sub => BinOp::Sub,
             TokenKind::Mul => BinOp::Mul,
             TokenKind::Div => BinOp::Div,
