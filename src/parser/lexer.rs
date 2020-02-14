@@ -206,12 +206,24 @@ impl Lexer {
             '<' => match nch {
                 '=' => {
                     self.read_char();
-                    TokenKind::Le
+                    if nnch == '_' {
+                        self.read_char();
+                        self.read_char();
+                        TokenKind::Ule
+                    } else {
+                        TokenKind::Le
+                    }
                 }
 
                 '<' => {
                     self.read_char();
                     TokenKind::LtLt
+                }
+
+                '_' => {
+                    self.read_char();
+                    self.read_char();
+                    TokenKind::Ult
                 }
 
                 _ => TokenKind::Lt,
@@ -220,7 +232,13 @@ impl Lexer {
             '>' => match nch {
                 '=' => {
                     self.read_char();
-                    TokenKind::Ge
+                    if nnch == '_' {
+                        self.read_char();
+                        self.read_char();
+                        TokenKind::Uge
+                    } else {
+                        TokenKind::Ge
+                    }
                 }
 
                 '>' => {
@@ -232,6 +250,12 @@ impl Lexer {
                     } else {
                         TokenKind::GtGt
                     }
+                }
+
+                '_' => {
+                    self.read_char();
+                    self.read_char();
+                    TokenKind::Ugt
                 }
 
                 _ => TokenKind::Gt,
@@ -899,5 +923,10 @@ mod tests {
         assert_tok(&mut reader, TokenKind::GtGt, 1, 1);
         assert_tok(&mut reader, TokenKind::LtLt, 1, 3);
         assert_tok(&mut reader, TokenKind::GtGtGt, 1, 5);
+
+        let mut reader = Lexer::from_str("<=_u<>_u");
+        assert_tok(&mut reader, TokenKind::Ule, 1, 1);
+        assert_tok(&mut reader, TokenKind::Lt, 1, 5);
+        assert_tok(&mut reader, TokenKind::Ugt, 1, 6);
     }
 }

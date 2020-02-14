@@ -1196,7 +1196,11 @@ impl<'a> Parser<'a> {
                 | TokenKind::Lt
                 | TokenKind::Le
                 | TokenKind::Gt
-                | TokenKind::Ge => 4,
+                | TokenKind::Ge
+                | TokenKind::Ult
+                | TokenKind::Ule
+                | TokenKind::Ugt
+                | TokenKind::Uge => 4,
                 TokenKind::BitOr | TokenKind::BitAnd | TokenKind::Caret => 5,
                 TokenKind::LtLt | TokenKind::GtGt | TokenKind::GtGtGt => 6,
                 TokenKind::Add | TokenKind::Sub => 7,
@@ -1322,6 +1326,10 @@ impl<'a> Parser<'a> {
             TokenKind::Le => BinOp::Cmp(CmpOp::Le),
             TokenKind::Gt => BinOp::Cmp(CmpOp::Gt),
             TokenKind::Ge => BinOp::Cmp(CmpOp::Ge),
+            TokenKind::Ult => BinOp::Cmp(CmpOp::Ult),
+            TokenKind::Ule => BinOp::Cmp(CmpOp::Ule),
+            TokenKind::Ugt => BinOp::Cmp(CmpOp::Ugt),
+            TokenKind::Uge => BinOp::Cmp(CmpOp::Uge),
             TokenKind::BitOr => BinOp::BitOr,
             TokenKind::BitAnd => BinOp::BitAnd,
             TokenKind::Caret => BinOp::BitXor,
@@ -1333,7 +1341,7 @@ impl<'a> Parser<'a> {
             TokenKind::LtLt => BinOp::ShiftL,
             TokenKind::GtGt => BinOp::ArithShiftR,
             TokenKind::GtGtGt => BinOp::LogicalShiftR,
-            TokenKind::Colon => BinOp::Extract,
+            TokenKind::Colon => BinOp::Range,
             _ => panic!("unimplemented token {:?}", tok),
         };
 

@@ -819,6 +819,10 @@ pub enum CmpOp {
     Le,
     Gt,
     Ge,
+    Ult,
+    Ule,
+    Ugt,
+    Uge,
 }
 
 impl CmpOp {
@@ -830,6 +834,10 @@ impl CmpOp {
             CmpOp::Le => "<=",
             CmpOp::Gt => ">",
             CmpOp::Ge => ">=",
+            CmpOp::Ult => "<_u",
+            CmpOp::Ule => "<=_u",
+            CmpOp::Ugt => ">_u",
+            CmpOp::Uge => ">=_u",
         }
     }
 }
@@ -851,7 +859,7 @@ pub enum BinOp {
     ShiftL,
     ArithShiftR,
     LogicalShiftR,
-    Extract
+    Range
 }
 
 impl BinOp {
@@ -872,7 +880,7 @@ impl BinOp {
             BinOp::ShiftL => "<<",
             BinOp::ArithShiftR => ">>",
             BinOp::LogicalShiftR => ">>>",
-            BinOp::Extract => ":",
+            BinOp::Range => ":",
         }
     }
 

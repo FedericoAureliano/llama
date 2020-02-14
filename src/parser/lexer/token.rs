@@ -54,7 +54,12 @@ pub enum TokenKind {
     Le,
     Gt,
     Ge,
-    
+
+    Ult,
+    Ule,
+    Ugt,
+    Uge,
+
     GtGt,
     GtGtGt,
     LtLt,
@@ -170,6 +175,11 @@ impl TokenKind {
             TokenKind::Le => "<=",
             TokenKind::Gt => ">",
             TokenKind::Ge => ">=",
+
+            TokenKind::Ult => "<_u",
+            TokenKind::Ule => "<=_u",
+            TokenKind::Ugt => ">_u",
+            TokenKind::Uge => ">=_u",
 
             TokenKind::GtGt => ">>",
             TokenKind::GtGtGt => ">>>",

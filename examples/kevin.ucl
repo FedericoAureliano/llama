@@ -410,7 +410,8 @@ module main {
         }
       else
         {
-          csr_ret, rd_ret = rs1, csr; // line 0
+          csr_ret = rs1; 
+          rd_ret = csr; // line 0
         }
       pc = (pc + 4bv64); // line 0
     }
@@ -423,7 +424,8 @@ module main {
         }
       else
         {
-          csr_ret, rd_ret = (rs1 | csr), csr; // line 0
+          csr_ret = (rs1 | csr);
+          rd_ret = csr; // line 0
         }
       pc = (pc + 4bv64); // line 0
     }
@@ -436,7 +438,8 @@ module main {
         }
       else
         {
-          csr_ret, rd_ret = ((rs1) & csr), csr; // line 0
+          csr_ret = ((rs1) & csr);
+          rd_ret = csr; // line 0
         }
       pc = (pc + 4bv64); // line 0
     }
@@ -449,7 +452,8 @@ module main {
         }
       else
         {
-          csr_ret, rd_ret = bv_zero_extend(59, imm), csr; // line 0
+          csr_ret = bv_zero_extend(59, imm); 
+          rd_ret = csr; // line 0
         }
       pc = (pc + 4bv64); // line 0
     }
@@ -462,7 +466,8 @@ module main {
         }
       else
         {
-          csr_ret, rd_ret = (bv_zero_extend(59, imm) | csr), csr; // line 0
+          csr_ret = (bv_zero_extend(59, imm) | csr);
+          rd_ret = csr; // line 0
         }
       pc = (pc + 4bv64); // line 0
     }
@@ -475,7 +480,8 @@ module main {
         }
       else
         {
-          csr_ret, rd_ret = ((bv_zero_extend(59, imm)) & csr), csr; // line 0
+          csr_ret = ((bv_zero_extend(59, imm)) & csr);
+          rd_ret = csr; // line 0
         }
       pc = (pc + 4bv64); // line 0
     }
@@ -2093,32 +2099,22 @@ module main {
         modifies pc, a0, a4, s0, a5, sp, mem, exception, zero;
     {
         if (pc == 2147533984bv64) {
-            {
                 call () = bb_0x8000c4a0();
                 assert (pc == 2147534032bv64 || pc == 2147534072bv64);
-            }
         }
         if (pc == 2147534032bv64) {
-            {
                 call () = bb_0x8000c4d0();
                 assert (pc == 2147534064bv64 || pc == 2147534072bv64);
-            }
         }
         if (pc == 2147534064bv64) {
-            {
                 call () = bb_0x8000c4f0();
                 assert (pc == 2147534072bv64 || pc == 2147534076bv64);
-            }
         }
         if (pc == 2147534072bv64) {
-            {
                 call () = bb_0x8000c4f8();
-            }
         }
         if (pc == 2147534076bv64) {
-            {
                 call () = bb_0x8000c4fc();
-            }
         }
     }
     
@@ -2126,74 +2122,52 @@ module main {
         modifies a5, zero, a4, a0, s0, a3, pc, exception, ra, sp, mem;
     {
         if (pc == 2147534092bv64) {
-            {
                 call () = bb_0x8000c50c();
                 assert (pc == 2147533984bv64);
                 call () = region_is_napot_all();
                 assert (pc == 2147534128bv64);
-            }
         }
         if (pc == 2147534128bv64) {
-            {
                 call () = bb_0x8000c530();
                 assert (pc == 2147534136bv64 || pc == 2147534144bv64);
-            }
         }
         if (pc == 2147534136bv64) {
-            {
                 call () = bb_0x8000c538();
                 assert (pc == 2147534144bv64 || pc == 2147534316bv64);
-            }
         }
         if (pc == 2147534144bv64) {
-            {
                 call () = bb_0x8000c540();
                 assert (pc == 2147533712bv64);
                 call () = region_is_napot();
                 assert (pc == 2147534156bv64);
-            }
         }
         if (pc == 2147534156bv64) {
-            {
                 call () = bb_0x8000c54c();
                 assert (pc == 2147534164bv64 || pc == 2147534232bv64);
-            }
         }
         if (pc == 2147534164bv64) {
-            {
                 call () = bb_0x8000c554();
                 assert (pc == 2147534232bv64 || pc == 2147534316bv64);
-            }
         }
         if (pc == 2147534232bv64) {
-            {
                 call () = bb_0x8000c598();
                 assert (pc == 2147533796bv64);
                 call () = region_is_tor();
                 assert (pc == 2147534244bv64);
-            }
         }
         if (pc == 2147534244bv64) {
-            {
                 call () = bb_0x8000c5a4();
                 assert (pc == 2147534252bv64 || pc == 2147534312bv64);
-            }
         }
         if (pc == 2147534252bv64) {
-            {
                 call () = bb_0x8000c5ac();
                 assert (pc == 2147534312bv64 || pc == 2147534316bv64);
-            }
         }
         if (pc == 2147534312bv64) {
-            {
                 call () = bb_0x8000c5e8();
-            }
         }
         if (pc == 2147534316bv64) {
-            {
                 call () = bb_0x8000c5ec();
-            }
         }
     }
     
@@ -2365,40 +2339,28 @@ module main {
         modifies a4, s0, exception, a5, zero, mem, sp, pc, a0, ra;
     {
         if (pc == 2147533880bv64) {
-            {
                 call () = bb_0x8000c438();
                 assert (pc == 2147533796bv64);
                 call () = region_is_tor();
                 assert (pc == 2147533916bv64);
-            }
         }
         if (pc == 2147533916bv64) {
-            {
                 call () = bb_0x8000c45c();
                 assert (pc == 2147533924bv64 || pc == 2147533960bv64);
-            }
         }
         if (pc == 2147533924bv64) {
-            {
                 call () = bb_0x8000c464();
                 assert (pc == 2147533952bv64 || pc == 2147533960bv64);
-            }
         }
         if (pc == 2147533952bv64) {
-            {
                 call () = bb_0x8000c480();
                 assert (pc == 2147533960bv64 || pc == 2147533964bv64);
-            }
         }
         if (pc == 2147533960bv64) {
-            {
                 call () = bb_0x8000c488();
-            }
         }
         if (pc == 2147533964bv64) {
-            {
                 call () = bb_0x8000c48c();
-            }
         }
     }
     
@@ -2437,553 +2399,375 @@ module main {
         modifies pmpaddr4, t0, s0, pmpcfg2, pmpaddr6, exception, pmpcfg0, a0, a4, pmpaddr1, pmpaddr2, pmpaddr11, pmpaddr3, zero, pmpaddr12, mem, a1, pmpaddr0, sp, a5, mtvec, pmpaddr5, a3, pmpaddr7, pc, ra, pmpaddr13, pmpaddr14, pmpaddr8, pmpaddr9, pmpaddr15, pmpaddr10, a2;
     {
         if (pc == 2147536984bv64) {
-            {
                 call () = bb_0x8000d058();
                 assert (pc == 2147534896bv64);
                 call () = is_pmp_region_valid();
                 assert (pc == 2147537032bv64);
-            }
         }
         if (pc == 2147537032bv64) {
-            {
                 call () = bb_0x8000d088();
                 assert (pc == 2147537040bv64 || pc == 2147537068bv64);
-            }
         }
         if (pc == 2147537040bv64) {
-            {
                 call () = bb_0x8000d090();
                 assert (pc == 2147506796bv64);
                 call () = printm();
                 assert (pc == 2147537060bv64);
-            }
         }
         if (pc == 2147537060bv64) {
-            {
                 call () = bb_0x8000d0a4();
                 assert (pc == 2147537068bv64 || pc == 2147540536bv64);
-            }
         }
         if (pc == 2147537068bv64) {
-            {
                 call () = bb_0x8000d0ac();
                 assert (pc == 2147533472bv64);
                 call () = region_register_idx();
                 assert (pc == 2147537092bv64);
-            }
         }
         if (pc == 2147540536bv64) {
-            {
                 call () = bb_0x8000de38();
-            }
         }
         if (pc == 2147537092bv64) {
-            {
                 call () = bb_0x8000d0c4();
                 assert (pc == 2147534336bv64);
                 call () = region_pmpcfg_val();
                 assert (pc == 2147537128bv64);
-            }
         }
         if (pc == 2147537128bv64) {
-            {
                 call () = bb_0x8000d0e8();
                 assert (pc == 2147534092bv64);
                 call () = region_pmpaddr_val();
                 assert (pc == 2147537144bv64);
-            }
         }
         if (pc == 2147537144bv64) {
-            {
                 call () = bb_0x8000d0f8();
                 assert (pc == 2147537172bv64 || pc == 2147538036bv64);
-            }
         }
         if (pc == 2147537172bv64) {
-            {
                 call () = bb_0x8000d114();
                 assert (pc == 2147537188bv64 || pc == 2147537304bv64);
-            }
         }
         if (pc == 2147537188bv64) {
-            {
                 call () = bb_0x8000d124();
                 assert (pc == 2147537204bv64 || pc == 2147537684bv64);
-            }
         }
         if (pc == 2147537204bv64) {
-            {
                 call () = bb_0x8000d134();
                 assert (pc == 2147537220bv64 || pc == 2147537268bv64);
-            }
         }
         if (pc == 2147537220bv64) {
-            {
                 call () = bb_0x8000d144();
                 assert (pc == 2147537236bv64 || pc == 2147537516bv64);
-            }
         }
         if (pc == 2147537236bv64) {
-            {
                 call () = bb_0x8000d154();
                 assert (pc == 2147537252bv64 || pc == 2147537600bv64);
-            }
         }
         if (pc == 2147537252bv64) {
-            {
                 call () = bb_0x8000d164();
                 assert (pc == 2147537264bv64 || pc == 2147537440bv64);
-            }
         }
         if (pc == 2147537264bv64) {
-            {
                 call () = bb_0x8000d170();
                 assert (pc == 2147537268bv64 || pc == 2147538800bv64);
-            }
         }
         if (pc == 2147537268bv64) {
-            {
                 call () = bb_0x8000d174();
                 assert (pc == 2147537284bv64 || pc == 2147537860bv64);
-            }
         }
         if (pc == 2147537284bv64) {
-            {
                 call () = bb_0x8000d184();
                 assert (pc == 2147537300bv64 || pc == 2147537948bv64);
-            }
         }
         if (pc == 2147537300bv64) {
-            {
                 call () = bb_0x8000d194();
                 assert (pc == 2147537304bv64 || pc == 2147537772bv64);
-            }
         }
         if (pc == 2147537304bv64) {
-            {
                 call () = bb_0x8000d198();
                 assert (pc == 2147537320bv64 || pc == 2147538364bv64);
-            }
         }
         if (pc == 2147537320bv64) {
-            {
                 call () = bb_0x8000d1a8();
                 assert (pc == 2147537336bv64 || pc == 2147537372bv64);
-            }
         }
         if (pc == 2147537336bv64) {
-            {
                 call () = bb_0x8000d1b8();
                 assert (pc == 2147537352bv64 || pc == 2147538196bv64);
-            }
         }
         if (pc == 2147537352bv64) {
-            {
                 call () = bb_0x8000d1c8();
                 assert (pc == 2147537368bv64 || pc == 2147538280bv64);
-            }
         }
         if (pc == 2147537368bv64) {
-            {
                 call () = bb_0x8000d1d8();
                 assert (pc == 2147537372bv64 || pc == 2147538120bv64);
-            }
         }
         if (pc == 2147537372bv64) {
-            {
                 call () = bb_0x8000d1dc();
                 assert (pc == 2147537388bv64 || pc == 2147538540bv64);
-            }
         }
         if (pc == 2147537388bv64) {
-            {
                 call () = bb_0x8000d1ec();
                 assert (pc == 2147537404bv64 || pc == 2147538452bv64);
-            }
         }
         if (pc == 2147537404bv64) {
-            {
                 call () = bb_0x8000d1fc();
                 assert (pc == 2147537420bv64 || pc == 2147538628bv64);
-            }
         }
         if (pc == 2147537420bv64) {
-            {
                 call () = bb_0x8000d20c();
                 assert (pc == 2147537436bv64 || pc == 2147538716bv64);
-            }
         }
         if (pc == 2147537436bv64) {
-            {
                 call () = bb_0x8000d21c();
                 assert (pc == 2147537440bv64 || pc == 2147538800bv64);
-            }
         }
         if (pc == 2147537440bv64) {
-            {
                 call () = bb_0x8000d220();
                 assert (pc == 2147537516bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147537516bv64) {
-            {
                 call () = bb_0x8000d26c();
                 assert (pc == 2147537600bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147537600bv64) {
-            {
                 call () = bb_0x8000d2c0();
                 assert (pc == 2147537684bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147537684bv64) {
-            {
                 call () = bb_0x8000d314();
                 assert (pc == 2147537772bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147537772bv64) {
-            {
                 call () = bb_0x8000d36c();
                 assert (pc == 2147537860bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147537860bv64) {
-            {
                 call () = bb_0x8000d3c4();
                 assert (pc == 2147537948bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147537948bv64) {
-            {
                 call () = bb_0x8000d41c();
                 assert (pc == 2147538036bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538036bv64) {
-            {
                 call () = bb_0x8000d474();
                 assert (pc == 2147538120bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538120bv64) {
-            {
                 call () = bb_0x8000d4c8();
                 assert (pc == 2147538196bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538196bv64) {
-            {
                 call () = bb_0x8000d514();
                 assert (pc == 2147538280bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538280bv64) {
-            {
                 call () = bb_0x8000d568();
                 assert (pc == 2147538364bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538364bv64) {
-            {
                 call () = bb_0x8000d5bc();
                 assert (pc == 2147538452bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538452bv64) {
-            {
                 call () = bb_0x8000d614();
                 assert (pc == 2147538540bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538540bv64) {
-            {
                 call () = bb_0x8000d66c();
                 assert (pc == 2147538628bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538628bv64) {
-            {
                 call () = bb_0x8000d6c4();
                 assert (pc == 2147538716bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538716bv64) {
-            {
                 call () = bb_0x8000d71c();
                 assert (pc == 2147538800bv64 || pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538800bv64) {
-            {
                 call () = bb_0x8000d770();
                 assert (pc == 2147509228bv64);
                 call () = poweroff();
                 assert (pc == 2147538812bv64);
-            }
         }
         if (pc == 2147538812bv64) {
-            {
                 call () = bb_0x8000d77c();
                 assert (pc == 2147533880bv64);
                 call () = region_needs_two_entries();
                 assert (pc == 2147538824bv64);
-            }
         }
         if (pc == 2147538824bv64) {
-            {
                 call () = bb_0x8000d788();
                 assert (pc == 2147538832bv64 || pc == 2147540528bv64);
-            }
         }
         if (pc == 2147538832bv64) {
-            {
                 call () = bb_0x8000d790();
                 assert (pc == 2147533592bv64);
                 call () = region_get_addr();
                 assert (pc == 2147538860bv64);
-            }
         }
         if (pc == 2147538860bv64) {
-            {
                 call () = bb_0x8000d7ac();
                 assert (pc == 2147538888bv64 || pc == 2147539752bv64);
-            }
         }
         if (pc == 2147538888bv64) {
-            {
                 call () = bb_0x8000d7c8();
                 assert (pc == 2147538904bv64 || pc == 2147539020bv64);
-            }
         }
         if (pc == 2147538904bv64) {
-            {
                 call () = bb_0x8000d7d8();
                 assert (pc == 2147538920bv64 || pc == 2147539400bv64);
-            }
         }
         if (pc == 2147538920bv64) {
-            {
                 call () = bb_0x8000d7e8();
                 assert (pc == 2147538936bv64 || pc == 2147538984bv64);
-            }
         }
         if (pc == 2147538936bv64) {
-            {
                 call () = bb_0x8000d7f8();
                 assert (pc == 2147538952bv64 || pc == 2147539232bv64);
-            }
         }
         if (pc == 2147538952bv64) {
-            {
                 call () = bb_0x8000d808();
                 assert (pc == 2147538968bv64 || pc == 2147539316bv64);
-            }
         }
         if (pc == 2147538968bv64) {
-            {
                 call () = bb_0x8000d818();
                 assert (pc == 2147538980bv64 || pc == 2147539156bv64);
-            }
         }
         if (pc == 2147538980bv64) {
-            {
                 call () = bb_0x8000d824();
                 assert (pc == 2147538984bv64 || pc == 2147540516bv64);
-            }
         }
         if (pc == 2147538984bv64) {
-            {
                 call () = bb_0x8000d828();
                 assert (pc == 2147539000bv64 || pc == 2147539576bv64);
-            }
         }
         if (pc == 2147539000bv64) {
-            {
                 call () = bb_0x8000d838();
                 assert (pc == 2147539016bv64 || pc == 2147539664bv64);
-            }
         }
         if (pc == 2147539016bv64) {
-            {
                 call () = bb_0x8000d848();
                 assert (pc == 2147539020bv64 || pc == 2147539488bv64);
-            }
         }
         if (pc == 2147539020bv64) {
-            {
                 call () = bb_0x8000d84c();
                 assert (pc == 2147539036bv64 || pc == 2147540080bv64);
-            }
         }
         if (pc == 2147539036bv64) {
-            {
                 call () = bb_0x8000d85c();
                 assert (pc == 2147539052bv64 || pc == 2147539088bv64);
-            }
         }
         if (pc == 2147539052bv64) {
-            {
                 call () = bb_0x8000d86c();
                 assert (pc == 2147539068bv64 || pc == 2147539912bv64);
-            }
         }
         if (pc == 2147539068bv64) {
-            {
                 call () = bb_0x8000d87c();
                 assert (pc == 2147539084bv64 || pc == 2147539996bv64);
-            }
         }
         if (pc == 2147539084bv64) {
-            {
                 call () = bb_0x8000d88c();
                 assert (pc == 2147539088bv64 || pc == 2147539836bv64);
-            }
         }
         if (pc == 2147539088bv64) {
-            {
                 call () = bb_0x8000d890();
                 assert (pc == 2147539104bv64 || pc == 2147540256bv64);
-            }
         }
         if (pc == 2147539104bv64) {
-            {
                 call () = bb_0x8000d8a0();
                 assert (pc == 2147539120bv64 || pc == 2147540168bv64);
-            }
         }
         if (pc == 2147539120bv64) {
-            {
                 call () = bb_0x8000d8b0();
                 assert (pc == 2147539136bv64 || pc == 2147540344bv64);
-            }
         }
         if (pc == 2147539136bv64) {
-            {
                 call () = bb_0x8000d8c0();
                 assert (pc == 2147539152bv64 || pc == 2147540432bv64);
-            }
         }
         if (pc == 2147539152bv64) {
-            {
                 call () = bb_0x8000d8d0();
                 assert (pc == 2147539156bv64 || pc == 2147540516bv64);
-            }
         }
         if (pc == 2147539156bv64) {
-            {
                 call () = bb_0x8000d8d4();
                 assert (pc == 2147539232bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539232bv64) {
-            {
                 call () = bb_0x8000d920();
                 assert (pc == 2147539316bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539316bv64) {
-            {
                 call () = bb_0x8000d974();
                 assert (pc == 2147539400bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539400bv64) {
-            {
                 call () = bb_0x8000d9c8();
                 assert (pc == 2147539488bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539488bv64) {
-            {
                 call () = bb_0x8000da20();
                 assert (pc == 2147539576bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539576bv64) {
-            {
                 call () = bb_0x8000da78();
                 assert (pc == 2147539664bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539664bv64) {
-            {
                 call () = bb_0x8000dad0();
                 assert (pc == 2147539752bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539752bv64) {
-            {
                 call () = bb_0x8000db28();
                 assert (pc == 2147539836bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539836bv64) {
-            {
                 call () = bb_0x8000db7c();
                 assert (pc == 2147539912bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539912bv64) {
-            {
                 call () = bb_0x8000dbc8();
                 assert (pc == 2147539996bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147539996bv64) {
-            {
                 call () = bb_0x8000dc1c();
                 assert (pc == 2147540080bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147540080bv64) {
-            {
                 call () = bb_0x8000dc70();
                 assert (pc == 2147540168bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147540168bv64) {
-            {
                 call () = bb_0x8000dcc8();
                 assert (pc == 2147540256bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147540256bv64) {
-            {
                 call () = bb_0x8000dd20();
                 assert (pc == 2147540344bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147540344bv64) {
-            {
                 call () = bb_0x8000dd78();
                 assert (pc == 2147540432bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147540432bv64) {
-            {
                 call () = bb_0x8000ddd0();
                 assert (pc == 2147540516bv64 || pc == 2147540532bv64);
-            }
         }
         if (pc == 2147540516bv64) {
-            {
                 call () = bb_0x8000de24();
                 assert (pc == 2147509228bv64);
                 call () = poweroff();
                 assert (pc == 2147540528bv64);
-            }
         }
         if (pc == 2147540532bv64) {
-            {
                 call () = bb_0x8000de34();
-            }
         }
         if (pc == 2147540528bv64) {
-            {
                 call () = bb_0x8000de30();
-            }
         }
     }
 
