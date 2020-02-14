@@ -48,9 +48,6 @@ pub enum SemError {
     ReturnTypeMismatch(String, String),
     UnresolvedInternal,
     UnclosedComment,
-    UnknownChar(char),
-    UnclosedChar,
-    UnclosedString,
     NumberOverflow(String),
     ExpectedFactor(String),
     ExpectedToken(String, String),
@@ -205,13 +202,8 @@ impl SemError {
             }
             SemError::RedundantAnnotation(ref token) => format!("redundant annotation {}.", token),
             SemError::UnknownAnnotation(ref token) => format!("unknown annotation {}.", token),
-            SemError::UnknownChar(ch) => {
-                format!("unknown character {} (codepoint {}).", ch, ch as usize)
-            }
             SemError::UnclosedComment => "unclosed comment.".into(),
             SemError::InvalidEscapeSequence(ch) => format!("unknown escape sequence `\\{}`.", ch),
-            SemError::UnclosedString => "unclosed string.".into(),
-            SemError::UnclosedChar => "unclosed char.".into(),
             SemError::IoError => "error reading from file.".into(),
             SemError::MissingPrcdBody => "missing function body.".into(),
             SemError::PrcdCallExpected => format!("function call expected"),

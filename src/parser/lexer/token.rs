@@ -5,9 +5,6 @@ use crate::parser::lexer::position::{Position, Span};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum TokenKind {
-    StringTail(String),
-    StringExpr(String),
-    LitChar(char),
     LitInt(String, IntBase, IntSuffix),
     LitFloat(String, FloatSuffix),
     Identifier(String),
@@ -19,14 +16,9 @@ pub enum TokenKind {
     Else,
     For,
     In,
-    Break,
-    Continue,
-    Return,
     True,
     False,
     At,
-
-    Underscore,
     
     // Operators
     Add,
@@ -46,7 +38,6 @@ pub enum TokenKind {
     Semicolon,
     Dot,
     Colon,
-    Sep, // ::
     Arrow,
     Tilde,
     BitOr,
@@ -62,8 +53,6 @@ pub enum TokenKind {
     Le,
     Gt,
     Ge,
-    EqEqEq,
-    NeEqEq,
     
     GtGt,
     GtGtGt,
@@ -110,15 +99,11 @@ pub enum TokenKind {
 impl TokenKind {
     pub fn name(&self) -> &str {
         match *self {
-            TokenKind::StringTail(_) => "string tail",
-            TokenKind::StringExpr(_) => "string epxr",
             TokenKind::LitInt(_, _, suffix) => match suffix {
                 IntSuffix::Byte => "byte number",
                 IntSuffix::Int => "int number",
                 IntSuffix::Long => "long number",
             },
-
-            TokenKind::LitChar(_) => "char",
 
             TokenKind::LitFloat(_, suffix) => match suffix {
                 FloatSuffix::Float => "float number",
@@ -140,9 +125,6 @@ impl TokenKind {
             TokenKind::Else => "else",
             TokenKind::For => "for",
             TokenKind::In => "in",
-            TokenKind::Break => "break",
-            TokenKind::Continue => "continue",
-            TokenKind::Return => "return",
             TokenKind::True => "true",
             TokenKind::False => "false",
             TokenKind::At => "@",
@@ -151,8 +133,6 @@ impl TokenKind {
             TokenKind::Type => "type",
             TokenKind::Module => "module",
             TokenKind::Const => "const",
-
-            TokenKind::Underscore => "_",
 
             // Operators
             TokenKind::Add => "+",
@@ -172,7 +152,6 @@ impl TokenKind {
             TokenKind::Semicolon => ";",
             TokenKind::Dot => ".",
             TokenKind::Colon => ":",
-            TokenKind::Sep => "::",
             TokenKind::Arrow => "=>",
             TokenKind::Tilde => "~",
             TokenKind::BitOr => "|",
@@ -192,9 +171,6 @@ impl TokenKind {
             TokenKind::GtGt => ">>",
             TokenKind::GtGtGt => ">>>",
             TokenKind::LtLt => "<<",
-
-            TokenKind::EqEqEq => "===",
-            TokenKind::NeEqEq => "!==",
 
             TokenKind::Theorem => "theorem",
             TokenKind::Lemma => "lemma",
@@ -267,9 +243,6 @@ impl Token {
 
                 format!("{}{}", val, suffix)
             }
-
-            TokenKind::StringTail(ref val) => format!("\"{}\" tail", &val),
-            TokenKind::StringExpr(ref val) => format!("\"{}\" expr", &val),
 
             TokenKind::Identifier(ref val) => val.clone(),
 

@@ -16,15 +16,15 @@ pub trait Visitor<'v>: Sized {
         walk_module(self, m);
     }
 
-    fn visit_init(&mut self, m: &'v Init) {
+    fn visit_init(&mut self, m: &'v TransitionSystemBlock) {
         walk_init(self, m);
     }
 
-    fn visit_next(&mut self, m: &'v Next) {
+    fn visit_next(&mut self, m: &'v TransitionSystemBlock) {
         walk_next(self, m);
     }
 
-    fn visit_control(&mut self, m: &'v Control) {
+    fn visit_control(&mut self, m: &'v TransitionSystemBlock) {
         walk_control(self, m);
     }
 
@@ -92,27 +92,21 @@ pub fn walk_module<'v, V: Visitor<'v>>(v: &mut V, m: &'v Module) {
     // TODO: visit control
 }
 
-pub fn walk_init<'v, V: Visitor<'v>>(v: &mut V, m: &'v Init) {
-    if let Some(ref block) = m.block {
-        for stmt in &block.stmts {
-            v.visit_stmt(stmt);
-        }
+pub fn walk_init<'v, V: Visitor<'v>>(v: &mut V, m: &'v TransitionSystemBlock) {
+    for stmt in &m.block.stmts {
+        v.visit_stmt(stmt);
     }
 }
 
-pub fn walk_next<'v, V: Visitor<'v>>(v: &mut V, m: &'v Next) {
-    if let Some(ref block) = m.block {
-        for stmt in &block.stmts {
-            v.visit_stmt(stmt);
-        }
+pub fn walk_next<'v, V: Visitor<'v>>(v: &mut V, m: &'v TransitionSystemBlock) {
+    for stmt in &m.block.stmts {
+        v.visit_stmt(stmt);
     }
 }
 
-pub fn walk_control<'v, V: Visitor<'v>>(v: &mut V, m: &'v Control) {
-    if let Some(ref block) = m.block {
-        for stmt in &block.stmts {
-            v.visit_stmt(stmt);
-        }
+pub fn walk_control<'v, V: Visitor<'v>>(v: &mut V, m: &'v TransitionSystemBlock) {
+    for stmt in &m.block.stmts {
+        v.visit_stmt(stmt);
     }
 }
 
@@ -203,14 +197,6 @@ pub fn walk_stmt<'v, V: Visitor<'v>>(v: &mut V, s: &'v Stmt) {
         StmtExpr(ref value) => {
             v.visit_expr(&value.expr);
         }
-
-        StmtReturn(ref value) => {
-            if let Some(ref e) = value.expr {
-                v.visit_expr(e);
-            }
-        }
-        StmtBreak(_) => {}
-        StmtContinue(_) => {}
     }
 }
 
@@ -241,25 +227,9 @@ pub fn walk_expr<'v, V: Visitor<'v>>(v: &mut V, e: &'v Expr) {
             }
         }
 
-        ExprPath(ref path) => {
-            v.visit_expr(&path.lhs);
-            v.visit_expr(&path.rhs);
-        }
-
-        ExprDelegation(ref call) => {
-            for arg in &call.args {
-                v.visit_expr(arg);
-            }
-        }
-
         ExprDot(ref value) => {
             v.visit_expr(&value.lhs);
             v.visit_expr(&value.rhs);
-        }
-
-        ExprConv(ref value) => {
-            v.visit_expr(&value.object);
-            v.visit_type(&value.data_type);
         }
 
         ExprLambda(ref value) => {
@@ -280,12 +250,6 @@ pub fn walk_expr<'v, V: Visitor<'v>>(v: &mut V, e: &'v Expr) {
             }
         }
 
-        ExprTemplate(ref value) => {
-            for part in &value.parts {
-                v.visit_expr(part);
-            }
-        }
-
         ExprIf(ref value) => {
             v.visit_expr(&value.cond);
             v.visit_expr(&value.then_block);
@@ -300,10 +264,8 @@ pub fn walk_expr<'v, V: Visitor<'v>>(v: &mut V, e: &'v Expr) {
                 v.visit_expr(expr);
             }
         }
-        ExprLitChar(_) => {}
         ExprLitInt(_) => {}
         ExprLitFloat(_) => {}
-        ExprLitStr(_) => {}
         ExprLitBool(_) => {}
         ExprIdent(_) => {}
     }

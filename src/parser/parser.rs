@@ -500,46 +500,64 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_init(&mut self) -> Result<Init, ParseErrorAndPos> {
+    fn parse_init(&mut self) -> Result<TransitionSystemBlock, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Init)?.position;
-        let block = self.parse_procedure_block()?;
-        let span = self.span_from(start);
-
-        Ok(Init {
-            id: self.generate_id(),
-            pos,
-            span,
-            block,
-        })
+        if let Some(block) = self.parse_procedure_block()? {
+            let span = self.span_from(start);
+    
+            Ok(TransitionSystemBlock {
+                id: self.generate_id(),
+                pos,
+                span,
+                block,
+            })
+        } else {
+            Err(ParseErrorAndPos::new(
+                    self.token.position,
+                    ParseError::ExpectedBlock,
+                ))
+        }
     }
 
-    fn parse_next(&mut self) -> Result<Next, ParseErrorAndPos> {
+    fn parse_next(&mut self) -> Result<TransitionSystemBlock, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Next)?.position;
-        let block = self.parse_procedure_block()?;
-        let span = self.span_from(start);
-
-        Ok(Next {
-            id: self.generate_id(),
-            pos,
-            span,
-            block,
-        })
+        if let Some(block) = self.parse_procedure_block()? {
+            let span = self.span_from(start);
+    
+            Ok(TransitionSystemBlock {
+                id: self.generate_id(),
+                pos,
+                span,
+                block,
+            })
+        } else {
+            Err(ParseErrorAndPos::new(
+                    self.token.position,
+                    ParseError::ExpectedBlock,
+                ))
+        }
     }
 
-    fn parse_control(&mut self) -> Result<Control, ParseErrorAndPos> {
+    fn parse_control(&mut self) -> Result<TransitionSystemBlock, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Control)?.position;
-        let block = self.parse_procedure_block()?;
-        let span = self.span_from(start);
-
-        Ok(Control {
-            id: self.generate_id(),
-            pos,
-            span,
-            block,
-        })
+        if let Some(block) = self.parse_procedure_block()? {
+            let span = self.span_from(start);
+    
+            Ok(TransitionSystemBlock {
+                id: self.generate_id(),
+                pos,
+                span,
+                block,
+            })
+        } else {
+            Err(ParseErrorAndPos::new(
+                    self.token.position,
+                    ParseError::ExpectedBlock,
+                ))
+        }
     }
 
     fn parse_procedure_params(&mut self) -> Result<Vec<Param>, ParseErrorAndPos> {
@@ -753,7 +771,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_procedure_requires(&mut self) -> Result<StmtAssumeType, ParseErrorAndPos> {
+    fn parse_procedure_requires(&mut self) -> Result<StmtPredicateType, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Requires)?.position;
         let expr = self.parse_expression()?;
@@ -761,7 +779,7 @@ impl<'a> Parser<'a> {
         self.expect_semicolon()?;
         let span = self.span_from(start);
 
-        Ok(StmtAssumeType {
+        Ok(StmtPredicateType {
             id : self.generate_id(),
             pos,
             span,
@@ -769,7 +787,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_procedure_ensures(&mut self) -> Result<StmtAssertType, ParseErrorAndPos> {
+    fn parse_procedure_ensures(&mut self) -> Result<StmtPredicateType, ParseErrorAndPos> {
         let start = self.token.span.start();
         let pos = self.expect_token(TokenKind::Ensures)?.position;
         let expr = self.parse_expression()?;
@@ -777,7 +795,7 @@ impl<'a> Parser<'a> {
         self.expect_semicolon()?;
         let span = self.span_from(start);
 
-        Ok(StmtAssertType {
+        Ok(StmtPredicateType {
             id : self.generate_id(),
             pos,
             span,
@@ -1042,9 +1060,6 @@ impl<'a> Parser<'a> {
             | TokenKind::Var 
             | TokenKind::Const => self.parse_var(),
             TokenKind::While => self.parse_while(),
-            TokenKind::Break => self.parse_break(),
-            TokenKind::Continue => self.parse_continue(),
-            TokenKind::Return => self.parse_return(),
             TokenKind::Else => Err(ParseErrorAndPos::new(
                 self.token.position,
                 ParseError::MisplacedElse,
@@ -1141,49 +1156,6 @@ impl<'a> Parser<'a> {
         )))
     }
 
-    fn parse_break(&mut self) -> StmtResult {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Break)?.position;
-        self.expect_semicolon()?;
-        let span = self.span_from(start);
-
-        Ok(Box::new(Stmt::create_break(self.generate_id(), pos, span)))
-    }
-
-    fn parse_continue(&mut self) -> StmtResult {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Continue)?.position;
-        self.expect_semicolon()?;
-        let span = self.span_from(start);
-
-        Ok(Box::new(Stmt::create_continue(
-            self.generate_id(),
-            pos,
-            span,
-        )))
-    }
-
-    fn parse_return(&mut self) -> StmtResult {
-        let start = self.token.span.start();
-        let pos = self.expect_token(TokenKind::Return)?.position;
-        let expr = if self.token.is(TokenKind::Semicolon) {
-            None
-        } else {
-            let expr = self.parse_expression()?;
-            Some(expr)
-        };
-
-        self.expect_semicolon()?;
-        let span = self.span_from(start);
-
-        Ok(Box::new(Stmt::create_return(
-            self.generate_id(),
-            pos,
-            span,
-            expr,
-        )))
-    }
-
     fn parse_expression(&mut self) -> ExprResult {
         self.parse_expression_struct_lit(true)
     }
@@ -1222,11 +1194,10 @@ impl<'a> Parser<'a> {
                 | TokenKind::Le
                 | TokenKind::Gt
                 | TokenKind::Ge => 4,
-                TokenKind::EqEqEq | TokenKind::NeEqEq => 5,
-                TokenKind::BitOr | TokenKind::BitAnd | TokenKind::Caret => 6,
-                TokenKind::LtLt | TokenKind::GtGt | TokenKind::GtGtGt => 7,
-                TokenKind::Add | TokenKind::Sub => 8,
-                TokenKind::Mul | TokenKind::Div | TokenKind::Mod => 9,
+                TokenKind::BitOr | TokenKind::BitAnd | TokenKind::Caret => 5,
+                TokenKind::LtLt | TokenKind::GtGt | TokenKind::GtGtGt => 6,
+                TokenKind::Add | TokenKind::Sub => 7,
+                TokenKind::Mul | TokenKind::Div | TokenKind::Mod => 8,
                 _ => {
                     return Ok(left);
                 }
@@ -1323,20 +1294,6 @@ impl<'a> Parser<'a> {
                     ))
                 }
 
-                TokenKind::Sep => {
-                    let tok = self.advance_token()?;
-                    let rhs = self.parse_factor()?;
-                    let span = self.span_from(start);
-
-                    Box::new(Expr::create_path(
-                        self.generate_id(),
-                        tok.position,
-                        span,
-                        left,
-                        rhs,
-                    ))
-                }
-
                 _ => {
                     return Ok(left);
                 }
@@ -1361,8 +1318,6 @@ impl<'a> Parser<'a> {
             TokenKind::Le => BinOp::Cmp(CmpOp::Le),
             TokenKind::Gt => BinOp::Cmp(CmpOp::Gt),
             TokenKind::Ge => BinOp::Cmp(CmpOp::Ge),
-            TokenKind::EqEqEq => BinOp::Cmp(CmpOp::Is),
-            TokenKind::NeEqEq => BinOp::Cmp(CmpOp::IsNot),
             TokenKind::BitOr => BinOp::BitOr,
             TokenKind::BitAnd => BinOp::BitAnd,
             TokenKind::Caret => BinOp::BitXor,
@@ -1394,10 +1349,8 @@ impl<'a> Parser<'a> {
             TokenKind::LParen => self.parse_parentheses(),
             TokenKind::LBrace => self.parse_block(),
             TokenKind::If => self.parse_if(),
-            TokenKind::LitChar(_) => self.parse_lit_char(),
             TokenKind::LitInt(_, _, _) => self.parse_lit_int(),
             TokenKind::LitFloat(_, _) => self.parse_lit_float(),
-            TokenKind::StringTail(_) | TokenKind::StringExpr(_) => self.parse_string(),
             TokenKind::Identifier(_) => self.parse_identifier(),
             TokenKind::True => self.parse_bool_literal(),
             TokenKind::False => self.parse_bool_literal(),
@@ -1465,23 +1418,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_lit_char(&mut self) -> ExprResult {
-        let span = self.token.span;
-        let tok = self.advance_token()?;
-        let pos = tok.position;
-
-        if let TokenKind::LitChar(val) = tok.kind {
-            Ok(Box::new(Expr::create_lit_char(
-                self.generate_id(),
-                pos,
-                span,
-                val,
-            )))
-        } else {
-            unreachable!();
-        }
-    }
-
     fn parse_lit_int(&mut self) -> ExprResult {
         let span = self.token.span;
         let tok = self.advance_token()?;
@@ -1532,79 +1468,6 @@ impl<'a> Parser<'a> {
         }
 
         unreachable!()
-    }
-
-    fn parse_string(&mut self) -> ExprResult {
-        let span = self.token.span;
-        let string = self.advance_token()?;
-
-        match string.kind {
-            TokenKind::StringTail(value) => Ok(Box::new(Expr::create_lit_str(
-                self.generate_id(),
-                string.position,
-                span,
-                value,
-            ))),
-
-            TokenKind::StringExpr(value) => {
-                let start = self.token.span.start();
-                let mut parts: Vec<Box<Expr>> = Vec::new();
-                parts.push(Box::new(Expr::create_lit_str(
-                    self.generate_id(),
-                    string.position,
-                    span,
-                    value,
-                )));
-
-                loop {
-                    let expr = self.parse_expression()?;
-                    parts.push(expr);
-
-                    if !self.token.is(TokenKind::RBrace) {
-                        return Err(ParseErrorAndPos::new(
-                            self.token.position,
-                            ParseError::UnclosedStringTemplate,
-                        ));
-                    }
-
-                    let token = self.lexer.read_string_continuation()?;
-                    self.advance_token_with(token);
-
-                    let pos = self.token.position;
-                    let span = self.token.span;
-
-                    let (value, finished) = match self.token.kind {
-                        TokenKind::StringTail(ref value) => (value.clone(), true),
-                        TokenKind::StringExpr(ref value) => (value.clone(), false),
-                        _ => unreachable!(),
-                    };
-
-                    parts.push(Box::new(Expr::create_lit_str(
-                        self.generate_id(),
-                        pos,
-                        span,
-                        value,
-                    )));
-
-                    self.advance_token()?;
-
-                    if finished {
-                        break;
-                    }
-                }
-
-                let span = self.span_from(start);
-
-                Ok(Box::new(Expr::create_template(
-                    self.generate_id(),
-                    string.position,
-                    span,
-                    parts,
-                )))
-            }
-
-            _ => unreachable!(),
-        }
     }
 
     fn parse_bool_literal(&mut self) -> ExprResult {

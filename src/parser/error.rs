@@ -5,8 +5,6 @@ pub enum ParseError {
     // Lexer errors
     UnknownChar(char),
     UnclosedComment,
-    UnclosedString,
-    UnclosedChar,
     InvalidEscapeSequence(char),
 
     // Parser errors
@@ -20,9 +18,9 @@ pub enum ParseError {
     MisplacedElse,
     ExpectedFactor(String),
     NumberOverflow(String),
-    UnclosedStringTemplate,
     ExpectedIdentifier(String),
     ExpectedStatement,
+    ExpectedBlock,
 }
 
 impl ParseError {
@@ -32,8 +30,6 @@ impl ParseError {
                 format!("unknown character {} (codepoint {}).", ch, *ch as usize)
             }
             ParseError::UnclosedComment => "unclosed comment.".into(),
-            ParseError::UnclosedString => "unclosed string.".into(),
-            ParseError::UnclosedChar => "unclosed char.".into(),
             ParseError::InvalidEscapeSequence(ch) => format!("unknown escape sequence `\\{}`.", ch),
 
             // Parser errors
@@ -57,11 +53,11 @@ impl ParseError {
             ParseError::ExpectedType(ref got) => format!("type expected but got {}.", got),
             ParseError::MisplacedElse => "misplace else.".into(),
             ParseError::ExpectedFactor(ref got) => format!("factor expected but got {}.", got),
-            ParseError::UnclosedStringTemplate => "unclosed string template.".into(),
             ParseError::ExpectedIdentifier(ref tok) => {
                 format!("identifier expected but got {}.", tok)
             },
             ParseError::ExpectedStatement => "expected a statement.".into(),
+            ParseError::ExpectedBlock => "expected a block.".into(),
         }
     }
 }

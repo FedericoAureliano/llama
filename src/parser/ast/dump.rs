@@ -194,6 +194,11 @@ impl<'a> AstDumper<'a> {
             field.pos,
             field.id
         );
+        if let Some(e) = &field.expr {
+            self.indent(|d| {
+                d.dump_expr(e);
+            })
+        }
     }
 
     fn dump_property(&mut self, inv: &Property) {
@@ -332,9 +337,6 @@ impl<'a> AstDumper<'a> {
             StmtAssume(ref ass) => self.dump_stmt_assume(ass),
             StmtCall(ref cal) => self.dump_stmt_call(cal),
             StmtHavoc(ref hav) => self.dump_stmt_havoc(hav),
-            StmtReturn(ref ret) => self.dump_stmt_return(ret),
-            StmtBreak(ref stmt) => self.dump_stmt_break(stmt),
-            StmtContinue(ref stmt) => self.dump_stmt_continue(stmt),
             StmtExpr(ref expr) => self.dump_stmt_expr(expr),
             StmtVar(ref stmt) => self.dump_stmt_var(stmt),
             StmtWhile(ref stmt) => self.dump_stmt_while(stmt),
@@ -406,7 +408,7 @@ impl<'a> AstDumper<'a> {
         });
     }
 
-    fn dump_stmt_assume(&mut self, stmt: &StmtAssumeType) {
+    fn dump_stmt_assume(&mut self, stmt: &StmtPredicateType) {
         dump!(
             self,
             "assume @ {} {}",
@@ -420,7 +422,7 @@ impl<'a> AstDumper<'a> {
         });
     }
 
-    fn dump_stmt_assert(&mut self, stmt: &StmtAssertType) {
+    fn dump_stmt_assert(&mut self, stmt: &StmtPredicateType) {
         dump!(
             self,
             "assert @ {} {}",
@@ -492,43 +494,17 @@ impl<'a> AstDumper<'a> {
         self.dump_expr(&stmt.expr);
     }
 
-    fn dump_stmt_return(&mut self, ret: &StmtReturnType) {
-        dump!(self, "return @ {} {}", ret.pos, ret.id);
-
-        self.indent(|d| {
-            if let Some(ref expr) = ret.expr {
-                d.dump_expr(expr);
-            } else {
-                dump!(d, "<nothing>");
-            }
-        });
-    }
-
-    fn dump_stmt_break(&mut self, stmt: &StmtBreakType) {
-        dump!(self, "break @ {} {}", stmt.pos, stmt.id);
-    }
-
-    fn dump_stmt_continue(&mut self, stmt: &StmtContinueType) {
-        dump!(self, "continue @ {} {}", stmt.pos, stmt.id);
-    }
-
     fn dump_expr(&mut self, expr: &Expr) {
         match *expr {
             ExprUn(ref un) => self.dump_expr_un(un),
             ExprBin(ref bin) => self.dump_expr_bin(bin),
             ExprDot(ref field) => self.dump_expr_dot(field),
-            ExprLitChar(ref lit) => self.dump_expr_lit_char(lit),
             ExprLitInt(ref lit) => self.dump_expr_lit_int(lit),
             ExprLitFloat(ref lit) => self.dump_expr_lit_float(lit),
-            ExprLitStr(ref lit) => self.dump_expr_lit_str(lit),
-            ExprTemplate(ref tmpl) => self.dump_expr_template(tmpl),
             ExprLitBool(ref lit) => self.dump_expr_lit_bool(lit),
             ExprIdent(ref ident) => self.dump_expr_ident(ident),
             ExprCall(ref call) => self.dump_expr_call(call),
             ExprTypeParam(ref expr) => self.dump_expr_type_param(expr),
-            ExprPath(ref path) => self.dump_expr_path(path),
-            ExprDelegation(ref call) => self.dump_expr_delegation(call),
-            ExprConv(ref expr) => self.dump_expr_conv(expr),
             ExprLambda(ref expr) => self.dump_expr_lambda(expr),
             ExprBlock(ref expr) => self.dump_expr_block(expr),
             ExprIf(ref expr) => self.dump_expr_if(expr),
@@ -554,29 +530,23 @@ impl<'a> AstDumper<'a> {
         dump!(self, "block end");
     }
 
-    fn dump_init(&mut self, block: &Init) {
+    fn dump_init(&mut self, block: &TransitionSystemBlock) {
         self.indent(|d| {
             dump!(d, "init @ {} {}", block.pos, block.id);
-            if let Some(ref block) = block.block {
-                d.indent(|d| d.dump_expr_block(block));
-            }
+            d.indent(|d| d.dump_expr_block(&*block.block));
         });
     }
 
-    fn dump_next(&mut self, block: &Next) {
+    fn dump_next(&mut self, block: &TransitionSystemBlock) {
         self.indent(|d| {
             dump!(d, "next @ {} {}", block.pos, block.id);
-            if let Some(ref block) = block.block {
-                d.indent(|d| d.dump_expr_block(block));
-            }
+            d.indent(|d| d.dump_expr_block(&*block.block));
         });
     }
 
-    fn dump_control(&mut self, block: &Control) {
+    fn dump_control(&mut self, block: &TransitionSystemBlock) {
         dump!(self, "control @ {} {}", block.pos, block.id);
-        if let Some(ref block) = block.block {
-            self.indent(|d| d.dump_expr_block(block));
-        }
+        self.indent(|d| d.dump_expr_block(&*block.block));
     }
 
     fn dump_expr_if(&mut self, expr: &ExprIfType) {
@@ -597,53 +567,12 @@ impl<'a> AstDumper<'a> {
         });
     }
 
-    fn dump_expr_conv(&mut self, expr: &ExprConvType) {
-        self.indent(|d| d.dump_expr(&expr.object));
-        let op = if expr.is { "is" } else { "as" };
-        dump!(self, "{} @ {} {}", op, expr.pos, expr.id);
-        self.indent(|d| d.dump_type(&expr.data_type));
-    }
-
-    fn dump_expr_delegation(&mut self, expr: &ExprDelegationType) {
-        dump!(self, "super @ {} {}", expr.pos, expr.id);
-
-        self.indent(|d| {
-            for arg in &expr.args {
-                d.dump_expr(arg);
-            }
-        });
-    }
-
-    fn dump_expr_lit_char(&mut self, lit: &ExprLitCharType) {
-        dump!(
-            self,
-            "lit char {} {} @ {} {}",
-            lit.value,
-            lit.value as u32,
-            lit.pos,
-            lit.id
-        );
-    }
-
     fn dump_expr_lit_int(&mut self, lit: &ExprLitIntType) {
         dump!(self, "lit int {} @ {} {}", lit.value, lit.pos, lit.id);
     }
 
     fn dump_expr_lit_float(&mut self, lit: &ExprLitFloatType) {
         dump!(self, "lit float {} @ {} {}", lit.value, lit.pos, lit.id);
-    }
-
-    fn dump_expr_lit_str(&mut self, lit: &ExprLitStrType) {
-        dump!(self, "lit string {:?} @ {} {}", lit.value, lit.pos, lit.id);
-    }
-
-    fn dump_expr_template(&mut self, tmpl: &ExprTemplateType) {
-        dump!(self, "template @ {} {}", tmpl.pos, tmpl.id);
-        self.indent(|d| {
-            for part in &tmpl.parts {
-                d.dump_expr(part)
-            }
-        });
     }
 
     fn dump_expr_lit_bool(&mut self, lit: &ExprLitBoolType) {
@@ -688,12 +617,6 @@ impl<'a> AstDumper<'a> {
     fn dump_expr_dot(&mut self, expr: &ExprDotType) {
         self.indent(|d| d.dump_expr(&expr.rhs));
         dump!(self, "dot @ {} {}", expr.pos, expr.id);
-        self.indent(|d| d.dump_expr(&expr.lhs));
-    }
-
-    fn dump_expr_path(&mut self, expr: &ExprPathType) {
-        self.indent(|d| d.dump_expr(&expr.rhs));
-        dump!(self, "path (::) @ {} {}", expr.pos, expr.id);
         self.indent(|d| d.dump_expr(&expr.lhs));
     }
 
