@@ -306,14 +306,6 @@ pub struct Module {
 }
 
 #[derive(Clone, Debug)]
-pub struct TypeParam {
-    pub name: Name,
-    pub pos: Position,
-    pub span: Span,
-    pub bounds: Vec<Type>,
-}
-
-#[derive(Clone, Debug)]
 pub struct Field {
     pub id: NodeId,
     pub name: Name,
@@ -911,8 +903,7 @@ pub enum Expr {
     ExprLitBool(ExprLitBoolType),
     ExprIdent(ExprIdentType),
     ExprCall(ExprCallType),
-    ExprDeref(ExprDerefType),
-    ExprTypeParam(ExprTypeParamType),
+    ExprExtract(ExprExtractType),
     ExprDot(ExprDotType),
     ExprLambda(ExprLambdaType),
     ExprBlock(ExprBlockType),
@@ -1085,29 +1076,12 @@ impl Expr {
         array: Box<Expr>,
         args: Vec<Box<Expr>>,
     ) -> Expr {
-        Expr::ExprDeref(ExprDerefType {
+        Expr::ExprExtract(ExprExtractType {
             id,
             pos,
             span,
 
             array,
-            args,
-        })
-    }
-
-    pub fn create_type_param(
-        id: NodeId,
-        pos: Position,
-        span: Span,
-        callee: Box<Expr>,
-        args: Vec<Type>,
-    ) -> Expr {
-        Expr::ExprTypeParam(ExprTypeParamType {
-            id,
-            pos,
-            span,
-
-            callee,
             args,
         })
     }
@@ -1209,20 +1183,6 @@ impl Expr {
     pub fn is_call(&self) -> bool {
         match *self {
             Expr::ExprCall(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn to_type_param(&self) -> Option<&ExprTypeParamType> {
-        match *self {
-            Expr::ExprTypeParam(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn is_type_param(&self) -> bool {
-        match *self {
-            Expr::ExprTypeParam(_) => true,
             _ => false,
         }
     }
@@ -1378,8 +1338,7 @@ impl Expr {
             Expr::ExprLitBool(ref val) => val.pos,
             Expr::ExprIdent(ref val) => val.pos,
             Expr::ExprCall(ref val) => val.pos,
-            Expr::ExprDeref(ref val) => val.pos,
-            Expr::ExprTypeParam(ref val) => val.pos,
+            Expr::ExprExtract(ref val) => val.pos,
             Expr::ExprDot(ref val) => val.pos,
             Expr::ExprLambda(ref val) => val.pos,
             Expr::ExprBlock(ref val) => val.pos,
@@ -1398,8 +1357,7 @@ impl Expr {
             Expr::ExprLitBool(ref val) => val.span,
             Expr::ExprIdent(ref val) => val.span,
             Expr::ExprCall(ref val) => val.span,
-            Expr::ExprDeref(ref val) => val.span,
-            Expr::ExprTypeParam(ref val) => val.span,
+            Expr::ExprExtract(ref val) => val.span,
             Expr::ExprDot(ref val) => val.span,
             Expr::ExprLambda(ref val) => val.span,
             Expr::ExprBlock(ref val) => val.span,
@@ -1418,8 +1376,7 @@ impl Expr {
             Expr::ExprLitBool(ref val) => val.id,
             Expr::ExprIdent(ref val) => val.id,
             Expr::ExprCall(ref val) => val.id,
-            Expr::ExprDeref(ref val) => val.id,
-            Expr::ExprTypeParam(ref val) => val.id,
+            Expr::ExprExtract(ref val) => val.id,
             Expr::ExprDot(ref val) => val.id,
             Expr::ExprLambda(ref val) => val.id,
             Expr::ExprBlock(ref val) => val.id,
@@ -1549,7 +1506,7 @@ pub struct ExprLambdaType {
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprDerefType {
+pub struct ExprExtractType {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1570,28 +1527,12 @@ pub struct ExprCallType {
 
 impl ExprCallType {
     pub fn object(&self) -> Option<&Expr> {
-        if let Some(type_param) = self.callee.to_type_param() {
-            if let Some(dot) = type_param.callee.to_dot() {
-                Some(&dot.lhs)
-            } else {
-                None
-            }
-        } else if let Some(dot) = self.callee.to_dot() {
+        if let Some(dot) = self.callee.to_dot() {
             Some(&dot.lhs)
         } else {
             None
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct ExprTypeParamType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-
-    pub callee: Box<Expr>,
-    pub args: Vec<Type>,
 }
 
 #[derive(Clone, Debug)]

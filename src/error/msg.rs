@@ -9,7 +9,6 @@ pub enum SemError {
     UnknownFunction(String),
     UnknownField(String, String),
     UnknownEnumValue(String),
-    MultipleCandidatesForTypeParam(String, String, Vec<String>),
     IdentifierExists(String),
     ShadowFunction(String),
     ShadowParam(String),
@@ -37,11 +36,8 @@ pub enum SemError {
     LetMissingInitialization,
     LetReassigned,
     PrcdReassigned,
-    TypeParamReassigned,
     PrcdUsedAsIdentifier,
-    TypeParamUsedAsIdentifier,
     EnumUsedAsIdentifier,
-    TypeParamUsedAsCallee,
     UnderivableType(String),
     CycleInHierarchy,
     TypesIncompatible(String, String),
@@ -66,15 +62,10 @@ pub enum SemError {
     PrcdCallExpected,
     RecursiveStructure,
     TraitMethodWithBody,
-    TypeParamsExpected,
-    TypeParamNameNotUnique(String),
-    WrongNumberTypeParams(usize, usize),
     AssignmentToConst,
     BoundExpected,
-    NoTypeParamsExpected,
     MakeIteratorReturnType(String),
     InvalidLeftSideOfSeparator,
-    InvalidUseOfTypeParams,
     IfBranchTypesIncompatible(String, String),
     NameExpected,
     IndexExpected,
@@ -90,13 +81,6 @@ impl SemError {
             SemError::UnknownFunction(ref name) => format!("unknown function `{}`", name),
             SemError::UnknownEnumValue(ref name) => {
                 format!("no value with name `{}` in enumeration.", name)
-            }
-            SemError::MultipleCandidatesForTypeParam(ref tp, ref name, ref args) => {
-                let args = args.join(", ");
-                format!(
-                    "multiple candidates with definition `{}({})` found for type param `{}`.",
-                    name, args, tp
-                )
             }
             SemError::UnknownField(ref field, ref ty) => {
                 format!("unknown field `{}` for type `{}`", field, ty)
@@ -161,14 +145,9 @@ impl SemError {
             SemError::LetMissingInitialization => "`let` binding is missing initialization.".into(),
             SemError::LetReassigned => "`let` binding cannot be reassigned.".into(),
             SemError::PrcdReassigned => "function cannot be reassigned.".into(),
-            SemError::TypeParamReassigned => "type param cannot be reassigned.".into(),
             SemError::PrcdUsedAsIdentifier => "function cannot be used as identifier.".into(),
-            SemError::TypeParamUsedAsIdentifier => {
-                "type param cannot be used as identifier.".into()
-            }
             SemError::EnumUsedAsIdentifier => "enum cannot be used as identifier.".into(),
             SemError::InvalidLhsAssignment => "invalid left-hand-side of assignment.".into(),
-            SemError::TypeParamUsedAsCallee => "type param cannot be used as callee.".into(),
             SemError::UnderivableType(ref name) => {
                 format!("type `{}` cannot be used as super class.", name)
             }
@@ -211,25 +190,14 @@ impl SemError {
             SemError::TraitMethodWithBody => {
                 "trait method is not allowed to have definition".into()
             }
-            SemError::TypeParamsExpected => "type params expected.".into(),
-            SemError::TypeParamNameNotUnique(ref name) => {
-                format!("type param `{}` name already used.", name)
-            }
-            SemError::WrongNumberTypeParams(exp, actual) => {
-                format!("expected {} type parameters but got {}.", exp, actual)
-            }
             SemError::AssignmentToConst => "cannot assign to const variable.".into(),
             SemError::BoundExpected => "class or trait bound expected".into(),
-            SemError::NoTypeParamsExpected => "no type params allowed".into(),
             SemError::MakeIteratorReturnType(ref ty) => format!(
                 "makeIterator() returns `{}` which does not implement Iterator.",
                 ty
             ),
             SemError::InvalidLeftSideOfSeparator => {
                 "left hand side of separator is not a class.".into()
-            }
-            SemError::InvalidUseOfTypeParams => {
-                "type params need to be used on class or function.".into()
             }
             SemError::IfBranchTypesIncompatible(ref then_block, ref else_block) => format!(
                 "if-branches have incompatible types `{}` and `{}`.",

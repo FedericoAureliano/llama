@@ -219,19 +219,11 @@ pub fn walk_expr<'v, V: Visitor<'v>>(v: &mut V, e: &'v Expr) {
             }
         }
 
-        ExprDeref(ref deref) => {
+        ExprExtract(ref deref) => {
             v.visit_expr(&deref.array);
 
             for arg in &deref.args {
                 v.visit_expr(arg);
-            }
-        }
-
-        ExprTypeParam(ref expr) => {
-            v.visit_expr(&expr.callee);
-
-            for arg in &expr.args {
-                v.visit_type(arg);
             }
         }
 
