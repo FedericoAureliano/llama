@@ -39,9 +39,8 @@ impl fmt::Display for NodeId {
 pub enum Type {
     BasicType(BasicType),
     TypeAlias(TypeAlias),
-    EnumType(EnumType),
+    EnumType(Enum),
     TupleType(TupleType),
-    LambdaType(LambdaType),
 }
 
 #[derive(Clone, Debug)]
@@ -66,7 +65,7 @@ pub struct TypeAlias {
 }
 
 #[derive(Clone, Debug)]
-pub struct EnumType {
+pub struct Enum {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -81,16 +80,6 @@ pub struct TupleType {
     pub span: Span,
 
     pub subtypes: Vec<Box<Type>>,
-}
-
-#[derive(Clone, Debug)]
-pub struct LambdaType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-
-    pub params: Vec<Box<Type>>,
-    pub ret: Box<Type>,
 }
 
 impl Type {
@@ -133,27 +122,11 @@ impl Type {
         span: Span,
         variants: Vec<Name>,
     ) -> Type {
-        Type::EnumType(EnumType {
+        Type::EnumType(Enum {
             id,
             pos,
             span,
             variants,
-        })
-    }
-
-    pub fn create_lambda(
-        id: NodeId,
-        pos: Position,
-        span: Span,
-        params: Vec<Box<Type>>,
-        ret: Box<Type>,
-    ) -> Type {
-        Type::LambdaType(LambdaType {
-            id,
-            pos,
-            span,
-            params,
-            ret,
         })
     }
 
@@ -180,7 +153,7 @@ impl Type {
         }
     }
 
-    pub fn to_enum(&self) -> Option<&EnumType> {
+    pub fn to_enum(&self) -> Option<&Enum> {
         match *self {
             Type::EnumType(ref val) => Some(val),
             _ => None,
@@ -204,13 +177,6 @@ impl Type {
     pub fn to_tuple(&self) -> Option<&TupleType> {
         match *self {
             Type::TupleType(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn to_lambda(&self) -> Option<&LambdaType> {
-        match *self {
-            Type::LambdaType(ref val) => Some(val),
             _ => None,
         }
     }
@@ -247,13 +213,6 @@ impl Type {
 
                 format!("({})", types.join(", "))
             }
-
-            Type::LambdaType(ref val) => {
-                let types: Vec<String> = val.params.iter().map(|t| t.to_string(interner)).collect();
-                let ret = val.ret.to_string(interner);
-
-                format!("({}) -> {}", types.join(", "), ret)
-            }
         }
     }
 
@@ -263,7 +222,6 @@ impl Type {
             Type::TypeAlias(ref val) => val.pos,
             Type::EnumType(ref val) => val.pos,
             Type::TupleType(ref val) => val.pos,
-            Type::LambdaType(ref val) => val.pos,
         }
     }
 
@@ -273,7 +231,6 @@ impl Type {
             Type::TypeAlias(ref val) => val.id,
             Type::EnumType(ref val) => val.id,
             Type::TupleType(ref val) => val.id,
-            Type::LambdaType(ref val) => val.id,
         }
     }
 }
@@ -905,7 +862,6 @@ pub enum Expr {
     ExprCall(ExprCallType),
     ExprExtract(ExprExtractType),
     ExprDot(ExprDotType),
-    ExprLambda(ExprLambdaType),
     ExprBlock(ExprBlockType),
     ExprIf(ExprIfType),
     ExprTuple(ExprTupleType),
@@ -1103,25 +1059,6 @@ impl Expr {
         })
     }
 
-    pub fn create_lambda(
-        id: NodeId,
-        pos: Position,
-        span: Span,
-        params: Vec<Param>,
-        ret: Option<Box<Type>>,
-        block: Box<Stmt>,
-    ) -> Expr {
-        Expr::ExprLambda(ExprLambdaType {
-            id,
-            pos,
-            span,
-
-            params,
-            ret,
-            block,
-        })
-    }
-
     pub fn create_tuple(id: NodeId, pos: Position, span: Span, values: Vec<Box<Expr>>) -> Expr {
         Expr::ExprTuple(ExprTupleType {
             id,
@@ -1264,20 +1201,6 @@ impl Expr {
         }
     }
 
-    pub fn to_lambda(&self) -> Option<&ExprLambdaType> {
-        match *self {
-            Expr::ExprLambda(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn is_lambda(&self) -> bool {
-        match self {
-            &Expr::ExprLambda(_) => true,
-            _ => false,
-        }
-    }
-
     pub fn to_tuple(&self) -> Option<&ExprTupleType> {
         match *self {
             Expr::ExprTuple(ref val) => Some(val),
@@ -1340,7 +1263,6 @@ impl Expr {
             Expr::ExprCall(ref val) => val.pos,
             Expr::ExprExtract(ref val) => val.pos,
             Expr::ExprDot(ref val) => val.pos,
-            Expr::ExprLambda(ref val) => val.pos,
             Expr::ExprBlock(ref val) => val.pos,
             Expr::ExprIf(ref val) => val.pos,
             Expr::ExprTuple(ref val) => val.pos,
@@ -1359,7 +1281,6 @@ impl Expr {
             Expr::ExprCall(ref val) => val.span,
             Expr::ExprExtract(ref val) => val.span,
             Expr::ExprDot(ref val) => val.span,
-            Expr::ExprLambda(ref val) => val.span,
             Expr::ExprBlock(ref val) => val.span,
             Expr::ExprIf(ref val) => val.span,
             Expr::ExprTuple(ref val) => val.span,
@@ -1378,7 +1299,6 @@ impl Expr {
             Expr::ExprCall(ref val) => val.id,
             Expr::ExprExtract(ref val) => val.id,
             Expr::ExprDot(ref val) => val.id,
-            Expr::ExprLambda(ref val) => val.id,
             Expr::ExprBlock(ref val) => val.id,
             Expr::ExprIf(ref val) => val.id,
             Expr::ExprTuple(ref val) => val.id,
@@ -1492,17 +1412,6 @@ pub struct ExprIdentType {
 
     pub name: Name,
     pub type_params: Option<Vec<Type>>,
-}
-
-#[derive(Clone, Debug)]
-pub struct ExprLambdaType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-
-    pub params: Vec<Param>,
-    pub ret: Option<Box<Type>>,
-    pub block: Box<Stmt>,
 }
 
 #[derive(Clone, Debug)]

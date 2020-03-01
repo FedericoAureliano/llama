@@ -59,6 +59,10 @@ pub trait Visitor<'v>: Sized {
     fn visit_expr(&mut self, e: &'v Expr) {
         walk_expr(self, e);
     }
+
+    fn visit_enum(&mut self, e: &'v Enum) {
+        walk_enum(self, e);
+    }
 }
 
 pub fn walk_ast<'v, V: Visitor<'v>>(v: &mut V, a: &'v Ast) {
@@ -74,6 +78,11 @@ pub fn walk_file<'v, V: Visitor<'v>>(v: &mut V, f: &'v File) {
 }
 
 pub fn walk_module<'v, V: Visitor<'v>>(v: &mut V, m: &'v Module) {
+
+    for t in &m.types {
+        v.visit_type(t);
+    }
+
     for f in &m.inputs {
         v.visit_field(f);
     }
@@ -146,21 +155,14 @@ pub fn walk_type<'v, V: Visitor<'v>>(v: &mut V, t: &'v Type) {
             v.visit_type(&alias.alias);
         }
 
-        // TODO what to do when walking enum type?
-        EnumType(_) => {}
+        EnumType(ref e) => {
+            v.visit_enum(e);
+        }
 
         TupleType(ref tuple) => {
             for ty in &tuple.subtypes {
                 v.visit_type(ty);
             }
-        }
-
-        LambdaType(ref fct) => {
-            for ty in &fct.params {
-                v.visit_type(ty);
-            }
-
-            v.visit_type(&fct.ret);
         }
     }
 }
@@ -200,6 +202,10 @@ pub fn walk_stmt<'v, V: Visitor<'v>>(v: &mut V, s: &'v Stmt) {
     }
 }
 
+pub fn walk_enum<'v, V: Visitor<'v>>(_v: &mut V, _e: &'v Enum) {
+    // nothing to do
+}
+
 pub fn walk_expr<'v, V: Visitor<'v>>(v: &mut V, e: &'v Expr) {
     match *e {
         ExprUn(ref value) => {
@@ -230,18 +236,6 @@ pub fn walk_expr<'v, V: Visitor<'v>>(v: &mut V, e: &'v Expr) {
         ExprDot(ref value) => {
             v.visit_expr(&value.lhs);
             v.visit_expr(&value.rhs);
-        }
-
-        ExprLambda(ref value) => {
-            for param in &value.params {
-                v.visit_type(&param.data_type);
-            }
-
-            if let Some(ref ret) = value.ret {
-                v.visit_type(ret);
-            }
-
-            v.visit_stmt(&value.block);
         }
 
         ExprBlock(ref value) => {

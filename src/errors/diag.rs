@@ -1,4 +1,4 @@
-use crate::error::msg::{SemError, SemErrorAndPos};
+use crate::errors::msg::{SemError, SemErrorAndPos};
 use crate::vm::{FileId, VM};
 use crate::parser::lexer::position::Position;
 

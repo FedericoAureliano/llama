@@ -508,7 +508,6 @@ impl<'a> AstDumper<'a> {
             ExprIdent(ref ident) => self.dump_expr_ident(ident),
             ExprCall(ref call) => self.dump_expr_call(call),
             ExprExtract(ref deref) => self.dump_expr_extract(deref),
-            ExprLambda(ref expr) => self.dump_expr_lambda(expr),
             ExprBlock(ref expr) => self.dump_expr_block(expr),
             ExprIf(ref expr) => self.dump_expr_if(expr),
             ExprTuple(ref expr) => self.dump_expr_tuple(expr),
@@ -607,11 +606,6 @@ impl<'a> AstDumper<'a> {
         dump!(self, "binary {:?} @ {} {}", expr.op, expr.pos, expr.id);
         self.indent(|d| d.dump_expr(&expr.lhs));
         self.indent(|d| d.dump_expr(&expr.rhs));
-    }
-
-    fn dump_expr_lambda(&mut self, expr: &ExprLambdaType) {
-        dump!(self, "lambda @ {} {}", expr.pos, expr.id);
-        self.indent(|d| d.dump_stmt(&expr.block));
     }
 
     fn dump_expr_tuple(&mut self, expr: &ExprTupleType) {

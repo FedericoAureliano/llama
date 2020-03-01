@@ -70,6 +70,7 @@ pub enum SemError {
     NameExpected,
     IndexExpected,
     IllegalTupleIndex(u64, String),
+    NoTypeParamsExpected,
 }
 
 impl SemError {
@@ -208,6 +209,7 @@ impl SemError {
             SemError::IllegalTupleIndex(idx, ref ty) => {
                 format!("illegal index `{}` for type `{}`", idx, ty)
             }
+            SemError::NoTypeParamsExpected => "no type params allowed".into(),
         }
     }
 }

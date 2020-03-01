@@ -1,6 +1,10 @@
-pub mod error;
+pub mod errors;
 pub mod parser;
 pub mod vm;
+pub mod checks;
+pub mod types;
+pub mod symbols;
+pub mod utils;
 
 #[cfg(not(test))]
 use std::process::exit;
@@ -70,6 +74,22 @@ pub fn start() -> i32 {
     vm.ast = &ast;
     
     ast::dump::dump(&vm.ast, &vm.interner);
+
+    checks::check(&mut vm);
+
+    if vm.diagnostic.lock().has_errors() {
+        vm.diagnostic.lock().dump(&vm);
+        let num_errors = vm.diagnostic.lock().errors().len();
+
+        if num_errors == 1 {
+            eprintln!("{} error found.", num_errors);
+        } else {
+            eprintln!("{} errors found.", num_errors);
+        }
+
+        return 1;
+    }
+
     0
 }
 

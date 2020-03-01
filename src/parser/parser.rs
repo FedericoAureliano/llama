@@ -744,27 +744,13 @@ impl<'a> Parser<'a> {
                     Ok(Box::new(ty))
                 })?;
 
-                if self.token.is(TokenKind::Arrow) {
-                    self.advance_token()?;
-                    let ret = Box::new(self.parse_type()?);
-                    let span = self.span_from(start);
-
-                    Ok(Type::create_lambda(
-                        self.generate_id(),
-                        token.position,
-                        span,
-                        subtypes,
-                        ret,
-                    ))
-                } else {
-                    let span = self.span_from(start);
-                    Ok(Type::create_tuple(
-                        self.generate_id(),
-                        token.position,
-                        span,
-                        subtypes,
-                    ))
-                }
+                let span = self.span_from(start);
+                Ok(Type::create_tuple(
+                    self.generate_id(),
+                    token.position,
+                    span,
+                    subtypes,
+                ))
             }
 
             _ => Err(ParseErrorAndPos::new(
@@ -1370,7 +1356,6 @@ impl<'a> Parser<'a> {
             TokenKind::Identifier(_) => self.parse_identifier(),
             TokenKind::True => self.parse_bool_literal(),
             TokenKind::False => self.parse_bool_literal(),
-            TokenKind::BitOr | TokenKind::Or => self.parse_lambda(),
             _ => Err(ParseErrorAndPos::new(
                 self.token.position,
                 ParseError::ExpectedFactor(self.token.name().clone()),
@@ -1525,41 +1510,6 @@ impl<'a> Parser<'a> {
             tok.position,
             span,
             value,
-        )))
-    }
-
-    fn parse_lambda(&mut self) -> ExprResult {
-        let start = self.token.span.start();
-        let tok = self.advance_token()?;
-
-        let params = if tok.kind == TokenKind::Or {
-            // nothing to do
-            Vec::new()
-        } else {
-            self.param_idx = 0;
-            self.parse_comma_list(TokenKind::BitOr, |p| {
-                p.param_idx += 1;
-                p.parse_procedure_param()
-            })?
-        };
-
-        let ret = if self.token.is(TokenKind::Arrow) {
-            self.advance_token()?;
-            Some(Box::new(self.parse_type()?))
-        } else {
-            None
-        };
-
-        let block = self.parse_block_stmt()?;
-        let span = self.span_from(start);
-
-        Ok(Box::new(Expr::create_lambda(
-            self.generate_id(),
-            tok.position,
-            span,
-            params,
-            ret,
-            block,
         )))
     }
 
