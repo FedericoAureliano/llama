@@ -993,7 +993,6 @@ impl Expr {
         pos: Position,
         span: Span,
         name: Name,
-        type_params: Option<Vec<Type>>,
     ) -> Expr {
         Expr::ExprIdent(ExprIdentType {
             id,
@@ -1001,7 +1000,6 @@ impl Expr {
             span,
 
             name,
-            type_params,
         })
     }
 
@@ -1408,7 +1406,6 @@ pub struct ExprIdentType {
     pub span: Span,
 
     pub name: Name,
-    pub type_params: Option<Vec<Type>>,
 }
 
 #[derive(Clone, Debug)]

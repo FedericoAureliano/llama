@@ -1,5 +1,5 @@
 module main {
-  type id_t = enum { privileged, unprivileged, invalid };
+  type id_t = enum { privileged, unprivileged, invalid, privileged};
   type syscall_t = enum { };
   
   input invocation : syscall_t;

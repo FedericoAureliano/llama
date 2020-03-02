@@ -20,8 +20,7 @@ pub fn check<'cst>(vm: &mut VM<'cst>) {
 
     let mut map_enum_defs = NodeMap::new();
 
-    // add user defined fcts and classes to vm
-    // this check does not look into fct or class bodies
+    // add module definitions
     defcheck::check(vm, &mut map_enum_defs);
     return_on_error!(vm);
 

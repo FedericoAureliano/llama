@@ -1422,7 +1422,6 @@ impl<'a> Parser<'a> {
             pos,
             span,
             name,
-            None,
         )))
     }
 

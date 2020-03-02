@@ -9,14 +9,16 @@ pub enum SemError {
     UnknownField(String, String),
     UnknownEnumValue(String),
     IdentifierExists(String),
-    ShadowFunction(String),
-    ShadowParam(String),
-    ShadowField(String),
-    ShadowConst(String),
-    ShadowEnum(String),
-    ShadowEnumValue(String),
+    DuplicateFunction(String),
+    DuplicateParam(String),
+    DuplicateField(String),
+    DuplicateConst(String),
+
+    DuplicateEnumVariant(String, String),
+    DuplicateEnum(String),
+    NoEnumValue(String),
+    
     InvalidLhsAssignment,
-    NoEnumValue,
     VarNeedsTypeInfo(String),
     ParamTypesIncompatible(String, Vec<String>, Vec<String>),
     WhileCondType(String),
@@ -88,15 +90,15 @@ impl SemError {
             SemError::IdentifierExists(ref name) => {
                 format!("can not redefine identifier `{}`.", name)
             }
-            SemError::ShadowFunction(ref name) => format!("can not shadow function `{}`.", name),
-            SemError::ShadowParam(ref name) => format!("can not shadow param `{}`.", name),
-            SemError::ShadowField(ref name) => {
+            SemError::DuplicateFunction(ref name) => format!("duplicate function `{}`.", name),
+            SemError::DuplicateParam(ref name) => format!("duplicate param `{}`.", name),
+            SemError::DuplicateField(ref name) => {
                 format!("field with name `{}` already exists.", name)
             }
-            SemError::ShadowConst(ref name) => format!("can not shadow const `{}`.", name),
-            SemError::ShadowEnum(ref name) => format!("can not shadow enum `{}`.", name),
-            SemError::ShadowEnumValue(ref name) => format!("can not shadow enum value `{}`.", name),
-            SemError::NoEnumValue => "enum needs at least one variant.".into(),
+            SemError::DuplicateConst(ref name) => format!("duplicate const `{}`.", name),
+            SemError::DuplicateEnumVariant(ref e, ref v) => format!("enum `{}` duplicates variant `{}`.", e, v),
+            SemError::DuplicateEnum(ref name) => format!("duplicate enum `{}`.", name),
+            SemError::NoEnumValue(ref name) => format!("enum `{}` needs at least one variant.", name),
             SemError::VarNeedsTypeInfo(ref name) => format!(
                 "variable `{}` needs either type declaration or expression.",
                 name

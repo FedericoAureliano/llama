@@ -14,7 +14,7 @@ pub fn check<'cst>(
     map_enum_defs: &mut NodeMap<EnumId>,
 ) {
     let cst = vm.cst;
-    let mut gdef = GlobalDef {
+    let mut gdef = Defn {
         vm,
         map_enum_defs,
     };
@@ -22,12 +22,12 @@ pub fn check<'cst>(
     gdef.visit_cst(cst);
 }
 
-struct GlobalDef<'x, 'cst: 'x> {
+struct Defn<'x, 'cst: 'x> {
     vm: &'x mut VM<'cst>,
     map_enum_defs: &'x mut NodeMap<EnumId>,
 }
 
-impl<'x, 'cst> Visitor<'cst> for GlobalDef<'x, 'cst> {
+impl<'x, 'cst> Visitor<'cst> for Defn<'x, 'cst> {
     fn visit_enum(&mut self, e: &'cst EnumType) {
         let id: EnumId = self.vm.enum_defs.len().into();
         let xenum = EnumData {
@@ -53,9 +53,9 @@ fn report(vm: &VM, name: Name, pos: Position, sym: Sym) {
     let name = vm.interner.str(name).to_string();
 
     let msg = match sym {
-        SymFct(_) => SemError::ShadowFunction(name),
-        SymConst(_) => SemError::ShadowConst(name),
-        SymEnum(_) => SemError::ShadowEnum(name),
+        SymFct(_) => SemError::DuplicateFunction(name),
+        SymConst(_) => SemError::DuplicateConst(name),
+        SymEnum(_) => SemError::DuplicateEnum(name),
         _ => unimplemented!(),
     };
 

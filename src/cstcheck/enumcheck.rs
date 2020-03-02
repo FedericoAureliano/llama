@@ -34,17 +34,19 @@ impl<'x, 'cst> Visitor<'cst> for EnumCheck<'x, 'cst> {
         let mut xenum = self.vm.enum_defs[enum_id].write();
         let mut enum_value_int: u32 = 0;
 
+        let name = self.vm.interner.str(e.name).to_string();
+
         for variant in &e.variants {
             
             xenum.values.push(*variant);
             let result = xenum.name_to_value.insert(*variant, enum_value_int);
 
             if result.is_some() {
-                let name = self.vm.interner.str(*variant).to_string();
+                let v = self.vm.interner.str(*variant).to_string();
                 self.vm
                     .diagnostic
                     .lock()
-                    .report(e.pos, SemError::ShadowEnumValue(name));
+                    .report(e.pos, SemError::DuplicateEnumVariant(name.clone(), v));
             }
 
             enum_value_int += 1;
@@ -54,7 +56,7 @@ impl<'x, 'cst> Visitor<'cst> for EnumCheck<'x, 'cst> {
             self.vm
                 .diagnostic
                 .lock()
-                .report(e.pos, SemError::NoEnumValue);
+                .report(e.pos, SemError::NoEnumValue(name));
         }
     }
 }
