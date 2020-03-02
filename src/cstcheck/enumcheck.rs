@@ -1,35 +1,34 @@
-use crate::parser::ast::visit::Visitor;
-use crate::parser::ast::{Ast, Enum};
+use crate::parser::cst::visit::Visitor;
+use crate::parser::cst::{Cst, EnumType};
 
-use crate::errors::msg::SemError;
+use crate::errors::message::SemError;
 use crate::vm::{EnumId, NodeMap, VM};
 
-pub fn check<'ast>(vm: &mut VM<'ast>, ast: &'ast Ast, map_enum_defs: &NodeMap<EnumId>) {
+pub fn check<'cst>(vm: &mut VM<'cst>, cst: &'cst Cst, map_enum_defs: &NodeMap<EnumId>) {
     let mut enumck = EnumCheck {
         vm,
-        ast,
+        cst,
         map_enum_defs,
     };
 
     enumck.check();
 }
 
-struct EnumCheck<'x, 'ast: 'x> {
-    vm: &'x mut VM<'ast>,
-    ast: &'ast Ast,
+struct EnumCheck<'x, 'cst: 'x> {
+    vm: &'x mut VM<'cst>,
+    cst: &'cst Cst,
     map_enum_defs: &'x NodeMap<EnumId>,
 }
 
-impl<'x, 'ast> EnumCheck<'x, 'ast> {
+impl<'x, 'cst> EnumCheck<'x, 'cst> {
     fn check(&mut self) {
-        self.visit_ast(self.ast);
+        self.visit_cst(self.cst);
     }
 }
 
-impl<'x, 'ast> Visitor<'ast> for EnumCheck<'x, 'ast> {
-    fn visit_enum(&mut self, e: &'ast Enum) {
+impl<'x, 'cst> Visitor<'cst> for EnumCheck<'x, 'cst> {
+    fn visit_enum(&mut self, e: &'cst EnumType) {
 
-        // TODO: failing here because haven't actually populated enum table
         let enum_id = *self.map_enum_defs.get(e.id).unwrap();
 
         let mut xenum = self.vm.enum_defs[enum_id].write();
@@ -45,7 +44,7 @@ impl<'x, 'ast> Visitor<'ast> for EnumCheck<'x, 'ast> {
                 self.vm
                     .diagnostic
                     .lock()
-                    .report(xenum.file, e.pos, SemError::ShadowEnumValue(name));
+                    .report(e.pos, SemError::ShadowEnumValue(name));
             }
 
             enum_value_int += 1;
@@ -55,7 +54,7 @@ impl<'x, 'ast> Visitor<'ast> for EnumCheck<'x, 'ast> {
             self.vm
                 .diagnostic
                 .lock()
-                .report(xenum.file, e.pos, SemError::NoEnumValue);
+                .report(e.pos, SemError::NoEnumValue);
         }
     }
 }

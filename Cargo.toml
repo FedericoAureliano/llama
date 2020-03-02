@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 rustc-serialize = "0.3.*"
-docopt = "0.7.*"
+docopt = "1"
+serde = { version = "1", features = ["derive"] }
 parking_lot = "0.6"
 bit-vec = "0.6.1"

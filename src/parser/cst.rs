@@ -10,20 +10,14 @@ pub mod dump;
 pub mod visit;
 
 #[derive(Clone, Debug)]
-pub struct Ast {
-    pub files: Vec<File>,
-}
-
-impl Ast {
-    pub fn new() -> Ast {
-        Ast { files: Vec::new() }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct File {
-    pub path: String,
+pub struct Cst {
     pub modules: Vec<Module>,
+}
+
+impl Cst {
+    pub fn new() -> Cst {
+        Cst { modules: Vec::new() }
+    }
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
@@ -39,7 +33,7 @@ impl fmt::Display for NodeId {
 pub enum Type {
     BasicType(BasicType),
     TypeAlias(TypeAlias),
-    EnumType(Enum),
+    EnumType(EnumType),
     TupleType(TupleType),
 }
 
@@ -65,11 +59,12 @@ pub struct TypeAlias {
 }
 
 #[derive(Clone, Debug)]
-pub struct Enum {
+pub struct EnumType {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
+    pub name: Name,
     pub variants: Vec<Name>,
 }
 
@@ -120,12 +115,14 @@ impl Type {
         id: NodeId,
         pos: Position,
         span: Span,
+        name: Name,
         variants: Vec<Name>,
     ) -> Type {
-        Type::EnumType(Enum {
+        Type::EnumType(EnumType {
             id,
             pos,
             span,
+            name,
             variants,
         })
     }
@@ -153,7 +150,7 @@ impl Type {
         }
     }
 
-    pub fn to_enum(&self) -> Option<&Enum> {
+    pub fn to_enum(&self) -> Option<&EnumType> {
         match *self {
             Type::EnumType(ref val) => Some(val),
             _ => None,
@@ -204,7 +201,7 @@ impl Type {
 
             Type::EnumType(ref val) => {
                 let types: Vec<String> = val.variants.iter().map(|t| format!("{}", *interner.str(*t))).collect();
-                format!("enum {{{}}}", types.join(", "))
+                format!("enum {} of {{{}}}", *interner.str(val.name), types.join(", "))
             }
 
             Type::TupleType(ref val) => {

@@ -1,5 +1,4 @@
-use crate::errors::msg::{SemError, SemErrorAndPos};
-use crate::vm::{FileId, VM};
+use crate::errors::message::{SemError, SemErrorAndPos};
 use crate::parser::lexer::position::Position;
 
 pub struct Diagnostic {
@@ -15,17 +14,17 @@ impl Diagnostic {
         &self.errors
     }
 
-    pub fn report(&mut self, file: FileId, pos: Position, msg: SemError) {
-        self.errors.push(SemErrorAndPos::new(file, pos, msg));
+    pub fn report(&mut self, pos: Position, msg: SemError) {
+        self.errors.push(SemErrorAndPos::new(pos, msg));
     }
 
     pub fn has_errors(&self) -> bool {
         !self.errors.is_empty()
     }
 
-    pub fn dump(&self, vm: &VM) {
+    pub fn dump(&self) {
         for err in &self.errors {
-            eprintln!("{}", &err.message(vm));
+            eprintln!("{}", &err.message());
         }
     }
 }

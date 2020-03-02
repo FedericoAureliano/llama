@@ -1,15 +1,10 @@
-use crate::parser::ast::*;
-use crate::parser::ast::Expr::*;
-use crate::parser::ast::Stmt::*;
-use crate::parser::ast::Type::*;
+use crate::parser::cst::*;
+use crate::parser::cst::Expr::*;
+use crate::parser::cst::Stmt::*;
 
 pub trait Visitor<'v>: Sized {
-    fn visit_ast(&mut self, a: &'v Ast) {
-        walk_ast(self, a);
-    }
-
-    fn visit_file(&mut self, a: &'v File) {
-        walk_file(self, a);
+    fn visit_cst(&mut self, a: &'v Cst) {
+        walk_cst(self, a);
     }
 
     fn visit_module(&mut self, m: &'v Module) {
@@ -60,19 +55,13 @@ pub trait Visitor<'v>: Sized {
         walk_expr(self, e);
     }
 
-    fn visit_enum(&mut self, e: &'v Enum) {
+    fn visit_enum(&mut self, e: &'v EnumType) {
         walk_enum(self, e);
     }
 }
 
-pub fn walk_ast<'v, V: Visitor<'v>>(v: &mut V, a: &'v Ast) {
-    for f in &a.files {
-        v.visit_file(f);
-    }
-}
-
-pub fn walk_file<'v, V: Visitor<'v>>(v: &mut V, f: &'v File) {
-    for m in &f.modules {
+pub fn walk_cst<'v, V: Visitor<'v>>(v: &mut V, a: &'v Cst) {
+    for m in &a.modules {
         v.visit_module(m)
     }
 }
@@ -149,17 +138,17 @@ pub fn walk_return<'v, V: Visitor<'v>>(v: &mut V, p: &'v Param) {
 
 pub fn walk_type<'v, V: Visitor<'v>>(v: &mut V, t: &'v Type) {
     match *t {
-        BasicType(_) => {}
+        Type::BasicType(_) => {}
 
-        TypeAlias(ref alias) => {
+        Type::TypeAlias(ref alias) => {
             v.visit_type(&alias.alias);
         }
 
-        EnumType(ref e) => {
+        Type::EnumType(ref e) => {
             v.visit_enum(e);
         }
 
-        TupleType(ref tuple) => {
+        Type::TupleType(ref tuple) => {
             for ty in &tuple.subtypes {
                 v.visit_type(ty);
             }
@@ -202,7 +191,7 @@ pub fn walk_stmt<'v, V: Visitor<'v>>(v: &mut V, s: &'v Stmt) {
     }
 }
 
-pub fn walk_enum<'v, V: Visitor<'v>>(_v: &mut V, _e: &'v Enum) {
+pub fn walk_enum<'v, V: Visitor<'v>>(_v: &mut V, _e: &'v EnumType) {
     // nothing to do
 }
 

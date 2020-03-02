@@ -1,2 +1,2 @@
-pub mod diag;
-pub mod msg;
+pub mod diagnostic;
+pub mod message;

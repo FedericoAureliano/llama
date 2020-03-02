@@ -7,8 +7,6 @@ use std::ops::Index;
 use crate::parser::interner::Name;
 use crate::parser::lexer::position::Position;
 
-use crate::vm::FileId;
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EnumId(u32);
 
@@ -29,7 +27,6 @@ impl Index<EnumId> for Vec<RwLock<EnumData>> {
 #[derive(Debug)]
 pub struct EnumData {
     pub id: EnumId,
-    pub file: FileId,
     pub pos: Position,
     pub name: Name,
     pub values: Vec<Name>,

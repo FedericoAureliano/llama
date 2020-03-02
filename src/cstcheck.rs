@@ -1,11 +1,12 @@
-use crate::errors::msg::SemError;
-use crate::vm::{FileId, NodeMap, VM};
-use crate::parser::ast::Type::{BasicType, TupleType, TypeAlias, EnumType};
-use crate::parser::ast::{Type};
+use crate::errors::message::SemError;
+use crate::vm::{NodeMap, VM};
+use crate::parser::cst::Type::{BasicType, TupleType, TypeAlias, EnumType};
+use crate::parser::cst::{Type};
 use crate::types::{BuiltinType, TypeList};
 use crate::symbols::Sym::{SymEnum};
 
-mod enums;
+mod enumcheck;
+mod defcheck;
 
 macro_rules! return_on_error {
     ($vm: ident) => {{
@@ -15,16 +16,21 @@ macro_rules! return_on_error {
     }};
 }
 
-pub fn check<'ast>(vm: &mut VM<'ast>) {
-    // TODO set to mutable and actually collect them
-    let map_enum_defs = NodeMap::new(); // get EnumId from ast node
+pub fn check<'cst>(vm: &mut VM<'cst>) {
+
+    let mut map_enum_defs = NodeMap::new();
+
+    // add user defined fcts and classes to vm
+    // this check does not look into fct or class bodies
+    defcheck::check(vm, &mut map_enum_defs);
+    return_on_error!(vm);
 
     // check enums
-    enums::check(vm, &vm.ast, &map_enum_defs);
+    enumcheck::check(vm, &vm.cst, &map_enum_defs);
     return_on_error!(vm);
 }
 
-pub fn read_type<'ast>(vm: &VM<'ast>, file: FileId, t: &'ast Type) -> Option<BuiltinType> {
+pub fn read_type<'cst>(vm: &VM<'cst>, t: &'cst Type) -> Option<BuiltinType> {
     match *t {
         BasicType(ref basic) => {
             let sym = vm.symbol_table.lock().get(basic.name);
@@ -33,7 +39,7 @@ pub fn read_type<'ast>(vm: &VM<'ast>, file: FileId, t: &'ast Type) -> Option<Bui
                     SymEnum(enum_id) => {
                         if basic.params.len() > 0 {
                             let msg = SemError::NoTypeParamsExpected;
-                            vm.diagnostic.lock().report(file, basic.pos, msg);
+                            vm.diagnostic.lock().report(basic.pos, msg);
                         }
 
                         return Some(BuiltinType::Enum(enum_id));
@@ -41,20 +47,20 @@ pub fn read_type<'ast>(vm: &VM<'ast>, file: FileId, t: &'ast Type) -> Option<Bui
                     _ => {
                         let name = vm.interner.str(basic.name).to_string();
                         let msg = SemError::ExpectedType(name);
-                        vm.diagnostic.lock().report(file, basic.pos, msg);
+                        vm.diagnostic.lock().report(basic.pos, msg);
                     }
                 }
             } else {
                 let name = vm.interner.str(basic.name).to_string();
                 let msg = SemError::UnknownType(name);
-                vm.diagnostic.lock().report(file, basic.pos, msg);
+                vm.diagnostic.lock().report(basic.pos, msg);
             }
 
             None
         }
 
         TypeAlias(ref a) => {
-            read_type(vm, file, &*a.alias)
+            read_type(vm, &*a.alias)
         }
 
         EnumType(_) => {
@@ -69,7 +75,7 @@ pub fn read_type<'ast>(vm: &VM<'ast>, file: FileId, t: &'ast Type) -> Option<Bui
                 let mut subtypes = Vec::new();
 
                 for subtype in &tuple.subtypes {
-                    if let Some(ty) = read_type(vm, file, subtype) {
+                    if let Some(ty) = read_type(vm, subtype) {
                         subtypes.push(ty);
                     } else {
                         return None;

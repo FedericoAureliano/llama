@@ -1,4 +1,3 @@
-use crate::vm::{FileId, VM};
 use crate::parser::lexer::position::Position;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -97,7 +96,7 @@ impl SemError {
             SemError::ShadowConst(ref name) => format!("can not shadow const `{}`.", name),
             SemError::ShadowEnum(ref name) => format!("can not shadow enum `{}`.", name),
             SemError::ShadowEnumValue(ref name) => format!("can not shadow enum value `{}`.", name),
-            SemError::NoEnumValue => "enum needs at least one value.".into(),
+            SemError::NoEnumValue => "enum needs at least one variant.".into(),
             SemError::VarNeedsTypeInfo(ref name) => format!(
                 "variable `{}` needs either type declaration or expression.",
                 name
@@ -216,21 +215,18 @@ impl SemError {
 
 #[derive(Clone, Debug)]
 pub struct SemErrorAndPos {
-    pub file: FileId,
     pub pos: Position,
     pub msg: SemError,
 }
 
 impl SemErrorAndPos {
-    pub fn new(file: FileId, pos: Position, msg: SemError) -> SemErrorAndPos {
-        SemErrorAndPos { file, pos, msg }
+    pub fn new(pos: Position, msg: SemError) -> SemErrorAndPos {
+        SemErrorAndPos {pos, msg }
     }
 
-    pub fn message(&self, vm: &VM) -> String {
-        let file = vm.file(self.file);
+    pub fn message(&self) -> String {
         format!(
-            "error in {} at {}: {}",
-            file.name,
+            "error at {}: {}",
             self.pos,
             self.msg.message()
         )

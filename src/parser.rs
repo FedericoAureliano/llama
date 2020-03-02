@@ -1,6 +1,6 @@
 pub use lexer::position::Position;
 
-pub mod ast;
+pub mod cst;
 pub mod error;
 pub mod interner;
 pub mod lexer;

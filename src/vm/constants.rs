@@ -1,13 +1,12 @@
 use parking_lot::Mutex;
 use std::sync::Arc;
 
-use crate::parser::ast;
+use crate::parser::cst;
 use crate::parser::interner::Name;
 use crate::parser::lexer::position::Position;
 
 use crate::types::BuiltinType;
 use crate::utils::GrowableVec;
-use crate::vm::FileId;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ConstId(usize);
@@ -27,11 +26,10 @@ impl GrowableVec<Mutex<ConstData>> {
 #[derive(Clone, Debug)]
 pub struct ConstData {
     pub id: ConstId,
-    pub file: FileId,
     pub pos: Position,
     pub name: Name,
     pub ty: BuiltinType,
-    pub expr: Box<ast::Expr>,
+    pub expr: Box<cst::Expr>,
     pub value: ConstValue,
 }
 

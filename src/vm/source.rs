@@ -2,7 +2,7 @@ use std::collections::hash_map::{HashMap, Iter};
 use std::ops::{Index, IndexMut};
 use std::sync::Arc;
 
-use crate::parser::ast;
+use crate::parser::cst;
 use crate::parser::interner::Name;
 
 use crate::types::{BuiltinType, TypeList};
@@ -53,11 +53,11 @@ impl FctSrc {
         }
     }
 
-    pub fn set_ty(&mut self, id: ast::NodeId, ty: BuiltinType) {
+    pub fn set_ty(&mut self, id: cst::NodeId, ty: BuiltinType) {
         self.map_tys.insert_or_replace(id, ty);
     }
 
-    pub fn ty(&self, id: ast::NodeId) -> BuiltinType {
+    pub fn ty(&self, id: cst::NodeId) -> BuiltinType {
         self.map_tys.get(id).expect("no type found").clone()
     }
 
@@ -75,7 +75,7 @@ pub struct NodeMap<V>
 where
     V: Clone,
 {
-    map: HashMap<ast::NodeId, V>,
+    map: HashMap<cst::NodeId, V>,
 }
 
 impl<V> NodeMap<V>
@@ -88,25 +88,25 @@ where
         }
     }
 
-    pub fn get(&self, id: ast::NodeId) -> Option<&V> {
+    pub fn get(&self, id: cst::NodeId) -> Option<&V> {
         self.map.get(&id)
     }
 
-    pub fn get_mut(&mut self, id: ast::NodeId) -> Option<&mut V> {
+    pub fn get_mut(&mut self, id: cst::NodeId) -> Option<&mut V> {
         self.map.get_mut(&id)
     }
 
-    pub fn insert(&mut self, id: ast::NodeId, data: V) {
+    pub fn insert(&mut self, id: cst::NodeId, data: V) {
         let old = self.map.insert(id, data);
         assert!(old.is_none());
     }
 
-    pub fn replace(&mut self, id: ast::NodeId, data: V) {
+    pub fn replace(&mut self, id: cst::NodeId, data: V) {
         let old = self.map.insert(id, data);
         assert!(old.is_some());
     }
 
-    pub fn insert_or_replace(&mut self, id: ast::NodeId, data: V) {
+    pub fn insert_or_replace(&mut self, id: cst::NodeId, data: V) {
         self.map.insert(id, data);
     }
 
@@ -114,7 +114,7 @@ where
         self.map.clear();
     }
 
-    pub fn iter(&self) -> Iter<ast::NodeId, V> {
+    pub fn iter(&self) -> Iter<cst::NodeId, V> {
         self.map.iter()
     }
 }
@@ -281,7 +281,7 @@ pub struct Var {
     pub name: Name,
     pub ty: BuiltinType,
     pub reassignable: bool,
-    pub node_id: ast::NodeId,
+    pub node_id: cst::NodeId,
 }
 
 impl Index<VarId> for Vec<Var> {

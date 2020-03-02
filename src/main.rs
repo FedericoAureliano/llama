@@ -1,7 +1,7 @@
 pub mod errors;
 pub mod parser;
 pub mod vm;
-pub mod checks;
+pub mod cstcheck;
 pub mod types;
 pub mod symbols;
 pub mod utils;
@@ -10,75 +10,78 @@ pub mod utils;
 use std::process::exit;
 
 use crate::vm::VM;
-use crate::parser::ast::{self, Ast};
+use crate::parser::cst::{self, Cst};
 use crate::parser::lexer::reader::Reader;
 use crate::parser::parser::Parser;
 
 use std::default::Default;
 use docopt::Docopt;
+use serde::Deserialize;
 
 extern crate bit_vec;
 
-pub fn parse() -> Args {
-    Docopt::new(USAGE)
-        .and_then(|d| d.decode())
-        .unwrap_or_else(|e| e.exit())
-}
+const USAGE: &'static str = "
+Naval Fate.
 
-// Write the Docopt usage string.
-static USAGE: &'static str = "
-Usage: llama <file>
-       llama (--version | --help)
+Usage:
+  llama [-p | --print] <file>
+  llama (-h | --help)
+  llama (-v | --version)
 
 Options:
-    -h, --help              Shows this text.
-    --version               Shows version.
+  -h --help       Show this screen.
+  -v, --version   Show version.
+  -p, --print     Print concrete syntax tree.
 ";
 
-#[derive(Debug, RustcDecodable)]
-pub struct Args {
-    pub arg_argument: Option<Vec<String>>,
+#[derive(Debug, Deserialize)]
+struct Args {
     pub arg_file: String,
     pub flag_version: bool,
+    pub flag_print: bool,
 }
 
 impl Default for Args {
     fn default() -> Args {
         Args {
-            arg_argument: None,
             arg_file: "".into(),
             flag_version: false,
+            flag_print: false,
         }
     }
 }
 
 pub fn start() -> i32 {
-    let args = parse();
+    let args: Args = Docopt::new(USAGE)
+        .and_then(|d| d.deserialize())
+        .unwrap_or_else(|e| e.exit());
 
     if args.flag_version {
         println!("llama v0.01");
         return 0;
     }
 
-    let mut ast = Ast::new();
-    let empty = Ast::new();
+    let mut cst = Cst::new();
+    let empty = Cst::new();
     let mut vm = VM::new(&empty);
 
     let arg_file = args.arg_file.clone();
-    let res = parse_file(&arg_file, &mut vm, &mut ast);
+    let res = parse_file(&arg_file, &mut vm, &mut cst);
 
     if let Err(code) = res {
         return code;
     }
 
-    vm.ast = &ast;
+    vm.cst = &cst;
     
-    ast::dump::dump(&vm.ast, &vm.interner);
+    if args.flag_print {
+        cst::dump::dump(&vm.cst, &vm.interner);
+    }
 
-    checks::check(&mut vm);
+    cstcheck::check(&mut vm);
 
     if vm.diagnostic.lock().has_errors() {
-        vm.diagnostic.lock().dump(&vm);
+        vm.diagnostic.lock().dump();
         let num_errors = vm.diagnostic.lock().errors().len();
 
         if num_errors == 1 {
@@ -94,7 +97,7 @@ pub fn start() -> i32 {
 }
 
 
-fn parse_file(filename: &str, vm: &mut VM, ast: &mut Ast) -> Result<(), i32> {
+fn parse_file(filename: &str, vm: &mut VM, cst: &mut Cst) -> Result<(), i32> {
     let reader = if filename == "-" {
         match Reader::from_input() {
             Ok(reader) => reader,
@@ -115,20 +118,15 @@ fn parse_file(filename: &str, vm: &mut VM, ast: &mut Ast) -> Result<(), i32> {
         }
     };
 
-    parse_reader(reader, vm, ast)
+    parse_reader(reader, vm, cst)
 }
 
-fn parse_reader(reader: Reader, vm: &mut VM, ast: &mut Ast) -> Result<(), i32> {
+fn parse_reader(reader: Reader, vm: &mut VM, cst: &mut Cst) -> Result<(), i32> {
     let filename: String = reader.path().into();
-    let parser = Parser::new(reader, &vm.id_generator, ast, &mut vm.interner);
+    let parser = Parser::new(reader, &vm.id_generator, cst, &mut vm.interner);
 
     match parser.parse() {
-        Ok(file) => {
-            vm.files.push(file);
-            assert_eq!(ast.files.len(), vm.files.len());
-            Ok(())
-        }
-
+        Ok(()) => Ok(()),
         Err(error) => {
             println!(
                 "error in {} at {}: {}",

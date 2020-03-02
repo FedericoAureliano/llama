@@ -2,13 +2,13 @@ use parking_lot::RwLock;
 
 use std::sync::Arc;
 
-use crate::parser::ast;
+use crate::parser::cst;
 use crate::parser::interner::Name;
 use crate::parser::lexer::position::Position;
 
 use crate::types::BuiltinType;
 use crate::utils::GrowableVec;
-use crate::vm::{FctSrc, FileId, VM};
+use crate::vm::{FctSrc, VM};
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
 pub struct FctId(pub usize);
@@ -25,45 +25,30 @@ impl From<usize> for FctId {
     }
 }
 
-impl<'ast> GrowableVec<RwLock<Fct<'ast>>> {
-    pub fn idx(&self, index: FctId) -> Arc<RwLock<Fct<'ast>>> {
+impl<'cst> GrowableVec<RwLock<Fct<'cst>>> {
+    pub fn idx(&self, index: FctId) -> Arc<RwLock<Fct<'cst>>> {
         self.idx_usize(index.0)
     }
 }
 
 #[derive(Debug)]
-pub struct Fct<'ast> {
+pub struct Fct<'cst> {
     pub id: FctId,
-    pub ast: &'ast ast::Function,
+    pub cst: &'cst cst::Function,
     pub pos: Position,
     pub name: Name,
-    pub parent: FctParent,
-    pub has_open: bool,
-    pub has_override: bool,
-    pub has_final: bool,
-    pub has_optimize_immediately: bool,
-    pub is_static: bool,
-    pub is_pub: bool,
-    pub is_abstract: bool,
-    pub is_test: bool,
-    pub use_cannon: bool,
-    pub internal: bool,
-    pub internal_resolved: bool,
-    pub overrides: Option<FctId>,
+
     pub param_types: Vec<BuiltinType>,
     pub return_type: BuiltinType,
-    pub is_constructor: bool,
-    pub file: FileId,
 
     pub vtable_index: Option<u32>,
     pub impl_for: Option<FctId>,
     pub initialized: bool,
-    pub throws: bool,
 
     pub kind: FctKind,
 }
 
-impl<'ast> Fct<'ast> {
+impl<'cst> Fct<'cst> {
 
     pub fn full_name(&self, vm: &VM) -> String {
         let mut repr = String::new();
@@ -72,7 +57,7 @@ impl<'ast> Fct<'ast> {
 
         repr.push_str("(");
 
-        for (ind, ty) in self.params_without_self().iter().enumerate() {
+        for (ind, ty) in self.params().iter().enumerate() {
             if ind > 0 {
                 repr.push_str(", ");
             }
@@ -101,7 +86,7 @@ impl<'ast> Fct<'ast> {
     }
 
     pub fn pos(&self) -> Position {
-        self.ast.pos
+        self.cst.pos
     }
 
     pub fn src(&self) -> &RwLock<FctSrc> {
@@ -111,22 +96,8 @@ impl<'ast> Fct<'ast> {
         }
     }
 
-    pub fn has_self(&self) -> bool {
-        match self.parent {
-            _ => false,
-        }
-    }
-
-    pub fn params_with_self(&self) -> &[BuiltinType] {
+    pub fn params(&self) -> &[BuiltinType] {
         &self.param_types
-    }
-
-    pub fn params_without_self(&self) -> &[BuiltinType] {
-        if self.has_self() {
-            &self.param_types[1..]
-        } else {
-            &self.param_types
-        }
     }
 }
 

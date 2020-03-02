@@ -2,8 +2,7 @@ use std::cell::RefCell;
 use std::mem;
 use bit_vec::BitVec;
 
-use crate::parser::ast;
-use crate::parser::ast::*;
+use crate::parser::cst::*;
 use crate::parser::error::{ParseError, ParseErrorAndPos};
 
 use crate::parser::interner::*;
@@ -11,7 +10,6 @@ use crate::parser::interner::*;
 use crate::parser::lexer::position::{Position, Span};
 use crate::parser::lexer::reader::Reader;
 use crate::parser::lexer::token::*;
-use crate::parser::lexer::File as LexerFile;
 use crate::parser::lexer::*;
 
 pub struct Parser<'a> {
@@ -19,11 +17,11 @@ pub struct Parser<'a> {
     token: Token,
     id_generator: &'a NodeIdGenerator,
     interner: &'a mut Interner,
-    ast: &'a mut Ast,
+    cst: &'a mut Cst,
     param_idx: u32,
     in_class_or_module: bool,
     parse_struct_lit: bool,
-    last_end: Option<u32>,
+    lcst_end: Option<u32>,
 }
 
 type ExprResult = Result<Box<Expr>, ParseErrorAndPos>;
@@ -33,7 +31,7 @@ impl<'a> Parser<'a> {
     pub fn new(
         reader: Reader,
         id_generator: &'a NodeIdGenerator,
-        ast: &'a mut Ast,
+        cst: &'a mut Cst,
         interner: &'a mut Interner,
     ) -> Parser<'a> {
         let token = Token::new(TokenKind::End, Position::new(1, 1), Span::invalid());
@@ -47,8 +45,8 @@ impl<'a> Parser<'a> {
             param_idx: 0,
             in_class_or_module: false,
             parse_struct_lit: true,
-            ast,
-            last_end: Some(0),
+            cst,
+            lcst_end: Some(0),
         };
 
         parser
@@ -58,7 +56,7 @@ impl<'a> Parser<'a> {
         self.id_generator.next()
     }
 
-    pub fn parse(mut self) -> Result<LexerFile, ParseErrorAndPos> {
+    pub fn parse(mut self) -> Result<(), ParseErrorAndPos> {
         self.init()?;
         let mut modules = vec![];
 
@@ -66,14 +64,9 @@ impl<'a> Parser<'a> {
             self.parse_top_level_element(&mut modules)?;
         }
 
-        let file = self.lexer.file();
+        self.cst.modules = modules;
 
-        self.ast.files.push(ast::File {
-            path: file.name.clone(),
-            modules,
-        });
-
-        Ok(file)
+        Ok(())
     }
 
     fn init(&mut self) -> Result<(), ParseErrorAndPos> {
@@ -177,27 +170,10 @@ impl<'a> Parser<'a> {
                 }
     
                 TokenKind::Type => {
-                    // this is a type alias declaration
                     self.ban_modifiers(&modifiers)?;
-                    self.advance_token()?;
+                    self.expect_token(TokenKind::Type)?;
 
-                    let pos = self.token.position;
-                    let start = self.token.span.start();
-                    let name = self.expect_identifier()?;
-
-                    self.expect_token(TokenKind::Eq)?;
-                    let alias = self.parse_type()?;
-                    self.expect_semicolon()?;
-                    let span = self.span_from(start);
-
-                    let ty = Type::create_alias(
-                        self.generate_id(),
-                        pos,
-                        span,
-                        name,
-                        Box::new(alias),
-                    );
-
+                    let ty = self.parse_type_decl()?;
                     module.types.push(ty);
                 }
 
@@ -691,26 +667,6 @@ impl<'a> Parser<'a> {
 
     fn parse_type(&mut self) -> Result<Type, ParseErrorAndPos> {
         match self.token.kind {
-            TokenKind::Enum => {
-                let pos = self.expect_token(TokenKind::Enum)?.position;
-                let start = self.token.span.start();
-
-                let variants = if self.token.is(TokenKind::LBrace) {
-                    self.advance_token()?;
-                    self.parse_comma_list(TokenKind::RBrace, |p| Ok(p.expect_identifier()?))?
-                } else {
-                    Vec::new()
-                };
-
-                let span = self.span_from(start);
-                Ok(Type::create_enum(
-                    self.generate_id(),
-                    pos,
-                    span,
-                    variants,
-                ))                
-            }
-
                                         // This gives us arrays
             TokenKind::Identifier(_) | TokenKind::LBracket => {
                 let pos = self.token.position;
@@ -758,6 +714,99 @@ impl<'a> Parser<'a> {
                 ParseError::ExpectedType(self.token.name()),
             )),
         }
+    }
+
+    fn parse_type_decl(&mut self) -> Result<Type, ParseErrorAndPos> {
+
+        let pos = self.token.position;
+        let start = self.token.span.start();
+        let name = self.expect_identifier()?;
+
+        self.expect_token(TokenKind::Eq)?;
+
+        let rhs = match self.token.kind {
+            TokenKind::Enum => {
+                let pos = self.expect_token(TokenKind::Enum)?.position;
+                let start = self.token.span.start();
+
+                let variants = if self.token.is(TokenKind::LBrace) {
+                    self.advance_token()?;
+                    self.parse_comma_list(TokenKind::RBrace, |p| Ok(p.expect_identifier()?))?
+                } else {
+                    Vec::new()
+                };
+
+                let span = self.span_from(start);
+                self.expect_semicolon()?;
+
+                return Ok(Type::create_enum(
+                    self.generate_id(),
+                    pos,
+                    span,
+                    name,
+                    variants,
+                ))
+            }
+                                        // This gives us arrays
+            TokenKind::Identifier(_) | TokenKind::LBracket => {
+                let pos = self.token.position;
+                let start = self.token.span.start();
+
+                let params = if self.token.is(TokenKind::LBracket) {
+                    self.advance_token()?;
+                    self.parse_comma_list(TokenKind::RBracket, |p| Ok(Box::new(p.parse_type()?)))?
+                } else {
+                    Vec::new()
+                };
+
+                let name = self.expect_identifier()?;
+
+                let span = self.span_from(start);
+                Ok(Type::create_basic(
+                    self.generate_id(),
+                    pos,
+                    span,
+                    name,
+                    params,
+                ))
+            }
+
+            TokenKind::LParen => {
+                let start = self.token.span.start();
+                let token = self.advance_token()?;
+                let subtypes = self.parse_comma_list(TokenKind::RParen, |p| {
+                    let ty = p.parse_type()?;
+
+                    Ok(Box::new(ty))
+                })?;
+
+                let span = self.span_from(start);
+                Ok(Type::create_tuple(
+                    self.generate_id(),
+                    token.position,
+                    span,
+                    subtypes,
+                ))
+            }
+
+            _ => Err(ParseErrorAndPos::new(
+                self.token.position,
+                ParseError::ExpectedType(self.token.name()),
+            )),
+        }?;
+
+        self.expect_semicolon()?;
+        let span = self.span_from(start);
+
+        let ty = Type::create_alias(
+            self.generate_id(),
+            pos,
+            span,
+            name,
+            Box::new(rhs),
+        );
+
+        Ok(ty)
     }
 
     fn parse_procedure_requires(&mut self) -> Result<StmtPredicateType, ParseErrorAndPos> {
@@ -1550,7 +1599,7 @@ impl<'a> Parser<'a> {
     }
 
     fn advance_token_with(&mut self, token: Token) -> Token {
-        self.last_end = if self.token.span.is_valid() {
+        self.lcst_end = if self.token.span.is_valid() {
             Some(self.token.span.end())
         } else {
             None
@@ -1560,7 +1609,7 @@ impl<'a> Parser<'a> {
     }
 
     fn span_from(&self, start: u32) -> Span {
-        Span::new(start, self.last_end.unwrap() - start)
+        Span::new(start, self.lcst_end.unwrap() - start)
     }
 }
 

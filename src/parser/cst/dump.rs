@@ -1,6 +1,6 @@
-use crate::parser::ast::*;
-use crate::parser::ast::Expr::*;
-use crate::parser::ast::Stmt::*;
+use crate::parser::cst::*;
+use crate::parser::cst::Expr::*;
+use crate::parser::cst::Stmt::*;
 use crate::parser::interner::{ArcStr, Interner, Name};
 
 macro_rules! dump {
@@ -13,17 +13,17 @@ macro_rules! dump {
     }};
 }
 
-pub fn dump(ast: &Ast, interner: &Interner) {
-    let mut dumper = AstDumper {
+pub fn dump(cst: &Cst, interner: &Interner) {
+    let mut dumper = CstDumper {
         interner,
         indent: 0,
     };
 
-    dumper.dump_ast(ast);
+    dumper.dump_cst(cst);
 }
 
 pub fn dump_procedure(prcd: &Procedure, interner: &Interner) {
-    let mut dumper = AstDumper {
+    let mut dumper = CstDumper {
         interner,
         indent: 0,
     };
@@ -32,7 +32,7 @@ pub fn dump_procedure(prcd: &Procedure, interner: &Interner) {
 }
 
 pub fn dump_expr<'a>(expr: &'a Expr, interner: &'a Interner) {
-    let mut dumper = AstDumper {
+    let mut dumper = CstDumper {
         interner,
         indent: 0,
     };
@@ -41,7 +41,7 @@ pub fn dump_expr<'a>(expr: &'a Expr, interner: &'a Interner) {
 }
 
 pub fn dump_stmt<'a>(stmt: &'a Stmt, interner: &'a Interner) {
-    let mut dumper = AstDumper {
+    let mut dumper = CstDumper {
         interner,
         indent: 0,
     };
@@ -49,24 +49,14 @@ pub fn dump_stmt<'a>(stmt: &'a Stmt, interner: &'a Interner) {
     dumper.dump_stmt(stmt);
 }
 
-struct AstDumper<'a> {
+struct CstDumper<'a> {
     interner: &'a Interner,
     indent: u32,
 }
 
-impl<'a> AstDumper<'a> {
-    fn dump_ast(&mut self, ast: &Ast) {
-        for f in &ast.files {
-            dump!(self, "file: {}", &f.path);
-
-            self.indent(|d| {
-                d.dump_file(f);
-            })
-        }
-    }
-
-    fn dump_file(&mut self, f: &File) {
-        for m in &f.modules {
+impl<'a> CstDumper<'a> {
+    fn dump_cst(&mut self, cst: &Cst) {
+        for m in &cst.modules {
             self.dump_module(m)
         }
     }
@@ -655,7 +645,7 @@ impl<'a> AstDumper<'a> {
 
     fn indent<F>(&mut self, fct: F)
     where
-        F: Fn(&mut AstDumper) -> (),
+        F: Fn(&mut CstDumper) -> (),
     {
         let old = self.indent;
         self.indent = old + 1;
