@@ -56,8 +56,8 @@ impl Lexer {
                 self.read_comment()?;
             } else if self.is_multi_comment_start() {
                 self.read_multi_comment()?;
-            } else if is_identifier_start(ch) {
-                return self.read_identifier();
+            } else if is_ident_start(ch) {
+                return self.read_ident();
             } else if is_operator(ch) {
                 return self.read_operator();
             } else {
@@ -102,12 +102,12 @@ impl Lexer {
         Ok(())
     }
 
-    fn read_identifier(&mut self) -> Result<Token, ParseErrorAndPos> {
+    fn read_ident(&mut self) -> Result<Token, ParseErrorAndPos> {
         let pos = self.reader.pos();
         let idx = self.reader.idx();
         let mut value = String::new();
 
-        while is_identifier(self.curr()) {
+        while is_ident(self.curr()) {
             let ch = self.curr().unwrap();
             self.read_char();
             value.push(ch);
@@ -124,7 +124,7 @@ impl Lexer {
         let ttype = if let Some(tok_type) = lookup {
             tok_type
         } else {
-            TokenKind::Identifier(value)
+            TokenKind::Ident(value)
         };
 
         let span = self.span_from(idx);
@@ -458,15 +458,15 @@ fn is_operator(ch: Option<char>) -> bool {
         .unwrap_or(false)
 }
 
-fn is_identifier_start(ch: Option<char>) -> bool {
+fn is_ident_start(ch: Option<char>) -> bool {
     match ch {
         Some(ch) => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_',
         _ => false,
     }
 }
 
-fn is_identifier(ch: Option<char>) -> bool {
-    is_identifier_start(ch) || is_digit(ch)
+fn is_ident(ch: Option<char>) -> bool {
+    is_ident_start(ch) || is_digit(ch)
 }
 
 fn keywords_in_map() -> HashMap<&'static str, TokenKind> {
@@ -480,8 +480,6 @@ fn keywords_in_map() -> HashMap<&'static str, TokenKind> {
     keywords.insert("while", TokenKind::While);
     keywords.insert("if", TokenKind::If);
     keywords.insert("else", TokenKind::Else);
-    keywords.insert("for", TokenKind::For);
-    keywords.insert("in", TokenKind::In);
     keywords.insert("true", TokenKind::True);
     keywords.insert("false", TokenKind::False);
     keywords.insert("enum", TokenKind::Enum);
@@ -640,11 +638,11 @@ mod tests {
     }
 
     #[test]
-    fn test_read_identifier() {
+    fn test_read_ident() {
         let mut reader = Lexer::from_str("abc ident test");
-        assert_tok(&mut reader, TokenKind::Identifier("abc".into()), 1, 1);
-        assert_tok(&mut reader, TokenKind::Identifier("ident".into()), 1, 5);
-        assert_tok(&mut reader, TokenKind::Identifier("test".into()), 1, 11);
+        assert_tok(&mut reader, TokenKind::Ident("abc".into()), 1, 1);
+        assert_tok(&mut reader, TokenKind::Ident("ident".into()), 1, 5);
+        assert_tok(&mut reader, TokenKind::Ident("test".into()), 1, 11);
         assert_end(&mut reader, 1, 15);
     }
 
@@ -889,10 +887,6 @@ mod tests {
         assert_tok(&mut reader, TokenKind::Type, 1, 1);
         assert_tok(&mut reader, TokenKind::Enum, 1, 6);
         assert_tok(&mut reader, TokenKind::Const, 1, 11);
-
-        let mut reader = Lexer::from_str("for in impl Self");
-        assert_tok(&mut reader, TokenKind::For, 1, 1);
-        assert_tok(&mut reader, TokenKind::In, 1, 5);
     }
 
     #[test]

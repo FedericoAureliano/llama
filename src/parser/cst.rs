@@ -9,15 +9,43 @@ use crate::parser::lexer::token::{FloatSuffix, IntBase, IntSuffix};
 pub mod dump;
 pub mod visit;
 
+
 #[derive(Clone, Debug)]
 pub struct Cst {
-    pub modules: Vec<Module>,
+    pub modules: Vec<ModuleCst>,
 }
 
 impl Cst {
     pub fn new() -> Cst {
         Cst { modules: Vec::new() }
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct ModuleCst {
+    // TODO: instances of other modules
+    pub id: NodeId,
+    pub name: Name,
+    pub pos: Position,
+    
+    pub types: Vec<TypeDeclCst>,
+
+    pub inputs: Vec<FieldDeclCst>,
+    pub outputs: Vec<FieldDeclCst>,
+    pub variables: Vec<FieldDeclCst>,
+    pub constants: Vec<FieldDeclCst>,
+
+    pub macros: Vec<MacroDeclCst>,
+
+    pub functions: Vec<FunctionDeclCst>,
+    pub procedures: Vec<ProcedureDeclCst>,
+
+    pub theorems: Vec<PropertyDeclCst>,
+    pub lemmas: Vec<PropertyDeclCst>,
+
+    pub init: Option<Box<TransitionSystemBlockCst>>,
+    pub next: Option<Box<TransitionSystemBlockCst>>,
+    pub control: Option<Box<TransitionSystemBlockCst>>,
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
@@ -30,63 +58,41 @@ impl fmt::Display for NodeId {
 }
 
 #[derive(Clone, Debug)]
-pub enum Type {
-    BasicType(BasicType),
-    TypeAlias(TypeAlias),
-    EnumType(EnumType),
-    TupleType(TupleType),
+pub enum TypeIdentCst {
+    Basic(BasicTypeIdentCst),
+    Tuple(TupleTypeIdentCst),
 }
 
 #[derive(Clone, Debug)]
-pub struct BasicType {
+pub struct BasicTypeIdentCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub name: Name,
     // Params are for arrays
-    pub params: Vec<Box<Type>>,
+    pub params: Vec<Box<TypeIdentCst>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct TypeAlias {
+pub struct TupleTypeIdentCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub name: Name,
-    pub alias: Box<Type>,
+    pub subtypes: Vec<Box<TypeIdentCst>>,
 }
 
-#[derive(Clone, Debug)]
-pub struct EnumType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-
-    pub name: Name,
-    pub variants: Vec<Name>,
-}
-
-#[derive(Clone, Debug)]
-pub struct TupleType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-
-    pub subtypes: Vec<Box<Type>>,
-}
-
-impl Type {
+impl TypeIdentCst {
 
     pub fn create_basic(
         id: NodeId,
         pos: Position,
         span: Span,
         name: Name,
-        params: Vec<Box<Type>>,
-    ) -> Type {
-        Type::BasicType(BasicType {
+        params: Vec<Box<TypeIdentCst>>,
+    ) -> TypeIdentCst {
+        TypeIdentCst::Basic(BasicTypeIdentCst {
             id,
             pos,
             span,
@@ -95,14 +101,109 @@ impl Type {
         })
     }
 
+    pub fn create_tuple(id: NodeId, pos: Position, span: Span, subtypes: Vec<Box<TypeIdentCst>>) -> TypeIdentCst {
+        TypeIdentCst::Tuple(TupleTypeIdentCst {
+            id,
+            pos,
+            span,
+            subtypes,
+        })
+    }
+
+    pub fn to_basic(&self) -> Option<&BasicTypeIdentCst> {
+        match *self {
+            TypeIdentCst::Basic(ref val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn to_tuple(&self) -> Option<&TupleTypeIdentCst> {
+        match *self {
+            TypeIdentCst::Tuple(ref val) => Some(val),
+            _ => None,
+        }
+    }
+
+    #[cfg(test)]
+    pub fn is_unit(&self) -> bool {
+        match self {
+            &TypeIdentCst::Tuple(ref val) if val.subtypes.len() == 0 => true,
+            _ => false,
+        }
+    }
+
+    pub fn to_string(&self, interner: &Interner) -> String {
+        match *self {
+            TypeIdentCst::Basic(ref val) => {
+                if val.params.len() > 0 {
+                    let types: Vec<String> = val.params.iter().map(|t| format!("{}", t.to_string(interner))).collect();
+                    format!("[{}]{}", types.join(", "),  *interner.str(val.name))
+                } else {
+                    format!("{}", *interner.str(val.name))
+                }
+            }
+
+            TypeIdentCst::Tuple(ref val) => {
+                let types: Vec<String> =
+                    val.subtypes.iter().map(|t| t.to_string(interner)).collect();
+
+                format!("({})", types.join(", "))
+            }
+        }
+    }
+
+    pub fn pos(&self) -> Position {
+        match *self {
+            TypeIdentCst::Basic(ref val) => val.pos,
+            TypeIdentCst::Tuple(ref val) => val.pos,
+        }
+    }
+
+    pub fn id(&self) -> NodeId {
+        match *self {
+            TypeIdentCst::Basic(ref val) => val.id,
+            TypeIdentCst::Tuple(ref val) => val.id,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum TypeDeclCst {
+    Alias(TypeAliasCst),
+    Enum(EnumDeclCst),
+}
+
+#[derive(Clone, Debug)]
+pub struct TypeAliasCst {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+
+    pub name: Name,
+    pub alias: Box<TypeIdentCst>,
+}
+
+#[derive(Clone, Debug)]
+pub struct EnumDeclCst {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+
+    pub name: Name,
+    pub variants: Vec<NameCst>,
+}
+
+
+impl TypeDeclCst {
+
     pub fn create_alias(
         id: NodeId,
         pos: Position,
         span: Span,
         name: Name,
-        alias: Box<Type>,
-    ) -> Type {
-        Type::TypeAlias(TypeAlias {
+        alias: Box<TypeIdentCst>,
+    ) -> TypeDeclCst {
+        TypeDeclCst::Alias(TypeAliasCst {
             id,
             pos,
             span,
@@ -116,9 +217,9 @@ impl Type {
         pos: Position,
         span: Span,
         name: Name,
-        variants: Vec<Name>,
-    ) -> Type {
-        Type::EnumType(EnumType {
+        variants: Vec<NameCst>,
+    ) -> TypeDeclCst {
+        TypeDeclCst::Enum(EnumDeclCst {
             id,
             pos,
             span,
@@ -127,197 +228,109 @@ impl Type {
         })
     }
 
-    pub fn create_tuple(id: NodeId, pos: Position, span: Span, subtypes: Vec<Box<Type>>) -> Type {
-        Type::TupleType(TupleType {
-            id,
-            pos,
-            span,
-            subtypes,
-        })
-    }
-
-    pub fn to_basic(&self) -> Option<&BasicType> {
+    pub fn to_alias(&self) -> Option<&TypeAliasCst> {
         match *self {
-            Type::BasicType(ref val) => Some(val),
+            TypeDeclCst::Alias(ref val) => Some(val),
             _ => None,
         }
     }
 
-    pub fn to_alias(&self) -> Option<&TypeAlias> {
+    pub fn to_enum(&self) -> Option<&EnumDeclCst> {
         match *self {
-            Type::TypeAlias(ref val) => Some(val),
+            TypeDeclCst::Enum(ref val) => Some(val),
             _ => None,
-        }
-    }
-
-    pub fn to_enum(&self) -> Option<&EnumType> {
-        match *self {
-            Type::EnumType(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn to_basic_without_type_params(&self) -> Option<Name> {
-        match *self {
-            Type::BasicType(ref basic) => {
-                if basic.params.len() == 0 {
-                    Some(basic.name)
-                } else {
-                    None
-                }
-            }
-
-            _ => None,
-        }
-    }
-
-    pub fn to_tuple(&self) -> Option<&TupleType> {
-        match *self {
-            Type::TupleType(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    #[cfg(test)]
-    pub fn is_unit(&self) -> bool {
-        match self {
-            &Type::TupleType(ref val) if val.subtypes.len() == 0 => true,
-            _ => false,
         }
     }
 
     pub fn to_string(&self, interner: &Interner) -> String {
         match *self {
-            Type::BasicType(ref val) => {
-                if val.params.len() > 0 {
-                    let types: Vec<String> = val.params.iter().map(|t| format!("{}", t.to_string(interner))).collect();
-                    format!("[{}]{}", types.join(", "),  *interner.str(val.name))
-                } else {
-                    format!("{}", *interner.str(val.name))
-                }
-            }
-
-            Type::TypeAlias(ref val) => format!("`{}` := `{}`", *interner.str(val.name), val.alias.to_string(interner)),
-
-            Type::EnumType(ref val) => {
-                let types: Vec<String> = val.variants.iter().map(|t| format!("{}", *interner.str(*t))).collect();
+            TypeDeclCst::Alias(ref val) => format!("`{}` := `{}`", *interner.str(val.name), val.alias.to_string(interner)),
+            TypeDeclCst::Enum(ref val) => {
+                let types: Vec<String> = val.variants.iter().map(|t| format!("{}", *interner.str(t.name))).collect();
                 format!("enum {} of {{{}}}", *interner.str(val.name), types.join(", "))
-            }
-
-            Type::TupleType(ref val) => {
-                let types: Vec<String> =
-                    val.subtypes.iter().map(|t| t.to_string(interner)).collect();
-
-                format!("({})", types.join(", "))
             }
         }
     }
 
     pub fn pos(&self) -> Position {
         match *self {
-            Type::BasicType(ref val) => val.pos,
-            Type::TypeAlias(ref val) => val.pos,
-            Type::EnumType(ref val) => val.pos,
-            Type::TupleType(ref val) => val.pos,
+            TypeDeclCst::Alias(ref val) => val.pos,
+            TypeDeclCst::Enum(ref val) => val.pos,
         }
     }
 
     pub fn id(&self) -> NodeId {
         match *self {
-            Type::BasicType(ref val) => val.id,
-            Type::TypeAlias(ref val) => val.id,
-            Type::EnumType(ref val) => val.id,
-            Type::TupleType(ref val) => val.id,
+            TypeDeclCst::Alias(ref val) => val.id,
+            TypeDeclCst::Enum(ref val) => val.id,
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct Module {
-    // TODO: instances of other modules
-    pub id: NodeId,
-    pub name: Name,
-    pub pos: Position,
-    
-    pub types: Vec<Type>,
-
-    pub inputs: Vec<Field>,
-    pub outputs: Vec<Field>,
-    pub variables: Vec<Field>,
-    pub constants: Vec<Field>,
-
-    pub definitions: Vec<Define>,
-
-    pub functions: Vec<Function>,
-    pub procedures: Vec<Procedure>,
-
-    pub theorems: Vec<Property>,
-    pub lemmas: Vec<Property>,
-
-    pub init: Option<Box<TransitionSystemBlock>>,
-    pub next: Option<Box<TransitionSystemBlock>>,
-    pub control: Option<Box<TransitionSystemBlock>>,
-}
-
-#[derive(Clone, Debug)]
-pub struct Field {
+pub struct FieldDeclCst {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
-    pub data_type: Type,
-    pub expr: Option<Box<Expr>>,
+
+    pub data_type: TypeIdentCst,
+    pub expr: Option<Box<ExprCst>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct Property {
+pub struct PropertyDeclCst {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
-    pub expr: Box<Expr>,
+
+    pub expr: Box<ExprCst>,
 }
 
 #[derive(Clone, Debug)]
-pub struct Function {
+pub struct FunctionDeclCst {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
+
     pub to_synthesize: bool,
-    pub params: Vec<Param>,
-    pub return_type: Option<Type>,
+    
+    pub params: Vec<ParamCst>,
+    pub return_type: Option<TypeIdentCst>,
 }
 
 #[derive(Clone, Debug)]
-pub struct Define {
+pub struct MacroDeclCst {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
-    pub params: Vec<Param>,
-    pub return_type: Option<Type>,
-    pub expr: Box<Expr>,
+
+    pub params: Vec<ParamCst>,
+    pub return_type: Option<TypeIdentCst>,
+    pub expr: Box<ExprCst>,
 }
 
 #[derive(Clone, Debug)]
-pub struct Procedure {
+pub struct ProcedureDeclCst {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
-    pub params: Vec<Param>,
+    pub params: Vec<ParamCst>,
 
-    pub returns: Vec<Param>,
-    pub modifies: Vec<Name>,
-    pub requires: Vec<StmtPredicateType>,
-    pub ensures: Vec<StmtPredicateType>,
+    pub returns: Vec<ParamCst>,
+    pub modifies: Vec<NameCst>,
+    pub requires: Vec<PredicateStmtCst>,
+    pub ensures: Vec<PredicateStmtCst>,
 
-    pub block: Option<Box<ExprBlockType>>,
+    pub block: Option<Box<BlockCst>>,
 }
 
-impl Procedure {
-    pub fn block(&self) -> &ExprBlockType {
+impl ProcedureDeclCst {
+    pub fn block(&self) -> &BlockCst {
         self.block.as_ref().unwrap()
     }
 }
@@ -370,40 +383,40 @@ impl Modifier {
 }
 
 #[derive(Clone, Debug)]
-pub struct Param {
+pub struct ParamCst {
     pub id: NodeId,
     pub idx: u32,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
-    pub data_type: Type,
+
+    pub data_type: TypeIdentCst,
 }
 
 #[derive(Clone, Debug)]
-pub enum Stmt {
-    StmtInduction(StmtInductionType),
-    StmtSimulate(StmtSimulateType),
-    StmtAssert(StmtPredicateType),
-    StmtAssume(StmtPredicateType),
-    StmtCall(StmtCallType),
-    StmtHavoc(StmtHavocType),
-    StmtVar(StmtVarType),
-    StmtWhile(StmtWhileType),
-    StmtFor(StmtForType),
-    StmtExpr(StmtExprType),
+pub enum StmtCst {
+    Induction(InductionStmtCst),
+    Simulate(SimulateStmtCst),
+    Assert(PredicateStmtCst),
+    Assume(PredicateStmtCst),
+    Call(CallStmtCst),
+    Havoc(HavocStmtCst),
+    Var(VarStmtCst),
+    While(WhileStmtCst),
+    Expr(ExprStmtCst),
 }
 
-impl Stmt {
+impl StmtCst {
     pub fn create_var(
         id: NodeId,
         pos: Position,
         span: Span,
         name: Name,
         reassignable: bool,
-        data_type: Option<Type>,
-        expr: Option<Box<Expr>>,
-    ) -> Stmt {
-        Stmt::StmtVar(StmtVarType {
+        data_type: Option<TypeIdentCst>,
+        expr: Option<Box<ExprCst>>,
+    ) -> StmtCst {
+        StmtCst::Var(VarStmtCst {
             id,
             pos,
             span,
@@ -419,9 +432,9 @@ impl Stmt {
         id: NodeId,
         pos: Position,
         span: Span,
-        expr: Box<Expr>,
-    ) -> Stmt {
-        Stmt::StmtAssume(StmtPredicateType {
+        expr: Box<ExprCst>,
+    ) -> StmtCst {
+        StmtCst::Assume(PredicateStmtCst {
             id,
             pos,
             span,
@@ -433,9 +446,9 @@ impl Stmt {
         id: NodeId,
         pos: Position,
         span: Span,
-        expr: Box<Expr>,
-    ) -> Stmt {
-        Stmt::StmtAssert(StmtPredicateType {
+        expr: Box<ExprCst>,
+    ) -> StmtCst {
+        StmtCst::Assert(PredicateStmtCst {
             id,
             pos,
             span,
@@ -448,8 +461,8 @@ impl Stmt {
         pos: Position,
         span: Span,
         name: Name,
-    ) -> Stmt {
-        Stmt::StmtHavoc(StmtHavocType {
+    ) -> StmtCst {
+        StmtCst::Havoc(HavocStmtCst {
             id,
             pos,
             span,
@@ -463,8 +476,8 @@ impl Stmt {
         pos: Position,
         span: Span,
         steps: u64,
-    ) -> Stmt {
-        Stmt::StmtSimulate(StmtSimulateType {
+    ) -> StmtCst {
+        StmtCst::Simulate(SimulateStmtCst {
             id,
             pos,
             span,
@@ -477,8 +490,8 @@ impl Stmt {
         pos: Position,
         span: Span,
         steps: u64,
-    ) -> Stmt {
-        Stmt::StmtInduction(StmtInductionType {
+    ) -> StmtCst {
+        StmtCst::Induction(InductionStmtCst {
             id,
             pos,
             span,
@@ -491,10 +504,10 @@ impl Stmt {
         pos: Position,
         span: Span,
         func: Name,
-        rets: Vec<Name>,
-        args: Vec<Box<Expr>>,
-    ) -> Stmt {
-        Stmt::StmtCall(StmtCallType {
+        rets: Vec<NameCst>,
+        args: Vec<Box<ExprCst>>,
+    ) -> StmtCst {
+        StmtCst::Call(CallStmtCst {
             id,
             pos,
             span,
@@ -504,33 +517,14 @@ impl Stmt {
         })
     }
 
-    pub fn create_for(
-        id: NodeId,
-        pos: Position,
-        span: Span,
-        name: Name,
-        expr: Box<Expr>,
-        block: Box<Stmt>,
-    ) -> Stmt {
-        Stmt::StmtFor(StmtForType {
-            id,
-            pos,
-            span,
-
-            name,
-            expr,
-            block,
-        })
-    }
-
     pub fn create_while(
         id: NodeId,
         pos: Position,
         span: Span,
-        cond: Box<Expr>,
-        block: Box<Stmt>,
-    ) -> Stmt {
-        Stmt::StmtWhile(StmtWhileType {
+        cond: Box<ExprCst>,
+        block: Box<StmtCst>,
+    ) -> StmtCst {
+        StmtCst::While(WhileStmtCst {
             id,
             pos,
             span,
@@ -540,8 +534,8 @@ impl Stmt {
         })
     }
 
-    pub fn create_expr(id: NodeId, pos: Position, span: Span, expr: Box<Expr>) -> Stmt {
-        Stmt::StmtExpr(StmtExprType {
+    pub fn create_expr_stmt(id: NodeId, pos: Position, span: Span, expr: Box<ExprCst>) -> StmtCst {
+        StmtCst::Expr(ExprStmtCst {
             id,
             pos,
             span,
@@ -552,120 +546,103 @@ impl Stmt {
 
     pub fn id(&self) -> NodeId {
         match *self {
-            Stmt::StmtInduction(ref stmt) => stmt.id,
-            Stmt::StmtSimulate(ref stmt) => stmt.id,
-            Stmt::StmtAssert(ref stmt) => stmt.id,
-            Stmt::StmtAssume(ref stmt) => stmt.id,
-            Stmt::StmtCall(ref stmt) => stmt.id,
-            Stmt::StmtHavoc(ref stmt) => stmt.id,
-            Stmt::StmtVar(ref stmt) => stmt.id,
-            Stmt::StmtWhile(ref stmt) => stmt.id,
-            Stmt::StmtFor(ref stmt) => stmt.id,
-            Stmt::StmtExpr(ref stmt) => stmt.id,
+            StmtCst::Induction(ref stmt) => stmt.id,
+            StmtCst::Simulate(ref stmt) => stmt.id,
+            StmtCst::Assert(ref stmt) => stmt.id,
+            StmtCst::Assume(ref stmt) => stmt.id,
+            StmtCst::Call(ref stmt) => stmt.id,
+            StmtCst::Havoc(ref stmt) => stmt.id,
+            StmtCst::Var(ref stmt) => stmt.id,
+            StmtCst::While(ref stmt) => stmt.id,
+            StmtCst::Expr(ref stmt) => stmt.id,
         }
     }
 
     pub fn pos(&self) -> Position {
         match *self {
-            Stmt::StmtInduction(ref stmt) => stmt.pos,
-            Stmt::StmtSimulate(ref stmt) => stmt.pos,
-            Stmt::StmtAssert(ref stmt) => stmt.pos,
-            Stmt::StmtAssume(ref stmt) => stmt.pos,
-            Stmt::StmtCall(ref stmt) => stmt.pos,
-            Stmt::StmtHavoc(ref stmt) => stmt.pos,
-            Stmt::StmtVar(ref stmt) => stmt.pos,
-            Stmt::StmtWhile(ref stmt) => stmt.pos,
-            Stmt::StmtFor(ref stmt) => stmt.pos,
-            Stmt::StmtExpr(ref stmt) => stmt.pos,
+            StmtCst::Induction(ref stmt) => stmt.pos,
+            StmtCst::Simulate(ref stmt) => stmt.pos,
+            StmtCst::Assert(ref stmt) => stmt.pos,
+            StmtCst::Assume(ref stmt) => stmt.pos,
+            StmtCst::Call(ref stmt) => stmt.pos,
+            StmtCst::Havoc(ref stmt) => stmt.pos,
+            StmtCst::Var(ref stmt) => stmt.pos,
+            StmtCst::While(ref stmt) => stmt.pos,
+            StmtCst::Expr(ref stmt) => stmt.pos,
         }
     }
 
     pub fn span(&self) -> Span {
         match *self {
-            Stmt::StmtInduction(ref stmt) => stmt.span,
-            Stmt::StmtSimulate(ref stmt) => stmt.span,
-            Stmt::StmtAssert(ref stmt) => stmt.span,
-            Stmt::StmtAssume(ref stmt) => stmt.span,
-            Stmt::StmtCall(ref stmt) => stmt.span,
-            Stmt::StmtHavoc(ref stmt) => stmt.span,
-            Stmt::StmtVar(ref stmt) => stmt.span,
-            Stmt::StmtWhile(ref stmt) => stmt.span,
-            Stmt::StmtFor(ref stmt) => stmt.span,
-            Stmt::StmtExpr(ref stmt) => stmt.span,
+            StmtCst::Induction(ref stmt) => stmt.span,
+            StmtCst::Simulate(ref stmt) => stmt.span,
+            StmtCst::Assert(ref stmt) => stmt.span,
+            StmtCst::Assume(ref stmt) => stmt.span,
+            StmtCst::Call(ref stmt) => stmt.span,
+            StmtCst::Havoc(ref stmt) => stmt.span,
+            StmtCst::Var(ref stmt) => stmt.span,
+            StmtCst::While(ref stmt) => stmt.span,
+            StmtCst::Expr(ref stmt) => stmt.span,
         }
     }
 
-    pub fn to_var(&self) -> Option<&StmtVarType> {
+    pub fn to_var(&self) -> Option<&VarStmtCst> {
         match *self {
-            Stmt::StmtVar(ref val) => Some(val),
+            StmtCst::Var(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_var(&self) -> bool {
         match *self {
-            Stmt::StmtVar(_) => true,
+            StmtCst::Var(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_while(&self) -> Option<&StmtWhileType> {
+    pub fn to_while(&self) -> Option<&WhileStmtCst> {
         match *self {
-            Stmt::StmtWhile(ref val) => Some(val),
+            StmtCst::While(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_while(&self) -> bool {
         match *self {
-            Stmt::StmtWhile(_) => true,
+            StmtCst::While(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_for(&self) -> Option<&StmtForType> {
+    pub fn to_expr(&self) -> Option<&ExprStmtCst> {
         match *self {
-            Stmt::StmtFor(ref val) => Some(val),
-            _ => None,
-        }
-    }
-
-    pub fn is_for(&self) -> bool {
-        match *self {
-            Stmt::StmtFor(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn to_expr(&self) -> Option<&StmtExprType> {
-        match *self {
-            Stmt::StmtExpr(ref val) => Some(val),
+            StmtCst::Expr(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_expr(&self) -> bool {
         match *self {
-            Stmt::StmtExpr(_) => true,
+            StmtCst::Expr(_) => true,
             _ => false,
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct StmtCallType {
+pub struct CallStmtCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub func: Name,
-    pub rets: Vec<Name>,
-    pub args: Vec<Box<Expr>>,
+    pub rets: Vec<NameCst>,
+    pub args: Vec<Box<ExprCst>>,
 }
 
 
 #[derive(Clone, Debug)]
-pub struct StmtHavocType {
+pub struct HavocStmtCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -674,23 +651,15 @@ pub struct StmtHavocType {
 }
 
 #[derive(Clone, Debug)]
-pub struct StmtPredicateType {
+pub struct PredicateStmtCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
-    pub expr: Box<Expr>,
+    pub expr: Box<ExprCst>,
 }
 
 #[derive(Clone, Debug)]
-pub struct StmtInductionType {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-    pub steps: u64,
-}
-
-#[derive(Clone, Debug)]
-pub struct StmtSimulateType {
+pub struct InductionStmtCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -698,7 +667,15 @@ pub struct StmtSimulateType {
 }
 
 #[derive(Clone, Debug)]
-pub struct StmtVarType {
+pub struct SimulateStmtCst {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+    pub steps: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct VarStmtCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -706,38 +683,38 @@ pub struct StmtVarType {
     pub name: Name,
     pub reassignable: bool,
 
-    pub data_type: Option<Type>,
-    pub expr: Option<Box<Expr>>,
+    pub data_type: Option<TypeIdentCst>,
+    pub expr: Option<Box<ExprCst>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct StmtForType {
+pub struct ForStmtCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub name: Name,
-    pub expr: Box<Expr>,
-    pub block: Box<Stmt>,
+    pub expr: Box<ExprCst>,
+    pub block: Box<StmtCst>,
 }
 
 #[derive(Clone, Debug)]
-pub struct StmtWhileType {
+pub struct WhileStmtCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub cond: Box<Expr>,
-    pub block: Box<Stmt>,
+    pub cond: Box<ExprCst>,
+    pub block: Box<StmtCst>,
 }
 
 #[derive(Clone, Debug)]
-pub struct StmtExprType {
+pub struct ExprStmtCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub expr: Box<Expr>,
+    pub expr: Box<ExprCst>,
 }
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
@@ -848,30 +825,30 @@ impl BinOp {
 }
 
 #[derive(Clone, Debug)]
-pub enum Expr {
-    ExprUn(ExprUnType),
-    ExprBin(ExprBinType),
-    ExprLitInt(ExprLitIntType),
-    ExprLitFloat(ExprLitFloatType),
-    ExprLitBitVec(ExprLitBitVecType),
-    ExprLitBool(ExprLitBoolType),
-    ExprIdent(ExprIdentType),
-    ExprCall(ExprCallType),
-    ExprExtract(ExprExtractType),
-    ExprDot(ExprDotType),
-    ExprBlock(ExprBlockType),
-    ExprIf(ExprIfType),
-    ExprTuple(ExprTupleType),
+pub enum ExprCst {
+    Un(UnExprCst),
+    Bin(BinExprCst),
+    LitInt(LitIntExprCst),
+    LitFloat(LitFloatExprCst),
+    LitBitVec(LitBitVecExprCst),
+    LitBool(LitBoolExprCst),
+    Ident(NameCst),
+    Call(CallExprCst),
+    Extract(ExtractExprCst),
+    Dot(DotExprCst),
+    Block(BlockCst),
+    If(IfExprCst),
+    Tuple(TupleExprCst),
 }
 
-impl Expr {
+impl ExprCst {
     pub fn create_block(
         id: NodeId,
         pos: Position,
         span: Span,
-        stmts: Vec<Box<Stmt>>,
-    ) -> Expr {
-        Expr::ExprBlock(ExprBlockType {
+        stmts: Vec<Box<StmtCst>>,
+    ) -> ExprCst {
+        ExprCst::Block(BlockCst {
             id,
             pos,
             span,
@@ -884,11 +861,11 @@ impl Expr {
         id: NodeId,
         pos: Position,
         span: Span,
-        cond: Box<Expr>,
-        then_block: Box<Expr>,
-        else_block: Option<Box<Expr>>,
-    ) -> Expr {
-        Expr::ExprIf(ExprIfType {
+        cond: Box<ExprCst>,
+        then_block: Box<ExprCst>,
+        else_block: Option<Box<ExprCst>>,
+    ) -> ExprCst {
+        ExprCst::If(IfExprCst {
             id,
             pos,
             span,
@@ -899,8 +876,8 @@ impl Expr {
         })
     }
 
-    pub fn create_un(id: NodeId, pos: Position, span: Span, op: UnOp, opnd: Box<Expr>) -> Expr {
-        Expr::ExprUn(ExprUnType {
+    pub fn create_un(id: NodeId, pos: Position, span: Span, op: UnOp, opnd: Box<ExprCst>) -> ExprCst {
+        ExprCst::Un(UnExprCst {
             id,
             pos,
             span,
@@ -915,10 +892,10 @@ impl Expr {
         pos: Position,
         span: Span,
         op: BinOp,
-        lhs: Box<Expr>,
-        rhs: Box<Expr>,
-    ) -> Expr {
-        Expr::ExprBin(ExprBinType {
+        lhs: Box<ExprCst>,
+        rhs: Box<ExprCst>,
+    ) -> ExprCst {
+        ExprCst::Bin(BinExprCst {
             id,
             pos,
             span,
@@ -936,8 +913,8 @@ impl Expr {
         value: u64,
         base: IntBase,
         suffix: IntSuffix,
-    ) -> Expr {
-        Expr::ExprLitInt(ExprLitIntType {
+    ) -> ExprCst {
+        ExprCst::LitInt(LitIntExprCst {
             id,
             pos,
             span,
@@ -954,8 +931,8 @@ impl Expr {
         span: Span,
         value: f64,
         suffix: FloatSuffix,
-    ) -> Expr {
-        Expr::ExprLitFloat(ExprLitFloatType {
+    ) -> ExprCst {
+        ExprCst::LitFloat(LitFloatExprCst {
             id,
             pos,
             span,
@@ -969,8 +946,8 @@ impl Expr {
         pos: Position,
         span: Span,
         value: BitVec,
-    ) -> Expr {
-        Expr::ExprLitBitVec(ExprLitBitVecType {
+    ) -> ExprCst {
+        ExprCst::LitBitVec(LitBitVecExprCst {
             id,
             pos,
             span,
@@ -978,8 +955,8 @@ impl Expr {
         })
     }
 
-    pub fn create_lit_bool(id: NodeId, pos: Position, span: Span, value: bool) -> Expr {
-        Expr::ExprLitBool(ExprLitBoolType {
+    pub fn create_lit_bool(id: NodeId, pos: Position, span: Span, value: bool) -> ExprCst {
+        ExprCst::LitBool(LitBoolExprCst {
             id,
             pos,
             span,
@@ -993,8 +970,8 @@ impl Expr {
         pos: Position,
         span: Span,
         name: Name,
-    ) -> Expr {
-        Expr::ExprIdent(ExprIdentType {
+    ) -> ExprCst {
+        ExprCst::Ident(NameCst {
             id,
             pos,
             span,
@@ -1007,10 +984,10 @@ impl Expr {
         id: NodeId,
         pos: Position,
         span: Span,
-        callee: Box<Expr>,
-        args: Vec<Box<Expr>>,
-    ) -> Expr {
-        Expr::ExprCall(ExprCallType {
+        callee: Box<ExprCst>,
+        args: Vec<Box<ExprCst>>,
+    ) -> ExprCst {
+        ExprCst::Call(CallExprCst {
             id,
             pos,
             span,
@@ -1024,10 +1001,10 @@ impl Expr {
         id: NodeId,
         pos: Position,
         span: Span,
-        array: Box<Expr>,
-        args: Vec<Box<Expr>>,
-    ) -> Expr {
-        Expr::ExprExtract(ExprExtractType {
+        array: Box<ExprCst>,
+        args: Vec<Box<ExprCst>>,
+    ) -> ExprCst {
+        ExprCst::Extract(ExtractExprCst {
             id,
             pos,
             span,
@@ -1041,10 +1018,10 @@ impl Expr {
         id: NodeId,
         pos: Position,
         span: Span,
-        lhs: Box<Expr>,
-        rhs: Box<Expr>,
-    ) -> Expr {
-        Expr::ExprDot(ExprDotType {
+        lhs: Box<ExprCst>,
+        rhs: Box<ExprCst>,
+    ) -> ExprCst {
+        ExprCst::Dot(DotExprCst {
             id,
             pos,
             span,
@@ -1054,8 +1031,8 @@ impl Expr {
         })
     }
 
-    pub fn create_tuple(id: NodeId, pos: Position, span: Span, values: Vec<Box<Expr>>) -> Expr {
-        Expr::ExprTuple(ExprTupleType {
+    pub fn create_tuple(id: NodeId, pos: Position, span: Span, values: Vec<Box<ExprCst>>) -> ExprCst {
+        ExprCst::Tuple(TupleExprCst {
             id,
             pos,
             span,
@@ -1063,287 +1040,287 @@ impl Expr {
         })
     }
 
-    pub fn to_un(&self) -> Option<&ExprUnType> {
+    pub fn to_un(&self) -> Option<&UnExprCst> {
         match *self {
-            Expr::ExprUn(ref val) => Some(val),
+            ExprCst::Un(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_un(&self) -> bool {
         match *self {
-            Expr::ExprUn(_) => true,
+            ExprCst::Un(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_bin(&self) -> Option<&ExprBinType> {
+    pub fn to_bin(&self) -> Option<&BinExprCst> {
         match *self {
-            Expr::ExprBin(ref val) => Some(val),
+            ExprCst::Bin(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_bin(&self) -> bool {
         match *self {
-            Expr::ExprBin(_) => true,
+            ExprCst::Bin(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_ident(&self) -> Option<&ExprIdentType> {
+    pub fn to_ident(&self) -> Option<&NameCst> {
         match *self {
-            Expr::ExprIdent(ref val) => Some(val),
+            ExprCst::Ident(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_ident(&self) -> bool {
         match *self {
-            Expr::ExprIdent(_) => true,
+            ExprCst::Ident(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_call(&self) -> Option<&ExprCallType> {
+    pub fn to_call(&self) -> Option<&CallExprCst> {
         match *self {
-            Expr::ExprCall(ref val) => Some(val),
+            ExprCst::Call(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_call(&self) -> bool {
         match *self {
-            Expr::ExprCall(_) => true,
+            ExprCst::Call(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_lit_int(&self) -> Option<&ExprLitIntType> {
+    pub fn to_lit_int(&self) -> Option<&LitIntExprCst> {
         match *self {
-            Expr::ExprLitInt(ref val) => Some(val),
+            ExprCst::LitInt(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_lit_int(&self) -> bool {
         match *self {
-            Expr::ExprLitInt(_) => true,
+            ExprCst::LitInt(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_lit_float(&self) -> Option<&ExprLitFloatType> {
+    pub fn to_lit_float(&self) -> Option<&LitFloatExprCst> {
         match *self {
-            Expr::ExprLitFloat(ref val) => Some(val),
+            ExprCst::LitFloat(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_lit_float(&self) -> bool {
         match *self {
-            Expr::ExprLitFloat(_) => true,
+            ExprCst::LitFloat(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_lit_bitvec(&self) -> Option<&ExprLitBitVecType> {
+    pub fn to_lit_bitvec(&self) -> Option<&LitBitVecExprCst> {
         match *self {
-            Expr::ExprLitBitVec(ref val) => Some(val),
+            ExprCst::LitBitVec(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_lit_bitvec(&self) -> bool {
         match *self {
-            Expr::ExprLitBitVec(_) => true,
+            ExprCst::LitBitVec(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_lit_bool(&self) -> Option<&ExprLitBoolType> {
+    pub fn to_lit_bool(&self) -> Option<&LitBoolExprCst> {
         match *self {
-            Expr::ExprLitBool(ref val) => Some(val),
+            ExprCst::LitBool(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_lit_bool(&self) -> bool {
         match *self {
-            Expr::ExprLitBool(_) => true,
+            ExprCst::LitBool(_) => true,
             _ => false,
         }
     }
 
     pub fn is_lit_true(&self) -> bool {
         match *self {
-            Expr::ExprLitBool(ref lit) if lit.value => true,
+            ExprCst::LitBool(ref lit) if lit.value => true,
             _ => false,
         }
     }
 
-    pub fn to_dot(&self) -> Option<&ExprDotType> {
+    pub fn to_dot(&self) -> Option<&DotExprCst> {
         match *self {
-            Expr::ExprDot(ref val) => Some(val),
+            ExprCst::Dot(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_dot(&self) -> bool {
         match *self {
-            Expr::ExprDot(_) => true,
+            ExprCst::Dot(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_tuple(&self) -> Option<&ExprTupleType> {
+    pub fn to_tuple(&self) -> Option<&TupleExprCst> {
         match *self {
-            Expr::ExprTuple(ref val) => Some(val),
+            ExprCst::Tuple(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_tuple(&self) -> bool {
         match *self {
-            Expr::ExprTuple(_) => true,
+            ExprCst::Tuple(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_block(&self) -> Option<&ExprBlockType> {
+    pub fn to_block(&self) -> Option<&BlockCst> {
         match *self {
-            Expr::ExprBlock(ref val) => Some(val),
+            ExprCst::Block(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_block(&self) -> bool {
         match self {
-            &Expr::ExprBlock(_) => true,
+            &ExprCst::Block(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_if(&self) -> Option<&ExprIfType> {
+    pub fn to_if(&self) -> Option<&IfExprCst> {
         match *self {
-            Expr::ExprIf(ref val) => Some(val),
+            ExprCst::If(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_if(&self) -> bool {
         match *self {
-            Expr::ExprIf(_) => true,
+            ExprCst::If(_) => true,
             _ => false,
         }
     }
 
     pub fn needs_semicolon(&self) -> bool {
         match self {
-            &Expr::ExprBlock(_) => false,
-            &Expr::ExprIf(_) => false,
+            &ExprCst::Block(_) => false,
+            &ExprCst::If(_) => false,
             _ => true,
         }
     }
 
     pub fn pos(&self) -> Position {
         match *self {
-            Expr::ExprUn(ref val) => val.pos,
-            Expr::ExprBin(ref val) => val.pos,
-            Expr::ExprLitInt(ref val) => val.pos,
-            Expr::ExprLitFloat(ref val) => val.pos,
-            Expr::ExprLitBitVec(ref val) => val.pos,
-            Expr::ExprLitBool(ref val) => val.pos,
-            Expr::ExprIdent(ref val) => val.pos,
-            Expr::ExprCall(ref val) => val.pos,
-            Expr::ExprExtract(ref val) => val.pos,
-            Expr::ExprDot(ref val) => val.pos,
-            Expr::ExprBlock(ref val) => val.pos,
-            Expr::ExprIf(ref val) => val.pos,
-            Expr::ExprTuple(ref val) => val.pos,
+            ExprCst::Un(ref val) => val.pos,
+            ExprCst::Bin(ref val) => val.pos,
+            ExprCst::LitInt(ref val) => val.pos,
+            ExprCst::LitFloat(ref val) => val.pos,
+            ExprCst::LitBitVec(ref val) => val.pos,
+            ExprCst::LitBool(ref val) => val.pos,
+            ExprCst::Ident(ref val) => val.pos,
+            ExprCst::Call(ref val) => val.pos,
+            ExprCst::Extract(ref val) => val.pos,
+            ExprCst::Dot(ref val) => val.pos,
+            ExprCst::Block(ref val) => val.pos,
+            ExprCst::If(ref val) => val.pos,
+            ExprCst::Tuple(ref val) => val.pos,
         }
     }
 
     pub fn span(&self) -> Span {
         match *self {
-            Expr::ExprUn(ref val) => val.span,
-            Expr::ExprBin(ref val) => val.span,
-            Expr::ExprLitInt(ref val) => val.span,
-            Expr::ExprLitFloat(ref val) => val.span,
-            Expr::ExprLitBitVec(ref val) => val.span,
-            Expr::ExprLitBool(ref val) => val.span,
-            Expr::ExprIdent(ref val) => val.span,
-            Expr::ExprCall(ref val) => val.span,
-            Expr::ExprExtract(ref val) => val.span,
-            Expr::ExprDot(ref val) => val.span,
-            Expr::ExprBlock(ref val) => val.span,
-            Expr::ExprIf(ref val) => val.span,
-            Expr::ExprTuple(ref val) => val.span,
+            ExprCst::Un(ref val) => val.span,
+            ExprCst::Bin(ref val) => val.span,
+            ExprCst::LitInt(ref val) => val.span,
+            ExprCst::LitFloat(ref val) => val.span,
+            ExprCst::LitBitVec(ref val) => val.span,
+            ExprCst::LitBool(ref val) => val.span,
+            ExprCst::Ident(ref val) => val.span,
+            ExprCst::Call(ref val) => val.span,
+            ExprCst::Extract(ref val) => val.span,
+            ExprCst::Dot(ref val) => val.span,
+            ExprCst::Block(ref val) => val.span,
+            ExprCst::If(ref val) => val.span,
+            ExprCst::Tuple(ref val) => val.span,
         }
     }
 
     pub fn id(&self) -> NodeId {
         match *self {
-            Expr::ExprUn(ref val) => val.id,
-            Expr::ExprBin(ref val) => val.id,
-            Expr::ExprLitInt(ref val) => val.id,
-            Expr::ExprLitFloat(ref val) => val.id,
-            Expr::ExprLitBitVec(ref val) => val.id,
-            Expr::ExprLitBool(ref val) => val.id,
-            Expr::ExprIdent(ref val) => val.id,
-            Expr::ExprCall(ref val) => val.id,
-            Expr::ExprExtract(ref val) => val.id,
-            Expr::ExprDot(ref val) => val.id,
-            Expr::ExprBlock(ref val) => val.id,
-            Expr::ExprIf(ref val) => val.id,
-            Expr::ExprTuple(ref val) => val.id,
+            ExprCst::Un(ref val) => val.id,
+            ExprCst::Bin(ref val) => val.id,
+            ExprCst::LitInt(ref val) => val.id,
+            ExprCst::LitFloat(ref val) => val.id,
+            ExprCst::LitBitVec(ref val) => val.id,
+            ExprCst::LitBool(ref val) => val.id,
+            ExprCst::Ident(ref val) => val.id,
+            ExprCst::Call(ref val) => val.id,
+            ExprCst::Extract(ref val) => val.id,
+            ExprCst::Dot(ref val) => val.id,
+            ExprCst::Block(ref val) => val.id,
+            ExprCst::If(ref val) => val.id,
+            ExprCst::Tuple(ref val) => val.id,
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprIfType {
+pub struct IfExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub cond: Box<Expr>,
-    pub then_block: Box<Expr>,
-    pub else_block: Option<Box<Expr>>,
+    pub cond: Box<ExprCst>,
+    pub then_block: Box<ExprCst>,
+    pub else_block: Option<Box<ExprCst>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprTupleType {
+pub struct TupleExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub values: Vec<Box<Expr>>,
+    pub values: Vec<Box<ExprCst>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprUnType {
+pub struct UnExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub op: UnOp,
-    pub opnd: Box<Expr>,
+    pub opnd: Box<ExprCst>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprBinType {
+pub struct BinExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub op: BinOp,
-    pub lhs: Box<Expr>,
-    pub rhs: Box<Expr>,
+    pub lhs: Box<ExprCst>,
+    pub rhs: Box<ExprCst>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprLitIntType {
+pub struct LitIntExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1354,7 +1331,7 @@ pub struct ExprLitIntType {
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprLitFloatType {
+pub struct LitFloatExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1364,7 +1341,7 @@ pub struct ExprLitFloatType {
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprLitBitVecType {
+pub struct LitBitVecExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1373,7 +1350,7 @@ pub struct ExprLitBitVecType {
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprLitBoolType {
+pub struct LitBoolExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1382,25 +1359,25 @@ pub struct ExprLitBoolType {
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprBlockType {
+pub struct BlockCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub stmts: Vec<Box<Stmt>>,
+    pub stmts: Vec<Box<StmtCst>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct TransitionSystemBlock {
+pub struct TransitionSystemBlockCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub block: Box<ExprBlockType>,
+    pub block: Box<BlockCst>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprIdentType {
+pub struct NameCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1409,27 +1386,27 @@ pub struct ExprIdentType {
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprExtractType {
+pub struct ExtractExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub array: Box<Expr>,
-    pub args: Vec<Box<Expr>>,
+    pub array: Box<ExprCst>,
+    pub args: Vec<Box<ExprCst>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprCallType {
+pub struct CallExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub callee: Box<Expr>,
-    pub args: Vec<Box<Expr>>,
+    pub callee: Box<ExprCst>,
+    pub args: Vec<Box<ExprCst>>,
 }
 
-impl ExprCallType {
-    pub fn object(&self) -> Option<&Expr> {
+impl CallExprCst {
+    pub fn object(&self) -> Option<&ExprCst> {
         if let Some(dot) = self.callee.to_dot() {
             Some(&dot.lhs)
         } else {
@@ -1439,11 +1416,11 @@ impl ExprCallType {
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprDotType {
+pub struct DotExprCst {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub lhs: Box<Expr>,
-    pub rhs: Box<Expr>,
+    pub lhs: Box<ExprCst>,
+    pub rhs: Box<ExprCst>,
 }

@@ -19,7 +19,7 @@ pub enum ParseError {
     MisplacedElse,
     ExpectedFactor(String),
     NumberOverflow(String),
-    ExpectedIdentifier(String),
+    ExpectedIdent(String),
     ExpectedStatement,
     ExpectedBlock,
 }
@@ -57,8 +57,8 @@ impl ParseError {
             ParseError::ExpectedType(ref got) => format!("type expected but got {}.", got),
             ParseError::MisplacedElse => "misplace else.".into(),
             ParseError::ExpectedFactor(ref got) => format!("factor expected but got {}.", got),
-            ParseError::ExpectedIdentifier(ref tok) => {
-                format!("identifier expected but got {}.", tok)
+            ParseError::ExpectedIdent(ref tok) => {
+                format!("ident expected but got {}.", tok)
             },
             ParseError::ExpectedStatement => "expected a statement.".into(),
             ParseError::ExpectedBlock => "expected a block.".into(),

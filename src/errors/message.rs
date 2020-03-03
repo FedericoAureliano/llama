@@ -4,11 +4,11 @@ use crate::parser::lexer::position::Position;
 pub enum SemError {
     Unimplemented,
     UnknownType(String),
-    UnknownIdentifier(String),
+    UnknownIdent(String),
     UnknownFunction(String),
     UnknownField(String, String),
     UnknownEnumValue(String),
-    IdentifierExists(String),
+    IdentExists(String),
     DuplicateFunction(String),
     DuplicateParam(String),
     DuplicateField(String),
@@ -37,8 +37,8 @@ pub enum SemError {
     LetMissingInitialization,
     LetReassigned,
     PrcdReassigned,
-    PrcdUsedAsIdentifier,
-    EnumUsedAsIdentifier,
+    PrcdUsedAsIdent,
+    EnumUsedAsIdent,
     UnderivableType(String),
     CycleInHierarchy,
     TypesIncompatible(String, String),
@@ -50,9 +50,9 @@ pub enum SemError {
     ExpectedToken(String, String),
     ExpectedTopLevelElement(String),
     ExpectedType(String),
-    ExpectedIdentifier(String),
+    ExpectedIdent(String),
     ExpectedStringable(String),
-    ExpectedSomeIdentifier,
+    ExpectedSomeIdent,
     MisplacedElse,
     IoError,
     MisplacedAnnotation(String),
@@ -79,7 +79,7 @@ impl SemError {
         match *self {
             SemError::Unimplemented => format!("feature not implemented yet."),
             SemError::UnknownType(ref name) => format!("type `{}` does not exist.", name),
-            SemError::UnknownIdentifier(ref name) => format!("unknown identifier `{}`.", name),
+            SemError::UnknownIdent(ref name) => format!("unknown ident `{}`.", name),
             SemError::UnknownFunction(ref name) => format!("unknown function `{}`", name),
             SemError::UnknownEnumValue(ref name) => {
                 format!("no value with name `{}` in enumeration.", name)
@@ -87,8 +87,8 @@ impl SemError {
             SemError::UnknownField(ref field, ref ty) => {
                 format!("unknown field `{}` for type `{}`", field, ty)
             }
-            SemError::IdentifierExists(ref name) => {
-                format!("can not redefine identifier `{}`.", name)
+            SemError::IdentExists(ref name) => {
+                format!("can not redefine ident `{}`.", name)
             }
             SemError::DuplicateFunction(ref name) => format!("duplicate function `{}`.", name),
             SemError::DuplicateParam(ref name) => format!("duplicate param `{}`.", name),
@@ -147,8 +147,8 @@ impl SemError {
             SemError::LetMissingInitialization => "`let` binding is missing initialization.".into(),
             SemError::LetReassigned => "`let` binding cannot be reassigned.".into(),
             SemError::PrcdReassigned => "function cannot be reassigned.".into(),
-            SemError::PrcdUsedAsIdentifier => "function cannot be used as identifier.".into(),
-            SemError::EnumUsedAsIdentifier => "enum cannot be used as identifier.".into(),
+            SemError::PrcdUsedAsIdent => "function cannot be used as ident.".into(),
+            SemError::EnumUsedAsIdent => "enum cannot be used as ident.".into(),
             SemError::InvalidLhsAssignment => "invalid left-hand-side of assignment.".into(),
             SemError::UnderivableType(ref name) => {
                 format!("type `{}` cannot be used as super class.", name)
@@ -168,10 +168,10 @@ impl SemError {
             SemError::NumberOverflow(ref ty) => format!("number does not fit into type {}.", ty),
             SemError::ExpectedFactor(ref got) => format!("factor expected but got {}.", got),
             SemError::ExpectedType(ref got) => format!("type expected but got {}.", got),
-            SemError::ExpectedIdentifier(ref tok) => {
-                format!("identifier expected but got {}.", tok)
+            SemError::ExpectedIdent(ref tok) => {
+                format!("ident expected but got {}.", tok)
             }
-            SemError::ExpectedSomeIdentifier => "identifier expected".into(),
+            SemError::ExpectedSomeIdent => "ident expected".into(),
             SemError::ExpectedTopLevelElement(ref token) => {
                 format!("expected function or class but got {}.", token)
             }

@@ -1,9 +1,9 @@
 use crate::errors::message::SemError;
 use crate::vm::{NodeMap, VM};
-use crate::parser::cst::Type::{BasicType, TupleType, TypeAlias, EnumType};
-use crate::parser::cst::{Type};
+use crate::parser::cst::Cst;
+use crate::parser::cst::{TypeIdentCst};
 use crate::types::{BuiltinType, TypeList};
-use crate::symbols::Sym::{SymEnum};
+use crate::symbols::Symbol::{EnumSymbol};
 
 mod enumcheck;
 mod defcheck;
@@ -16,26 +16,26 @@ macro_rules! return_on_error {
     }};
 }
 
-pub fn check<'cst>(vm: &mut VM<'cst>) {
+pub fn check(vm: &mut VM, cst: &Cst) {
 
     let mut map_enum_defs = NodeMap::new();
 
     // add module definitions
-    defcheck::check(vm, &mut map_enum_defs);
+    defcheck::check(vm, cst, &mut map_enum_defs);
     return_on_error!(vm);
 
     // check enums
-    enumcheck::check(vm, &vm.cst, &map_enum_defs);
+    enumcheck::check(vm, cst, &map_enum_defs);
     return_on_error!(vm);
 }
 
-pub fn read_type<'cst>(vm: &VM<'cst>, t: &'cst Type) -> Option<BuiltinType> {
+pub fn read_type(vm: &VM, t: &TypeIdentCst) -> Option<BuiltinType> {
     match *t {
-        BasicType(ref basic) => {
+        TypeIdentCst::Basic(ref basic) => {
             let sym = vm.symbol_table.lock().get(basic.name);
             if let Some(sym) = sym {
                 match sym {
-                    SymEnum(enum_id) => {
+                    EnumSymbol(enum_id) => {
                         if basic.params.len() > 0 {
                             let msg = SemError::NoTypeParamsExpected;
                             vm.diagnostic.lock().report(basic.pos, msg);
@@ -43,11 +43,11 @@ pub fn read_type<'cst>(vm: &VM<'cst>, t: &'cst Type) -> Option<BuiltinType> {
 
                         return Some(BuiltinType::Enum(enum_id));
                     }
-                    _ => {
-                        let name = vm.interner.str(basic.name).to_string();
-                        let msg = SemError::ExpectedType(name);
-                        vm.diagnostic.lock().report(basic.pos, msg);
-                    }
+                    // _ => {
+                    //     let name = vm.interner.str(basic.name).to_string();
+                    //     let msg = SemError::ExpectedType(name);
+                    //     vm.diagnostic.lock().report(basic.pos, msg);
+                    // }
                 }
             } else {
                 let name = vm.interner.str(basic.name).to_string();
@@ -58,16 +58,7 @@ pub fn read_type<'cst>(vm: &VM<'cst>, t: &'cst Type) -> Option<BuiltinType> {
             None
         }
 
-        TypeAlias(ref a) => {
-            read_type(vm, &*a.alias)
-        }
-
-        EnumType(_) => {
-            // what to do?
-            None
-        }
-
-        TupleType(ref tuple) => {
+        TypeIdentCst::Tuple(ref tuple) => {
             if tuple.subtypes.len() == 0 {
                 Some(BuiltinType::Unit)
             } else {

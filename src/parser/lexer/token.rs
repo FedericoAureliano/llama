@@ -8,15 +8,13 @@ pub enum TokenKind {
     LitInt(String, IntBase, IntSuffix),
     LitFloat(String, FloatSuffix),
     LitBitVec(String, String),
-    Identifier(String),
+    Ident(String),
     End,
 
     // Keywords
     While,
     If,
     Else,
-    For,
-    In,
     True,
     False,
     At,
@@ -119,7 +117,7 @@ impl TokenKind {
 
             TokenKind::LitBitVec(_, _) => "bitvec number",
 
-            TokenKind::Identifier(_) => "identifier",
+            TokenKind::Ident(_) => "ident",
             TokenKind::End => "<<EOF>>",
 
             // Keywords
@@ -132,8 +130,6 @@ impl TokenKind {
             TokenKind::While => "while",
             TokenKind::If => "if",
             TokenKind::Else => "else",
-            TokenKind::For => "for",
-            TokenKind::In => "in",
             TokenKind::True => "true",
             TokenKind::False => "false",
             TokenKind::At => "@",
@@ -259,7 +255,7 @@ impl Token {
                 format!("{}{}", val, suffix)
             }
 
-            TokenKind::Identifier(ref val) => val.clone(),
+            TokenKind::Ident(ref val) => val.clone(),
 
             _ => self.kind.name().into(),
         }

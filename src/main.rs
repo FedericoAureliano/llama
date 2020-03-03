@@ -62,8 +62,7 @@ pub fn start() -> i32 {
     }
 
     let mut cst = Cst::new();
-    let empty = Cst::new();
-    let mut vm = VM::new(&empty);
+    let mut vm = VM::new();
 
     let arg_file = args.arg_file.clone();
     let res = parse_file(&arg_file, &mut vm, &mut cst);
@@ -71,14 +70,12 @@ pub fn start() -> i32 {
     if let Err(code) = res {
         return code;
     }
-
-    vm.cst = &cst;
     
     if args.flag_print {
-        cst::dump::dump(&vm.cst, &vm.interner);
+        cst::dump::dump(&cst, &vm.interner);
     }
 
-    cstcheck::check(&mut vm);
+    cstcheck::check(&mut vm, &cst);
 
     if vm.diagnostic.lock().has_errors() {
         vm.diagnostic.lock().dump();
