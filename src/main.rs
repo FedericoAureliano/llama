@@ -1,7 +1,7 @@
 pub mod errors;
 pub mod parser;
 pub mod vm;
-pub mod cstcheck;
+pub mod cstpass;
 pub mod types;
 pub mod symbols;
 pub mod utils;
@@ -75,7 +75,7 @@ pub fn start() -> i32 {
         cst::dump::dump(&cst, &vm.interner);
     }
 
-    cstcheck::check(&mut vm, &cst);
+    cstpass::pass(&mut vm, &cst);
 
     if vm.diagnostic.lock().has_errors() {
         vm.diagnostic.lock().dump();

@@ -309,9 +309,3 @@ impl TypeLists {
         self.values[id.idx()].clone()
     }
 }
-
-#[derive(Debug, Copy, Clone)]
-pub enum TypeParamId {
-    Fct(TypeListId),
-    Class(TypeListId),
-}

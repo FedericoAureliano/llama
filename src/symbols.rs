@@ -5,19 +5,19 @@ use crate::vm::{EnumId};
 use crate::parser::interner::Name;
 
 #[derive(Debug)]
-pub struct SymTable {
-    levels: Vec<SymLevel>,
+pub struct SymbolTable {
+    levels: Vec<SymbolLevel>,
 }
 
-impl SymTable {
-    pub fn new() -> SymTable {
-        SymTable {
-            levels: vec![SymLevel::new()],
+impl SymbolTable {
+    pub fn new() -> SymbolTable {
+        SymbolTable {
+            levels: vec![SymbolLevel::new()],
         }
     }
 
     pub fn push_level(&mut self) {
-        self.levels.push(SymLevel::new());
+        self.levels.push(SymbolLevel::new());
     }
 
     pub fn pop_level(&mut self) {
@@ -50,14 +50,14 @@ impl SymTable {
 }
 
 #[derive(Debug)]
-pub struct SymLevel {
+pub struct SymbolLevel {
     map: HashMap<Name, Symbol>,
 }
 
-impl SymLevel {
+impl SymbolLevel {
     // creates a new table
-    pub fn new() -> SymLevel {
-        SymLevel {
+    pub fn new() -> SymbolLevel {
+        SymbolLevel {
             map: HashMap::new(),
         }
     }

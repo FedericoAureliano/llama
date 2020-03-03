@@ -4,7 +4,7 @@ use crate::parser::cst::{Cst, TypeDeclCst};
 use crate::errors::message::SemError;
 use crate::vm::{EnumId, NodeMap, VM};
 
-pub fn check<'cst>(vm: &mut VM, cst: &Cst, map_enum_defs: &NodeMap<EnumId>) {
+pub fn pass<'cst>(vm: &mut VM, cst: &Cst, map_enum_defs: &NodeMap<EnumId>) {
     let mut enumck = EnumCheck {
         vm,
         cst,

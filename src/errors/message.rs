@@ -3,12 +3,14 @@ use crate::parser::lexer::position::Position;
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SemError {
     Unimplemented,
+
     UnknownType(String),
     UnknownIdent(String),
     UnknownFunction(String),
     UnknownField(String, String),
     UnknownEnumValue(String),
     IdentExists(String),
+
     DuplicateFunction(String),
     DuplicateParam(String),
     DuplicateField(String),
@@ -21,12 +23,15 @@ pub enum SemError {
     InvalidLhsAssignment,
     VarNeedsTypeInfo(String),
     ParamTypesIncompatible(String, Vec<String>, Vec<String>),
+    
     WhileCondType(String),
     IfCondType(String),
     ReturnType(String, String),
+
     LvalueExpected,
     AssignType(String, String, String),
     AssignField(String, String, String, String),
+    
     UnOpType(String, String),
     BinOpType(String, String, String),
     ConstValueExpected,

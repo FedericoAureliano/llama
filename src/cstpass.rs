@@ -6,7 +6,7 @@ use crate::types::{BuiltinType, TypeList};
 use crate::symbols::Symbol::{EnumSymbol};
 
 mod enumcheck;
-mod defcheck;
+mod declpass;
 
 macro_rules! return_on_error {
     ($vm: ident) => {{
@@ -16,16 +16,16 @@ macro_rules! return_on_error {
     }};
 }
 
-pub fn check(vm: &mut VM, cst: &Cst) {
+pub fn pass(vm: &mut VM, cst: &Cst) {
 
     let mut map_enum_defs = NodeMap::new();
 
-    // add module definitions
-    defcheck::check(vm, cst, &mut map_enum_defs);
+    // populate tables
+    declpass::pass(vm, cst, &mut map_enum_defs);
     return_on_error!(vm);
 
     // check enums
-    enumcheck::check(vm, cst, &map_enum_defs);
+    enumcheck::pass(vm, cst, &map_enum_defs);
     return_on_error!(vm);
 }
 

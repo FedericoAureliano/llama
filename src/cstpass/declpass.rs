@@ -9,12 +9,12 @@ use crate::parser::cst::{Cst, TypeDeclCst};
 use crate::parser::interner::Name;
 use crate::parser::lexer::position::Position;
 
-pub fn check<'cst>(
+pub fn pass<'cst>(
     vm: &mut VM,
     cst: &Cst,
     map_enum_defs: &mut NodeMap<EnumId>,
 ) {
-    let mut gdef = Defn {
+    let mut gdef = Decl {
         vm,
         map_enum_defs,
     };
@@ -22,12 +22,12 @@ pub fn check<'cst>(
     gdef.visit_cst(cst);
 }
 
-struct Defn<'x> {
+struct Decl<'x> {
     vm: &'x mut VM,
     map_enum_defs: &'x mut NodeMap<EnumId>,
 }
 
-impl<'x, 'cst> Visitor<'cst> for Defn<'x> {
+impl<'x, 'cst> Visitor<'cst> for Decl<'x> {
     fn visit_type_decl(&mut self, t: &'cst TypeDeclCst) {
         match t {
             TypeDeclCst::Enum(e) => {

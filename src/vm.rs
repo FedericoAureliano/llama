@@ -3,7 +3,7 @@ use parking_lot::{Mutex, RwLock};
 use crate::parser::interner::*;
 use crate::parser::parser::NodeIdGenerator;
 use crate::errors::diagnostic::Diagnostic;
-use crate::symbols::SymTable;
+use crate::symbols::SymbolTable;
 use crate::types::TypeLists;
 
 pub use self::source::{NodeMap};
@@ -19,7 +19,7 @@ pub struct VM {
 
     pub enum_defs: Vec<RwLock<EnumData>>,
 
-    pub symbol_table: Mutex<SymTable>,
+    pub symbol_table: Mutex<SymbolTable>,
     pub type_lists: Mutex<TypeLists>,
 }
 
@@ -32,7 +32,7 @@ impl VM {
 
             enum_defs: Vec::new(),
 
-            symbol_table: Mutex::new(SymTable::new()),
+            symbol_table: Mutex::new(SymbolTable::new()),
             type_lists: Mutex::new(TypeLists::new()),
         });
 
