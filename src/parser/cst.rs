@@ -12,7 +12,7 @@ pub mod visit;
 
 #[derive(Clone, Debug)]
 pub struct Cst {
-    pub modules: Vec<ModuleCst>,
+    pub modules: Vec<ModuleSyntaxObject>,
 }
 
 impl Cst {
@@ -22,30 +22,30 @@ impl Cst {
 }
 
 #[derive(Clone, Debug)]
-pub struct ModuleCst {
+pub struct ModuleSyntaxObject {
     // TODO: instances of other modules
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     
-    pub types: Vec<TypeDeclCst>,
+    pub types: Vec<TypeDeclarationSyntaxObject>,
 
-    pub inputs: Vec<FieldDeclCst>,
-    pub outputs: Vec<FieldDeclCst>,
-    pub variables: Vec<FieldDeclCst>,
-    pub constants: Vec<FieldDeclCst>,
+    pub inputs: Vec<FieldDeclarationSyntaxObject>,
+    pub outputs: Vec<FieldDeclarationSyntaxObject>,
+    pub variables: Vec<FieldDeclarationSyntaxObject>,
+    pub constants: Vec<FieldDeclarationSyntaxObject>,
 
-    pub macros: Vec<MacroDeclCst>,
+    pub macros: Vec<MacroDeclarationSyntaxObject>,
 
-    pub functions: Vec<FunctionDeclCst>,
-    pub procedures: Vec<ProcedureDeclCst>,
+    pub functions: Vec<FunctionDeclarationSyntaxObject>,
+    pub procedures: Vec<ProcedureDeclarationSyntaxObject>,
 
-    pub theorems: Vec<PropertyDeclCst>,
-    pub lemmas: Vec<PropertyDeclCst>,
+    pub theorems: Vec<PropertyDeclarationSyntaxObject>,
+    pub lemmas: Vec<PropertyDeclarationSyntaxObject>,
 
-    pub init: Option<Box<TransitionSystemBlockCst>>,
-    pub next: Option<Box<TransitionSystemBlockCst>>,
-    pub control: Option<Box<TransitionSystemBlockCst>>,
+    pub init: Option<Box<TransitionSystemBlockSyntaxObject>>,
+    pub next: Option<Box<TransitionSystemBlockSyntaxObject>>,
+    pub control: Option<Box<TransitionSystemBlockSyntaxObject>>,
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
@@ -58,41 +58,41 @@ impl fmt::Display for NodeId {
 }
 
 #[derive(Clone, Debug)]
-pub enum TypeIdentCst {
-    Basic(BasicTypeIdentCst),
-    Tuple(TupleTypeIdentCst),
+pub enum TypeIdentifierSyntaxObject {
+    Basic(BasicTypeIdentifierSyntaxObject),
+    Tuple(TupleTypeIdentifierSyntaxObject),
 }
 
 #[derive(Clone, Debug)]
-pub struct BasicTypeIdentCst {
+pub struct BasicTypeIdentifierSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub name: Name,
     // Params are for arrays
-    pub params: Vec<Box<TypeIdentCst>>,
+    pub params: Vec<Box<TypeIdentifierSyntaxObject>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct TupleTypeIdentCst {
+pub struct TupleTypeIdentifierSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub subtypes: Vec<Box<TypeIdentCst>>,
+    pub subtypes: Vec<Box<TypeIdentifierSyntaxObject>>,
 }
 
-impl TypeIdentCst {
+impl TypeIdentifierSyntaxObject {
 
     pub fn create_basic(
         id: NodeId,
         pos: Position,
         span: Span,
         name: Name,
-        params: Vec<Box<TypeIdentCst>>,
-    ) -> TypeIdentCst {
-        TypeIdentCst::Basic(BasicTypeIdentCst {
+        params: Vec<Box<TypeIdentifierSyntaxObject>>,
+    ) -> TypeIdentifierSyntaxObject {
+        TypeIdentifierSyntaxObject::Basic(BasicTypeIdentifierSyntaxObject {
             id,
             pos,
             span,
@@ -101,8 +101,8 @@ impl TypeIdentCst {
         })
     }
 
-    pub fn create_tuple(id: NodeId, pos: Position, span: Span, subtypes: Vec<Box<TypeIdentCst>>) -> TypeIdentCst {
-        TypeIdentCst::Tuple(TupleTypeIdentCst {
+    pub fn create_tuple(id: NodeId, pos: Position, span: Span, subtypes: Vec<Box<TypeIdentifierSyntaxObject>>) -> TypeIdentifierSyntaxObject {
+        TypeIdentifierSyntaxObject::Tuple(TupleTypeIdentifierSyntaxObject {
             id,
             pos,
             span,
@@ -110,16 +110,16 @@ impl TypeIdentCst {
         })
     }
 
-    pub fn to_basic(&self) -> Option<&BasicTypeIdentCst> {
+    pub fn to_basic(&self) -> Option<&BasicTypeIdentifierSyntaxObject> {
         match *self {
-            TypeIdentCst::Basic(ref val) => Some(val),
+            TypeIdentifierSyntaxObject::Basic(ref val) => Some(val),
             _ => None,
         }
     }
 
-    pub fn to_tuple(&self) -> Option<&TupleTypeIdentCst> {
+    pub fn to_tuple(&self) -> Option<&TupleTypeIdentifierSyntaxObject> {
         match *self {
-            TypeIdentCst::Tuple(ref val) => Some(val),
+            TypeIdentifierSyntaxObject::Tuple(ref val) => Some(val),
             _ => None,
         }
     }
@@ -127,14 +127,14 @@ impl TypeIdentCst {
     #[cfg(test)]
     pub fn is_unit(&self) -> bool {
         match self {
-            &TypeIdentCst::Tuple(ref val) if val.subtypes.len() == 0 => true,
+            &TypeIdentifierSyntaxObject::Tuple(ref val) if val.subtypes.len() == 0 => true,
             _ => false,
         }
     }
 
     pub fn to_string(&self, interner: &Interner) -> String {
         match *self {
-            TypeIdentCst::Basic(ref val) => {
+            TypeIdentifierSyntaxObject::Basic(ref val) => {
                 if val.params.len() > 0 {
                     let types: Vec<String> = val.params.iter().map(|t| format!("{}", t.to_string(interner))).collect();
                     format!("[{}]{}", types.join(", "),  *interner.str(val.name))
@@ -143,7 +143,7 @@ impl TypeIdentCst {
                 }
             }
 
-            TypeIdentCst::Tuple(ref val) => {
+            TypeIdentifierSyntaxObject::Tuple(ref val) => {
                 let types: Vec<String> =
                     val.subtypes.iter().map(|t| t.to_string(interner)).collect();
 
@@ -154,56 +154,56 @@ impl TypeIdentCst {
 
     pub fn pos(&self) -> Position {
         match *self {
-            TypeIdentCst::Basic(ref val) => val.pos,
-            TypeIdentCst::Tuple(ref val) => val.pos,
+            TypeIdentifierSyntaxObject::Basic(ref val) => val.pos,
+            TypeIdentifierSyntaxObject::Tuple(ref val) => val.pos,
         }
     }
 
     pub fn id(&self) -> NodeId {
         match *self {
-            TypeIdentCst::Basic(ref val) => val.id,
-            TypeIdentCst::Tuple(ref val) => val.id,
+            TypeIdentifierSyntaxObject::Basic(ref val) => val.id,
+            TypeIdentifierSyntaxObject::Tuple(ref val) => val.id,
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub enum TypeDeclCst {
-    Alias(TypeAliasCst),
-    Enum(EnumDeclCst),
+pub enum TypeDeclarationSyntaxObject {
+    Alias(TypeAliasSyntaxObject),
+    Enum(EnumDeclarationSyntaxObject),
 }
 
 #[derive(Clone, Debug)]
-pub struct TypeAliasCst {
+pub struct TypeAliasSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub name: Name,
-    pub alias: Box<TypeIdentCst>,
+    pub alias: Box<TypeIdentifierSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct EnumDeclCst {
+pub struct EnumDeclarationSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub name: Name,
-    pub variants: Vec<NameCst>,
+    pub variants: Vec<NameSyntaxObject>,
 }
 
 
-impl TypeDeclCst {
+impl TypeDeclarationSyntaxObject {
 
     pub fn create_alias(
         id: NodeId,
         pos: Position,
         span: Span,
         name: Name,
-        alias: Box<TypeIdentCst>,
-    ) -> TypeDeclCst {
-        TypeDeclCst::Alias(TypeAliasCst {
+        alias: Box<TypeIdentifierSyntaxObject>,
+    ) -> TypeDeclarationSyntaxObject {
+        TypeDeclarationSyntaxObject::Alias(TypeAliasSyntaxObject {
             id,
             pos,
             span,
@@ -217,9 +217,9 @@ impl TypeDeclCst {
         pos: Position,
         span: Span,
         name: Name,
-        variants: Vec<NameCst>,
-    ) -> TypeDeclCst {
-        TypeDeclCst::Enum(EnumDeclCst {
+        variants: Vec<NameSyntaxObject>,
+    ) -> TypeDeclarationSyntaxObject {
+        TypeDeclarationSyntaxObject::Enum(EnumDeclarationSyntaxObject {
             id,
             pos,
             span,
@@ -228,24 +228,24 @@ impl TypeDeclCst {
         })
     }
 
-    pub fn to_alias(&self) -> Option<&TypeAliasCst> {
+    pub fn to_alias(&self) -> Option<&TypeAliasSyntaxObject> {
         match *self {
-            TypeDeclCst::Alias(ref val) => Some(val),
+            TypeDeclarationSyntaxObject::Alias(ref val) => Some(val),
             _ => None,
         }
     }
 
-    pub fn to_enum(&self) -> Option<&EnumDeclCst> {
+    pub fn to_enum(&self) -> Option<&EnumDeclarationSyntaxObject> {
         match *self {
-            TypeDeclCst::Enum(ref val) => Some(val),
+            TypeDeclarationSyntaxObject::Enum(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn to_string(&self, interner: &Interner) -> String {
         match *self {
-            TypeDeclCst::Alias(ref val) => format!("`{}` := `{}`", *interner.str(val.name), val.alias.to_string(interner)),
-            TypeDeclCst::Enum(ref val) => {
+            TypeDeclarationSyntaxObject::Alias(ref val) => format!("`{}` := `{}`", *interner.str(val.name), val.alias.to_string(interner)),
+            TypeDeclarationSyntaxObject::Enum(ref val) => {
                 let types: Vec<String> = val.variants.iter().map(|t| format!("{}", *interner.str(t.name))).collect();
                 format!("enum {} of {{{}}}", *interner.str(val.name), types.join(", "))
             }
@@ -254,42 +254,42 @@ impl TypeDeclCst {
 
     pub fn pos(&self) -> Position {
         match *self {
-            TypeDeclCst::Alias(ref val) => val.pos,
-            TypeDeclCst::Enum(ref val) => val.pos,
+            TypeDeclarationSyntaxObject::Alias(ref val) => val.pos,
+            TypeDeclarationSyntaxObject::Enum(ref val) => val.pos,
         }
     }
 
     pub fn id(&self) -> NodeId {
         match *self {
-            TypeDeclCst::Alias(ref val) => val.id,
-            TypeDeclCst::Enum(ref val) => val.id,
+            TypeDeclarationSyntaxObject::Alias(ref val) => val.id,
+            TypeDeclarationSyntaxObject::Enum(ref val) => val.id,
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct FieldDeclCst {
+pub struct FieldDeclarationSyntaxObject {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
 
-    pub data_type: TypeIdentCst,
-    pub expr: Option<Box<ExprCst>>,
+    pub data_type: TypeIdentifierSyntaxObject,
+    pub expr: Option<Box<ExprSyntaxObject>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct PropertyDeclCst {
+pub struct PropertyDeclarationSyntaxObject {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
 
-    pub expr: Box<ExprCst>,
+    pub expr: Box<ExprSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct FunctionDeclCst {
+pub struct FunctionDeclarationSyntaxObject {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
@@ -297,40 +297,40 @@ pub struct FunctionDeclCst {
 
     pub to_synthesize: bool,
     
-    pub params: Vec<ParamCst>,
-    pub return_type: Option<TypeIdentCst>,
+    pub params: Vec<ParamSyntaxObject>,
+    pub return_type: Option<TypeIdentifierSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct MacroDeclCst {
+pub struct MacroDeclarationSyntaxObject {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
 
-    pub params: Vec<ParamCst>,
-    pub return_type: Option<TypeIdentCst>,
-    pub expr: Box<ExprCst>,
+    pub params: Vec<ParamSyntaxObject>,
+    pub return_type: Option<TypeIdentifierSyntaxObject>,
+    pub expr: Box<ExprSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ProcedureDeclCst {
+pub struct ProcedureDeclarationSyntaxObject {
     pub id: NodeId,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
-    pub params: Vec<ParamCst>,
+    pub params: Vec<ParamSyntaxObject>,
 
-    pub returns: Vec<ParamCst>,
-    pub modifies: Vec<NameCst>,
-    pub requires: Vec<PredicateStmtCst>,
-    pub ensures: Vec<PredicateStmtCst>,
+    pub returns: Vec<ParamSyntaxObject>,
+    pub modifies: Vec<NameSyntaxObject>,
+    pub requires: Vec<PredicateStmtSyntaxObject>,
+    pub ensures: Vec<PredicateStmtSyntaxObject>,
 
-    pub block: Option<Box<BlockCst>>,
+    pub block: Option<Box<BlockSyntaxObject>>,
 }
 
-impl ProcedureDeclCst {
-    pub fn block(&self) -> &BlockCst {
+impl ProcedureDeclarationSyntaxObject {
+    pub fn block(&self) -> &BlockSyntaxObject {
         self.block.as_ref().unwrap()
     }
 }
@@ -383,40 +383,40 @@ impl Modifier {
 }
 
 #[derive(Clone, Debug)]
-pub struct ParamCst {
+pub struct ParamSyntaxObject {
     pub id: NodeId,
     pub idx: u32,
     pub name: Name,
     pub pos: Position,
     pub span: Span,
 
-    pub data_type: TypeIdentCst,
+    pub data_type: TypeIdentifierSyntaxObject,
 }
 
 #[derive(Clone, Debug)]
-pub enum StmtCst {
-    Induction(InductionStmtCst),
-    Simulate(SimulateStmtCst),
-    Assert(PredicateStmtCst),
-    Assume(PredicateStmtCst),
-    Call(CallStmtCst),
-    Havoc(HavocStmtCst),
-    Var(VarStmtCst),
-    While(WhileStmtCst),
-    Expr(ExprStmtCst),
+pub enum StmtSyntaxObject {
+    Induction(InductionStmtSyntaxObject),
+    Simulate(SimulateStmtSyntaxObject),
+    Assert(PredicateStmtSyntaxObject),
+    Assume(PredicateStmtSyntaxObject),
+    Call(CallStmtSyntaxObject),
+    Havoc(HavocStmtSyntaxObject),
+    Var(VarStmtSyntaxObject),
+    While(WhileStmtSyntaxObject),
+    Expr(ExprStmtSyntaxObject),
 }
 
-impl StmtCst {
+impl StmtSyntaxObject {
     pub fn create_var(
         id: NodeId,
         pos: Position,
         span: Span,
         name: Name,
         reassignable: bool,
-        data_type: Option<TypeIdentCst>,
-        expr: Option<Box<ExprCst>>,
-    ) -> StmtCst {
-        StmtCst::Var(VarStmtCst {
+        data_type: Option<TypeIdentifierSyntaxObject>,
+        expr: Option<Box<ExprSyntaxObject>>,
+    ) -> StmtSyntaxObject {
+        StmtSyntaxObject::Var(VarStmtSyntaxObject {
             id,
             pos,
             span,
@@ -432,9 +432,9 @@ impl StmtCst {
         id: NodeId,
         pos: Position,
         span: Span,
-        expr: Box<ExprCst>,
-    ) -> StmtCst {
-        StmtCst::Assume(PredicateStmtCst {
+        expr: Box<ExprSyntaxObject>,
+    ) -> StmtSyntaxObject {
+        StmtSyntaxObject::Assume(PredicateStmtSyntaxObject {
             id,
             pos,
             span,
@@ -446,9 +446,9 @@ impl StmtCst {
         id: NodeId,
         pos: Position,
         span: Span,
-        expr: Box<ExprCst>,
-    ) -> StmtCst {
-        StmtCst::Assert(PredicateStmtCst {
+        expr: Box<ExprSyntaxObject>,
+    ) -> StmtSyntaxObject {
+        StmtSyntaxObject::Assert(PredicateStmtSyntaxObject {
             id,
             pos,
             span,
@@ -461,8 +461,8 @@ impl StmtCst {
         pos: Position,
         span: Span,
         name: Name,
-    ) -> StmtCst {
-        StmtCst::Havoc(HavocStmtCst {
+    ) -> StmtSyntaxObject {
+        StmtSyntaxObject::Havoc(HavocStmtSyntaxObject {
             id,
             pos,
             span,
@@ -476,8 +476,8 @@ impl StmtCst {
         pos: Position,
         span: Span,
         steps: u64,
-    ) -> StmtCst {
-        StmtCst::Simulate(SimulateStmtCst {
+    ) -> StmtSyntaxObject {
+        StmtSyntaxObject::Simulate(SimulateStmtSyntaxObject {
             id,
             pos,
             span,
@@ -490,8 +490,8 @@ impl StmtCst {
         pos: Position,
         span: Span,
         steps: u64,
-    ) -> StmtCst {
-        StmtCst::Induction(InductionStmtCst {
+    ) -> StmtSyntaxObject {
+        StmtSyntaxObject::Induction(InductionStmtSyntaxObject {
             id,
             pos,
             span,
@@ -504,10 +504,10 @@ impl StmtCst {
         pos: Position,
         span: Span,
         func: Name,
-        rets: Vec<NameCst>,
-        args: Vec<Box<ExprCst>>,
-    ) -> StmtCst {
-        StmtCst::Call(CallStmtCst {
+        rets: Vec<NameSyntaxObject>,
+        args: Vec<Box<ExprSyntaxObject>>,
+    ) -> StmtSyntaxObject {
+        StmtSyntaxObject::Call(CallStmtSyntaxObject {
             id,
             pos,
             span,
@@ -521,10 +521,10 @@ impl StmtCst {
         id: NodeId,
         pos: Position,
         span: Span,
-        cond: Box<ExprCst>,
-        block: Box<StmtCst>,
-    ) -> StmtCst {
-        StmtCst::While(WhileStmtCst {
+        cond: Box<ExprSyntaxObject>,
+        block: Box<StmtSyntaxObject>,
+    ) -> StmtSyntaxObject {
+        StmtSyntaxObject::While(WhileStmtSyntaxObject {
             id,
             pos,
             span,
@@ -534,8 +534,8 @@ impl StmtCst {
         })
     }
 
-    pub fn create_expr_stmt(id: NodeId, pos: Position, span: Span, expr: Box<ExprCst>) -> StmtCst {
-        StmtCst::Expr(ExprStmtCst {
+    pub fn create_expr_stmt(id: NodeId, pos: Position, span: Span, expr: Box<ExprSyntaxObject>) -> StmtSyntaxObject {
+        StmtSyntaxObject::Expr(ExprStmtSyntaxObject {
             id,
             pos,
             span,
@@ -546,103 +546,103 @@ impl StmtCst {
 
     pub fn id(&self) -> NodeId {
         match *self {
-            StmtCst::Induction(ref stmt) => stmt.id,
-            StmtCst::Simulate(ref stmt) => stmt.id,
-            StmtCst::Assert(ref stmt) => stmt.id,
-            StmtCst::Assume(ref stmt) => stmt.id,
-            StmtCst::Call(ref stmt) => stmt.id,
-            StmtCst::Havoc(ref stmt) => stmt.id,
-            StmtCst::Var(ref stmt) => stmt.id,
-            StmtCst::While(ref stmt) => stmt.id,
-            StmtCst::Expr(ref stmt) => stmt.id,
+            StmtSyntaxObject::Induction(ref stmt) => stmt.id,
+            StmtSyntaxObject::Simulate(ref stmt) => stmt.id,
+            StmtSyntaxObject::Assert(ref stmt) => stmt.id,
+            StmtSyntaxObject::Assume(ref stmt) => stmt.id,
+            StmtSyntaxObject::Call(ref stmt) => stmt.id,
+            StmtSyntaxObject::Havoc(ref stmt) => stmt.id,
+            StmtSyntaxObject::Var(ref stmt) => stmt.id,
+            StmtSyntaxObject::While(ref stmt) => stmt.id,
+            StmtSyntaxObject::Expr(ref stmt) => stmt.id,
         }
     }
 
     pub fn pos(&self) -> Position {
         match *self {
-            StmtCst::Induction(ref stmt) => stmt.pos,
-            StmtCst::Simulate(ref stmt) => stmt.pos,
-            StmtCst::Assert(ref stmt) => stmt.pos,
-            StmtCst::Assume(ref stmt) => stmt.pos,
-            StmtCst::Call(ref stmt) => stmt.pos,
-            StmtCst::Havoc(ref stmt) => stmt.pos,
-            StmtCst::Var(ref stmt) => stmt.pos,
-            StmtCst::While(ref stmt) => stmt.pos,
-            StmtCst::Expr(ref stmt) => stmt.pos,
+            StmtSyntaxObject::Induction(ref stmt) => stmt.pos,
+            StmtSyntaxObject::Simulate(ref stmt) => stmt.pos,
+            StmtSyntaxObject::Assert(ref stmt) => stmt.pos,
+            StmtSyntaxObject::Assume(ref stmt) => stmt.pos,
+            StmtSyntaxObject::Call(ref stmt) => stmt.pos,
+            StmtSyntaxObject::Havoc(ref stmt) => stmt.pos,
+            StmtSyntaxObject::Var(ref stmt) => stmt.pos,
+            StmtSyntaxObject::While(ref stmt) => stmt.pos,
+            StmtSyntaxObject::Expr(ref stmt) => stmt.pos,
         }
     }
 
     pub fn span(&self) -> Span {
         match *self {
-            StmtCst::Induction(ref stmt) => stmt.span,
-            StmtCst::Simulate(ref stmt) => stmt.span,
-            StmtCst::Assert(ref stmt) => stmt.span,
-            StmtCst::Assume(ref stmt) => stmt.span,
-            StmtCst::Call(ref stmt) => stmt.span,
-            StmtCst::Havoc(ref stmt) => stmt.span,
-            StmtCst::Var(ref stmt) => stmt.span,
-            StmtCst::While(ref stmt) => stmt.span,
-            StmtCst::Expr(ref stmt) => stmt.span,
+            StmtSyntaxObject::Induction(ref stmt) => stmt.span,
+            StmtSyntaxObject::Simulate(ref stmt) => stmt.span,
+            StmtSyntaxObject::Assert(ref stmt) => stmt.span,
+            StmtSyntaxObject::Assume(ref stmt) => stmt.span,
+            StmtSyntaxObject::Call(ref stmt) => stmt.span,
+            StmtSyntaxObject::Havoc(ref stmt) => stmt.span,
+            StmtSyntaxObject::Var(ref stmt) => stmt.span,
+            StmtSyntaxObject::While(ref stmt) => stmt.span,
+            StmtSyntaxObject::Expr(ref stmt) => stmt.span,
         }
     }
 
-    pub fn to_var(&self) -> Option<&VarStmtCst> {
+    pub fn to_var(&self) -> Option<&VarStmtSyntaxObject> {
         match *self {
-            StmtCst::Var(ref val) => Some(val),
+            StmtSyntaxObject::Var(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_var(&self) -> bool {
         match *self {
-            StmtCst::Var(_) => true,
+            StmtSyntaxObject::Var(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_while(&self) -> Option<&WhileStmtCst> {
+    pub fn to_while(&self) -> Option<&WhileStmtSyntaxObject> {
         match *self {
-            StmtCst::While(ref val) => Some(val),
+            StmtSyntaxObject::While(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_while(&self) -> bool {
         match *self {
-            StmtCst::While(_) => true,
+            StmtSyntaxObject::While(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_expr(&self) -> Option<&ExprStmtCst> {
+    pub fn to_expr(&self) -> Option<&ExprStmtSyntaxObject> {
         match *self {
-            StmtCst::Expr(ref val) => Some(val),
+            StmtSyntaxObject::Expr(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_expr(&self) -> bool {
         match *self {
-            StmtCst::Expr(_) => true,
+            StmtSyntaxObject::Expr(_) => true,
             _ => false,
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct CallStmtCst {
+pub struct CallStmtSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub func: Name,
-    pub rets: Vec<NameCst>,
-    pub args: Vec<Box<ExprCst>>,
+    pub rets: Vec<NameSyntaxObject>,
+    pub args: Vec<Box<ExprSyntaxObject>>,
 }
 
 
 #[derive(Clone, Debug)]
-pub struct HavocStmtCst {
+pub struct HavocStmtSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -651,23 +651,15 @@ pub struct HavocStmtCst {
 }
 
 #[derive(Clone, Debug)]
-pub struct PredicateStmtCst {
+pub struct PredicateStmtSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
-    pub expr: Box<ExprCst>,
+    pub expr: Box<ExprSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct InductionStmtCst {
-    pub id: NodeId,
-    pub pos: Position,
-    pub span: Span,
-    pub steps: u64,
-}
-
-#[derive(Clone, Debug)]
-pub struct SimulateStmtCst {
+pub struct InductionStmtSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -675,7 +667,15 @@ pub struct SimulateStmtCst {
 }
 
 #[derive(Clone, Debug)]
-pub struct VarStmtCst {
+pub struct SimulateStmtSyntaxObject {
+    pub id: NodeId,
+    pub pos: Position,
+    pub span: Span,
+    pub steps: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct VarStmtSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -683,38 +683,38 @@ pub struct VarStmtCst {
     pub name: Name,
     pub reassignable: bool,
 
-    pub data_type: Option<TypeIdentCst>,
-    pub expr: Option<Box<ExprCst>>,
+    pub data_type: Option<TypeIdentifierSyntaxObject>,
+    pub expr: Option<Box<ExprSyntaxObject>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ForStmtCst {
+pub struct ForStmtSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub name: Name,
-    pub expr: Box<ExprCst>,
-    pub block: Box<StmtCst>,
+    pub expr: Box<ExprSyntaxObject>,
+    pub block: Box<StmtSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct WhileStmtCst {
+pub struct WhileStmtSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub cond: Box<ExprCst>,
-    pub block: Box<StmtCst>,
+    pub cond: Box<ExprSyntaxObject>,
+    pub block: Box<StmtSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprStmtCst {
+pub struct ExprStmtSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub expr: Box<ExprCst>,
+    pub expr: Box<ExprSyntaxObject>,
 }
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
@@ -825,30 +825,30 @@ impl BinOp {
 }
 
 #[derive(Clone, Debug)]
-pub enum ExprCst {
-    Un(UnExprCst),
-    Bin(BinExprCst),
-    LitInt(LitIntExprCst),
-    LitFloat(LitFloatExprCst),
-    LitBitVec(LitBitVecExprCst),
-    LitBool(LitBoolExprCst),
-    Ident(NameCst),
-    Call(CallExprCst),
-    Extract(ExtractExprCst),
-    Dot(DotExprCst),
-    Block(BlockCst),
-    If(IfExprCst),
-    Tuple(TupleExprCst),
+pub enum ExprSyntaxObject {
+    Un(UnExprSyntaxObject),
+    Bin(BinExprSyntaxObject),
+    LitInt(LitIntExprSyntaxObject),
+    LitFloat(LitFloatExprSyntaxObject),
+    LitBitVec(LitBitVecExprSyntaxObject),
+    LitBool(LitBoolExprSyntaxObject),
+    Identifier(NameSyntaxObject),
+    Call(CallExprSyntaxObject),
+    Extract(ExtractExprSyntaxObject),
+    Dot(DotExprSyntaxObject),
+    Block(BlockSyntaxObject),
+    If(IfExprSyntaxObject),
+    Tuple(TupleExprSyntaxObject),
 }
 
-impl ExprCst {
+impl ExprSyntaxObject {
     pub fn create_block(
         id: NodeId,
         pos: Position,
         span: Span,
-        stmts: Vec<Box<StmtCst>>,
-    ) -> ExprCst {
-        ExprCst::Block(BlockCst {
+        stmts: Vec<Box<StmtSyntaxObject>>,
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::Block(BlockSyntaxObject {
             id,
             pos,
             span,
@@ -861,11 +861,11 @@ impl ExprCst {
         id: NodeId,
         pos: Position,
         span: Span,
-        cond: Box<ExprCst>,
-        then_block: Box<ExprCst>,
-        else_block: Option<Box<ExprCst>>,
-    ) -> ExprCst {
-        ExprCst::If(IfExprCst {
+        cond: Box<ExprSyntaxObject>,
+        then_block: Box<ExprSyntaxObject>,
+        else_block: Option<Box<ExprSyntaxObject>>,
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::If(IfExprSyntaxObject {
             id,
             pos,
             span,
@@ -876,8 +876,8 @@ impl ExprCst {
         })
     }
 
-    pub fn create_un(id: NodeId, pos: Position, span: Span, op: UnOp, opnd: Box<ExprCst>) -> ExprCst {
-        ExprCst::Un(UnExprCst {
+    pub fn create_un(id: NodeId, pos: Position, span: Span, op: UnOp, opnd: Box<ExprSyntaxObject>) -> ExprSyntaxObject {
+        ExprSyntaxObject::Un(UnExprSyntaxObject {
             id,
             pos,
             span,
@@ -892,10 +892,10 @@ impl ExprCst {
         pos: Position,
         span: Span,
         op: BinOp,
-        lhs: Box<ExprCst>,
-        rhs: Box<ExprCst>,
-    ) -> ExprCst {
-        ExprCst::Bin(BinExprCst {
+        lhs: Box<ExprSyntaxObject>,
+        rhs: Box<ExprSyntaxObject>,
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::Bin(BinExprSyntaxObject {
             id,
             pos,
             span,
@@ -913,8 +913,8 @@ impl ExprCst {
         value: u64,
         base: IntBase,
         suffix: IntSuffix,
-    ) -> ExprCst {
-        ExprCst::LitInt(LitIntExprCst {
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::LitInt(LitIntExprSyntaxObject {
             id,
             pos,
             span,
@@ -931,8 +931,8 @@ impl ExprCst {
         span: Span,
         value: f64,
         suffix: FloatSuffix,
-    ) -> ExprCst {
-        ExprCst::LitFloat(LitFloatExprCst {
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::LitFloat(LitFloatExprSyntaxObject {
             id,
             pos,
             span,
@@ -946,8 +946,8 @@ impl ExprCst {
         pos: Position,
         span: Span,
         value: BitVec,
-    ) -> ExprCst {
-        ExprCst::LitBitVec(LitBitVecExprCst {
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::LitBitVec(LitBitVecExprSyntaxObject {
             id,
             pos,
             span,
@@ -955,8 +955,8 @@ impl ExprCst {
         })
     }
 
-    pub fn create_lit_bool(id: NodeId, pos: Position, span: Span, value: bool) -> ExprCst {
-        ExprCst::LitBool(LitBoolExprCst {
+    pub fn create_lit_bool(id: NodeId, pos: Position, span: Span, value: bool) -> ExprSyntaxObject {
+        ExprSyntaxObject::LitBool(LitBoolExprSyntaxObject {
             id,
             pos,
             span,
@@ -970,8 +970,8 @@ impl ExprCst {
         pos: Position,
         span: Span,
         name: Name,
-    ) -> ExprCst {
-        ExprCst::Ident(NameCst {
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::Identifier(NameSyntaxObject {
             id,
             pos,
             span,
@@ -984,10 +984,10 @@ impl ExprCst {
         id: NodeId,
         pos: Position,
         span: Span,
-        callee: Box<ExprCst>,
-        args: Vec<Box<ExprCst>>,
-    ) -> ExprCst {
-        ExprCst::Call(CallExprCst {
+        callee: Box<ExprSyntaxObject>,
+        args: Vec<Box<ExprSyntaxObject>>,
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::Call(CallExprSyntaxObject {
             id,
             pos,
             span,
@@ -1001,10 +1001,10 @@ impl ExprCst {
         id: NodeId,
         pos: Position,
         span: Span,
-        array: Box<ExprCst>,
-        args: Vec<Box<ExprCst>>,
-    ) -> ExprCst {
-        ExprCst::Extract(ExtractExprCst {
+        array: Box<ExprSyntaxObject>,
+        args: Vec<Box<ExprSyntaxObject>>,
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::Extract(ExtractExprSyntaxObject {
             id,
             pos,
             span,
@@ -1018,10 +1018,10 @@ impl ExprCst {
         id: NodeId,
         pos: Position,
         span: Span,
-        lhs: Box<ExprCst>,
-        rhs: Box<ExprCst>,
-    ) -> ExprCst {
-        ExprCst::Dot(DotExprCst {
+        lhs: Box<ExprSyntaxObject>,
+        rhs: Box<ExprSyntaxObject>,
+    ) -> ExprSyntaxObject {
+        ExprSyntaxObject::Dot(DotExprSyntaxObject {
             id,
             pos,
             span,
@@ -1031,8 +1031,8 @@ impl ExprCst {
         })
     }
 
-    pub fn create_tuple(id: NodeId, pos: Position, span: Span, values: Vec<Box<ExprCst>>) -> ExprCst {
-        ExprCst::Tuple(TupleExprCst {
+    pub fn create_tuple(id: NodeId, pos: Position, span: Span, values: Vec<Box<ExprSyntaxObject>>) -> ExprSyntaxObject {
+        ExprSyntaxObject::Tuple(TupleExprSyntaxObject {
             id,
             pos,
             span,
@@ -1040,287 +1040,287 @@ impl ExprCst {
         })
     }
 
-    pub fn to_un(&self) -> Option<&UnExprCst> {
+    pub fn to_un(&self) -> Option<&UnExprSyntaxObject> {
         match *self {
-            ExprCst::Un(ref val) => Some(val),
+            ExprSyntaxObject::Un(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_un(&self) -> bool {
         match *self {
-            ExprCst::Un(_) => true,
+            ExprSyntaxObject::Un(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_bin(&self) -> Option<&BinExprCst> {
+    pub fn to_bin(&self) -> Option<&BinExprSyntaxObject> {
         match *self {
-            ExprCst::Bin(ref val) => Some(val),
+            ExprSyntaxObject::Bin(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_bin(&self) -> bool {
         match *self {
-            ExprCst::Bin(_) => true,
+            ExprSyntaxObject::Bin(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_ident(&self) -> Option<&NameCst> {
+    pub fn to_ident(&self) -> Option<&NameSyntaxObject> {
         match *self {
-            ExprCst::Ident(ref val) => Some(val),
+            ExprSyntaxObject::Identifier(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_ident(&self) -> bool {
         match *self {
-            ExprCst::Ident(_) => true,
+            ExprSyntaxObject::Identifier(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_call(&self) -> Option<&CallExprCst> {
+    pub fn to_call(&self) -> Option<&CallExprSyntaxObject> {
         match *self {
-            ExprCst::Call(ref val) => Some(val),
+            ExprSyntaxObject::Call(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_call(&self) -> bool {
         match *self {
-            ExprCst::Call(_) => true,
+            ExprSyntaxObject::Call(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_lit_int(&self) -> Option<&LitIntExprCst> {
+    pub fn to_lit_int(&self) -> Option<&LitIntExprSyntaxObject> {
         match *self {
-            ExprCst::LitInt(ref val) => Some(val),
+            ExprSyntaxObject::LitInt(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_lit_int(&self) -> bool {
         match *self {
-            ExprCst::LitInt(_) => true,
+            ExprSyntaxObject::LitInt(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_lit_float(&self) -> Option<&LitFloatExprCst> {
+    pub fn to_lit_float(&self) -> Option<&LitFloatExprSyntaxObject> {
         match *self {
-            ExprCst::LitFloat(ref val) => Some(val),
+            ExprSyntaxObject::LitFloat(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_lit_float(&self) -> bool {
         match *self {
-            ExprCst::LitFloat(_) => true,
+            ExprSyntaxObject::LitFloat(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_lit_bitvec(&self) -> Option<&LitBitVecExprCst> {
+    pub fn to_lit_bitvec(&self) -> Option<&LitBitVecExprSyntaxObject> {
         match *self {
-            ExprCst::LitBitVec(ref val) => Some(val),
+            ExprSyntaxObject::LitBitVec(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_lit_bitvec(&self) -> bool {
         match *self {
-            ExprCst::LitBitVec(_) => true,
+            ExprSyntaxObject::LitBitVec(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_lit_bool(&self) -> Option<&LitBoolExprCst> {
+    pub fn to_lit_bool(&self) -> Option<&LitBoolExprSyntaxObject> {
         match *self {
-            ExprCst::LitBool(ref val) => Some(val),
+            ExprSyntaxObject::LitBool(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_lit_bool(&self) -> bool {
         match *self {
-            ExprCst::LitBool(_) => true,
+            ExprSyntaxObject::LitBool(_) => true,
             _ => false,
         }
     }
 
     pub fn is_lit_true(&self) -> bool {
         match *self {
-            ExprCst::LitBool(ref lit) if lit.value => true,
+            ExprSyntaxObject::LitBool(ref lit) if lit.value => true,
             _ => false,
         }
     }
 
-    pub fn to_dot(&self) -> Option<&DotExprCst> {
+    pub fn to_dot(&self) -> Option<&DotExprSyntaxObject> {
         match *self {
-            ExprCst::Dot(ref val) => Some(val),
+            ExprSyntaxObject::Dot(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_dot(&self) -> bool {
         match *self {
-            ExprCst::Dot(_) => true,
+            ExprSyntaxObject::Dot(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_tuple(&self) -> Option<&TupleExprCst> {
+    pub fn to_tuple(&self) -> Option<&TupleExprSyntaxObject> {
         match *self {
-            ExprCst::Tuple(ref val) => Some(val),
+            ExprSyntaxObject::Tuple(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_tuple(&self) -> bool {
         match *self {
-            ExprCst::Tuple(_) => true,
+            ExprSyntaxObject::Tuple(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_block(&self) -> Option<&BlockCst> {
+    pub fn to_block(&self) -> Option<&BlockSyntaxObject> {
         match *self {
-            ExprCst::Block(ref val) => Some(val),
+            ExprSyntaxObject::Block(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_block(&self) -> bool {
         match self {
-            &ExprCst::Block(_) => true,
+            &ExprSyntaxObject::Block(_) => true,
             _ => false,
         }
     }
 
-    pub fn to_if(&self) -> Option<&IfExprCst> {
+    pub fn to_if(&self) -> Option<&IfExprSyntaxObject> {
         match *self {
-            ExprCst::If(ref val) => Some(val),
+            ExprSyntaxObject::If(ref val) => Some(val),
             _ => None,
         }
     }
 
     pub fn is_if(&self) -> bool {
         match *self {
-            ExprCst::If(_) => true,
+            ExprSyntaxObject::If(_) => true,
             _ => false,
         }
     }
 
     pub fn needs_semicolon(&self) -> bool {
         match self {
-            &ExprCst::Block(_) => false,
-            &ExprCst::If(_) => false,
+            &ExprSyntaxObject::Block(_) => false,
+            &ExprSyntaxObject::If(_) => false,
             _ => true,
         }
     }
 
     pub fn pos(&self) -> Position {
         match *self {
-            ExprCst::Un(ref val) => val.pos,
-            ExprCst::Bin(ref val) => val.pos,
-            ExprCst::LitInt(ref val) => val.pos,
-            ExprCst::LitFloat(ref val) => val.pos,
-            ExprCst::LitBitVec(ref val) => val.pos,
-            ExprCst::LitBool(ref val) => val.pos,
-            ExprCst::Ident(ref val) => val.pos,
-            ExprCst::Call(ref val) => val.pos,
-            ExprCst::Extract(ref val) => val.pos,
-            ExprCst::Dot(ref val) => val.pos,
-            ExprCst::Block(ref val) => val.pos,
-            ExprCst::If(ref val) => val.pos,
-            ExprCst::Tuple(ref val) => val.pos,
+            ExprSyntaxObject::Un(ref val) => val.pos,
+            ExprSyntaxObject::Bin(ref val) => val.pos,
+            ExprSyntaxObject::LitInt(ref val) => val.pos,
+            ExprSyntaxObject::LitFloat(ref val) => val.pos,
+            ExprSyntaxObject::LitBitVec(ref val) => val.pos,
+            ExprSyntaxObject::LitBool(ref val) => val.pos,
+            ExprSyntaxObject::Identifier(ref val) => val.pos,
+            ExprSyntaxObject::Call(ref val) => val.pos,
+            ExprSyntaxObject::Extract(ref val) => val.pos,
+            ExprSyntaxObject::Dot(ref val) => val.pos,
+            ExprSyntaxObject::Block(ref val) => val.pos,
+            ExprSyntaxObject::If(ref val) => val.pos,
+            ExprSyntaxObject::Tuple(ref val) => val.pos,
         }
     }
 
     pub fn span(&self) -> Span {
         match *self {
-            ExprCst::Un(ref val) => val.span,
-            ExprCst::Bin(ref val) => val.span,
-            ExprCst::LitInt(ref val) => val.span,
-            ExprCst::LitFloat(ref val) => val.span,
-            ExprCst::LitBitVec(ref val) => val.span,
-            ExprCst::LitBool(ref val) => val.span,
-            ExprCst::Ident(ref val) => val.span,
-            ExprCst::Call(ref val) => val.span,
-            ExprCst::Extract(ref val) => val.span,
-            ExprCst::Dot(ref val) => val.span,
-            ExprCst::Block(ref val) => val.span,
-            ExprCst::If(ref val) => val.span,
-            ExprCst::Tuple(ref val) => val.span,
+            ExprSyntaxObject::Un(ref val) => val.span,
+            ExprSyntaxObject::Bin(ref val) => val.span,
+            ExprSyntaxObject::LitInt(ref val) => val.span,
+            ExprSyntaxObject::LitFloat(ref val) => val.span,
+            ExprSyntaxObject::LitBitVec(ref val) => val.span,
+            ExprSyntaxObject::LitBool(ref val) => val.span,
+            ExprSyntaxObject::Identifier(ref val) => val.span,
+            ExprSyntaxObject::Call(ref val) => val.span,
+            ExprSyntaxObject::Extract(ref val) => val.span,
+            ExprSyntaxObject::Dot(ref val) => val.span,
+            ExprSyntaxObject::Block(ref val) => val.span,
+            ExprSyntaxObject::If(ref val) => val.span,
+            ExprSyntaxObject::Tuple(ref val) => val.span,
         }
     }
 
     pub fn id(&self) -> NodeId {
         match *self {
-            ExprCst::Un(ref val) => val.id,
-            ExprCst::Bin(ref val) => val.id,
-            ExprCst::LitInt(ref val) => val.id,
-            ExprCst::LitFloat(ref val) => val.id,
-            ExprCst::LitBitVec(ref val) => val.id,
-            ExprCst::LitBool(ref val) => val.id,
-            ExprCst::Ident(ref val) => val.id,
-            ExprCst::Call(ref val) => val.id,
-            ExprCst::Extract(ref val) => val.id,
-            ExprCst::Dot(ref val) => val.id,
-            ExprCst::Block(ref val) => val.id,
-            ExprCst::If(ref val) => val.id,
-            ExprCst::Tuple(ref val) => val.id,
+            ExprSyntaxObject::Un(ref val) => val.id,
+            ExprSyntaxObject::Bin(ref val) => val.id,
+            ExprSyntaxObject::LitInt(ref val) => val.id,
+            ExprSyntaxObject::LitFloat(ref val) => val.id,
+            ExprSyntaxObject::LitBitVec(ref val) => val.id,
+            ExprSyntaxObject::LitBool(ref val) => val.id,
+            ExprSyntaxObject::Identifier(ref val) => val.id,
+            ExprSyntaxObject::Call(ref val) => val.id,
+            ExprSyntaxObject::Extract(ref val) => val.id,
+            ExprSyntaxObject::Dot(ref val) => val.id,
+            ExprSyntaxObject::Block(ref val) => val.id,
+            ExprSyntaxObject::If(ref val) => val.id,
+            ExprSyntaxObject::Tuple(ref val) => val.id,
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct IfExprCst {
+pub struct IfExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub cond: Box<ExprCst>,
-    pub then_block: Box<ExprCst>,
-    pub else_block: Option<Box<ExprCst>>,
+    pub cond: Box<ExprSyntaxObject>,
+    pub then_block: Box<ExprSyntaxObject>,
+    pub else_block: Option<Box<ExprSyntaxObject>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct TupleExprCst {
+pub struct TupleExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub values: Vec<Box<ExprCst>>,
+    pub values: Vec<Box<ExprSyntaxObject>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct UnExprCst {
+pub struct UnExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub op: UnOp,
-    pub opnd: Box<ExprCst>,
+    pub opnd: Box<ExprSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct BinExprCst {
+pub struct BinExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
     pub op: BinOp,
-    pub lhs: Box<ExprCst>,
-    pub rhs: Box<ExprCst>,
+    pub lhs: Box<ExprSyntaxObject>,
+    pub rhs: Box<ExprSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct LitIntExprCst {
+pub struct LitIntExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1331,7 +1331,7 @@ pub struct LitIntExprCst {
 }
 
 #[derive(Clone, Debug)]
-pub struct LitFloatExprCst {
+pub struct LitFloatExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1341,7 +1341,7 @@ pub struct LitFloatExprCst {
 }
 
 #[derive(Clone, Debug)]
-pub struct LitBitVecExprCst {
+pub struct LitBitVecExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1350,7 +1350,7 @@ pub struct LitBitVecExprCst {
 }
 
 #[derive(Clone, Debug)]
-pub struct LitBoolExprCst {
+pub struct LitBoolExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1359,25 +1359,25 @@ pub struct LitBoolExprCst {
 }
 
 #[derive(Clone, Debug)]
-pub struct BlockCst {
+pub struct BlockSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub stmts: Vec<Box<StmtCst>>,
+    pub stmts: Vec<Box<StmtSyntaxObject>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct TransitionSystemBlockCst {
+pub struct TransitionSystemBlockSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub block: Box<BlockCst>,
+    pub block: Box<BlockSyntaxObject>,
 }
 
 #[derive(Clone, Debug)]
-pub struct NameCst {
+pub struct NameSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
@@ -1386,27 +1386,27 @@ pub struct NameCst {
 }
 
 #[derive(Clone, Debug)]
-pub struct ExtractExprCst {
+pub struct ExtractExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub array: Box<ExprCst>,
-    pub args: Vec<Box<ExprCst>>,
+    pub array: Box<ExprSyntaxObject>,
+    pub args: Vec<Box<ExprSyntaxObject>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct CallExprCst {
+pub struct CallExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub callee: Box<ExprCst>,
-    pub args: Vec<Box<ExprCst>>,
+    pub callee: Box<ExprSyntaxObject>,
+    pub args: Vec<Box<ExprSyntaxObject>>,
 }
 
-impl CallExprCst {
-    pub fn object(&self) -> Option<&ExprCst> {
+impl CallExprSyntaxObject {
+    pub fn object(&self) -> Option<&ExprSyntaxObject> {
         if let Some(dot) = self.callee.to_dot() {
             Some(&dot.lhs)
         } else {
@@ -1416,11 +1416,11 @@ impl CallExprCst {
 }
 
 #[derive(Clone, Debug)]
-pub struct DotExprCst {
+pub struct DotExprSyntaxObject {
     pub id: NodeId,
     pub pos: Position,
     pub span: Span,
 
-    pub lhs: Box<ExprCst>,
-    pub rhs: Box<ExprCst>,
+    pub lhs: Box<ExprSyntaxObject>,
+    pub rhs: Box<ExprSyntaxObject>,
 }

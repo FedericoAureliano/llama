@@ -5,20 +5,22 @@ pub enum SemError {
     Unimplemented,
 
     UnknownType(String),
-    UnknownIdent(String),
+    UnknownIdentifier(String),
     UnknownFunction(String),
     UnknownField(String, String),
     UnknownEnumValue(String),
-    IdentExists(String),
+    IdentifierExists(String),
 
     DuplicateFunction(String),
     DuplicateParam(String),
     DuplicateField(String),
     DuplicateConst(String),
 
-    DuplicateEnumVariant(String, String),
+    DuplicateEnumVariant(String, String, String),
     DuplicateEnum(String),
     NoEnumValue(String),
+
+    DuplicateAlias(String),
     
     InvalidLhsAssignment,
     VarNeedsTypeInfo(String),
@@ -42,8 +44,8 @@ pub enum SemError {
     LetMissingInitialization,
     LetReassigned,
     PrcdReassigned,
-    PrcdUsedAsIdent,
-    EnumUsedAsIdent,
+    PrcdUsedAsIdentifier,
+    EnumUsedAsIdentifier,
     UnderivableType(String),
     CycleInHierarchy,
     TypesIncompatible(String, String),
@@ -55,9 +57,9 @@ pub enum SemError {
     ExpectedToken(String, String),
     ExpectedTopLevelElement(String),
     ExpectedType(String),
-    ExpectedIdent(String),
+    ExpectedIdentifier(String),
     ExpectedStringable(String),
-    ExpectedSomeIdent,
+    ExpectedSomeIdentifier,
     MisplacedElse,
     IoError,
     MisplacedAnnotation(String),
@@ -84,7 +86,7 @@ impl SemError {
         match *self {
             SemError::Unimplemented => format!("feature not implemented yet."),
             SemError::UnknownType(ref name) => format!("type `{}` does not exist.", name),
-            SemError::UnknownIdent(ref name) => format!("unknown ident `{}`.", name),
+            SemError::UnknownIdentifier(ref name) => format!("unknown ident `{}`.", name),
             SemError::UnknownFunction(ref name) => format!("unknown function `{}`", name),
             SemError::UnknownEnumValue(ref name) => {
                 format!("no value with name `{}` in enumeration.", name)
@@ -92,7 +94,7 @@ impl SemError {
             SemError::UnknownField(ref field, ref ty) => {
                 format!("unknown field `{}` for type `{}`", field, ty)
             }
-            SemError::IdentExists(ref name) => {
+            SemError::IdentifierExists(ref name) => {
                 format!("can not redefine ident `{}`.", name)
             }
             SemError::DuplicateFunction(ref name) => format!("duplicate function `{}`.", name),
@@ -101,9 +103,12 @@ impl SemError {
                 format!("field with name `{}` already exists.", name)
             }
             SemError::DuplicateConst(ref name) => format!("duplicate const `{}`.", name),
-            SemError::DuplicateEnumVariant(ref e, ref v) => format!("enum `{}` duplicates variant `{}`.", e, v),
+            SemError::DuplicateEnumVariant(ref v, ref e1, ref e2) => format!("variant `{}` in `{}` already exists in `{}`.", v, e1, e2),
             SemError::DuplicateEnum(ref name) => format!("duplicate enum `{}`.", name),
             SemError::NoEnumValue(ref name) => format!("enum `{}` needs at least one variant.", name),
+
+            SemError::DuplicateAlias(ref name) => format!("duplicate alias `{}`.", name),
+
             SemError::VarNeedsTypeInfo(ref name) => format!(
                 "variable `{}` needs either type declaration or expression.",
                 name
@@ -152,8 +157,8 @@ impl SemError {
             SemError::LetMissingInitialization => "`let` binding is missing initialization.".into(),
             SemError::LetReassigned => "`let` binding cannot be reassigned.".into(),
             SemError::PrcdReassigned => "function cannot be reassigned.".into(),
-            SemError::PrcdUsedAsIdent => "function cannot be used as ident.".into(),
-            SemError::EnumUsedAsIdent => "enum cannot be used as ident.".into(),
+            SemError::PrcdUsedAsIdentifier => "function cannot be used as ident.".into(),
+            SemError::EnumUsedAsIdentifier => "enum cannot be used as ident.".into(),
             SemError::InvalidLhsAssignment => "invalid left-hand-side of assignment.".into(),
             SemError::UnderivableType(ref name) => {
                 format!("type `{}` cannot be used as super class.", name)
@@ -173,10 +178,10 @@ impl SemError {
             SemError::NumberOverflow(ref ty) => format!("number does not fit into type {}.", ty),
             SemError::ExpectedFactor(ref got) => format!("factor expected but got {}.", got),
             SemError::ExpectedType(ref got) => format!("type expected but got {}.", got),
-            SemError::ExpectedIdent(ref tok) => {
+            SemError::ExpectedIdentifier(ref tok) => {
                 format!("ident expected but got {}.", tok)
             }
-            SemError::ExpectedSomeIdent => "ident expected".into(),
+            SemError::ExpectedSomeIdentifier => "ident expected".into(),
             SemError::ExpectedTopLevelElement(ref token) => {
                 format!("expected function or class but got {}.", token)
             }

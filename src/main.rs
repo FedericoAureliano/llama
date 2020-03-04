@@ -1,15 +1,12 @@
 pub mod errors;
 pub mod parser;
-pub mod vm;
-pub mod cstpass;
-pub mod types;
-pub mod symbols;
-pub mod utils;
+pub mod ast;
+pub mod walk;
 
 #[cfg(not(test))]
 use std::process::exit;
 
-use crate::vm::VM;
+use crate::ast::VM;
 use crate::parser::cst::{self, Cst};
 use crate::parser::lexer::reader::Reader;
 use crate::parser::parser::Parser;
@@ -75,11 +72,11 @@ pub fn start() -> i32 {
         cst::dump::dump(&cst, &vm.interner);
     }
 
-    cstpass::pass(&mut vm, &cst);
+    walk::walk(&mut vm, &cst);
 
-    if vm.diagnostic.lock().has_errors() {
-        vm.diagnostic.lock().dump();
-        let num_errors = vm.diagnostic.lock().errors().len();
+    if vm.diagnostic.has_errors() {
+        vm.diagnostic.dump();
+        let num_errors = vm.diagnostic.errors().len();
 
         if num_errors == 1 {
             eprintln!("{} error found.", num_errors);

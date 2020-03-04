@@ -1,6 +1,6 @@
 module main {
   type id_t = enum { privileged, unprivileged, invalid, privileged};
-  type syscall_t = enum { };
+  type syscall_t = enum {privileged};
   
   input invocation : syscall_t;
   input operand_ruid : id_t;

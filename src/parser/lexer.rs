@@ -124,7 +124,7 @@ impl Lexer {
         let ttype = if let Some(tok_type) = lookup {
             tok_type
         } else {
-            TokenKind::Ident(value)
+            TokenKind::Identifier(value)
         };
 
         let span = self.span_from(idx);
@@ -640,9 +640,9 @@ mod tests {
     #[test]
     fn test_read_ident() {
         let mut reader = Lexer::from_str("abc ident test");
-        assert_tok(&mut reader, TokenKind::Ident("abc".into()), 1, 1);
-        assert_tok(&mut reader, TokenKind::Ident("ident".into()), 1, 5);
-        assert_tok(&mut reader, TokenKind::Ident("test".into()), 1, 11);
+        assert_tok(&mut reader, TokenKind::Identifier("abc".into()), 1, 1);
+        assert_tok(&mut reader, TokenKind::Identifier("ident".into()), 1, 5);
+        assert_tok(&mut reader, TokenKind::Identifier("test".into()), 1, 11);
         assert_end(&mut reader, 1, 15);
     }
 

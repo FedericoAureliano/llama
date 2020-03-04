@@ -12,7 +12,7 @@ macro_rules! dump {
 }
 
 pub fn dump(cst: &Cst, interner: &Interner) {
-    let mut dumper = CstDumper {
+    let mut dumper = SyntaxObjectDumper {
         interner,
         indent: 0,
     };
@@ -20,8 +20,8 @@ pub fn dump(cst: &Cst, interner: &Interner) {
     dumper.dump_cst(cst);
 }
 
-pub fn dump_procedure(prcd: &ProcedureDeclCst, interner: &Interner) {
-    let mut dumper = CstDumper {
+pub fn dump_procedure(prcd: &ProcedureDeclarationSyntaxObject, interner: &Interner) {
+    let mut dumper = SyntaxObjectDumper {
         interner,
         indent: 0,
     };
@@ -29,8 +29,8 @@ pub fn dump_procedure(prcd: &ProcedureDeclCst, interner: &Interner) {
     dumper.dump_procedure(prcd);
 }
 
-pub fn dump_expr<'a>(expr: &'a ExprCst, interner: &'a Interner) {
-    let mut dumper = CstDumper {
+pub fn dump_expr<'a>(expr: &'a ExprSyntaxObject, interner: &'a Interner) {
+    let mut dumper = SyntaxObjectDumper {
         interner,
         indent: 0,
     };
@@ -38,8 +38,8 @@ pub fn dump_expr<'a>(expr: &'a ExprCst, interner: &'a Interner) {
     dumper.dump_expr(expr);
 }
 
-pub fn dump_stmt<'a>(stmt: &'a StmtCst, interner: &'a Interner) {
-    let mut dumper = CstDumper {
+pub fn dump_stmt<'a>(stmt: &'a StmtSyntaxObject, interner: &'a Interner) {
+    let mut dumper = SyntaxObjectDumper {
         interner,
         indent: 0,
     };
@@ -47,19 +47,19 @@ pub fn dump_stmt<'a>(stmt: &'a StmtCst, interner: &'a Interner) {
     dumper.dump_stmt(stmt);
 }
 
-struct CstDumper<'a> {
+struct SyntaxObjectDumper<'a> {
     interner: &'a Interner,
     indent: u32,
 }
 
-impl<'a> CstDumper<'a> {
+impl<'a> SyntaxObjectDumper<'a> {
     fn dump_cst(&mut self, cst: &Cst) {
         for m in &cst.modules {
             self.dump_module(m)
         }
     }
 
-    fn dump_module(&mut self, modu: &ModuleCst) {
+    fn dump_module(&mut self, modu: &ModuleSyntaxObject) {
         dump!(
             self,
             "module: {} @ {} {}",
@@ -173,7 +173,7 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_field(&mut self, field: &FieldDeclCst) {
+    fn dump_field(&mut self, field: &FieldDeclarationSyntaxObject) {
         dump!(
             self,
             "`{}` {} @ {} {}",
@@ -189,7 +189,7 @@ impl<'a> CstDumper<'a> {
         }
     }
 
-    fn dump_property(&mut self, inv: &PropertyDeclCst) {
+    fn dump_property(&mut self, inv: &PropertyDeclarationSyntaxObject) {
         dump!(
             self,
             "{} @ {} {}",
@@ -203,7 +203,7 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_definition(&mut self, fct: &MacroDeclCst) {
+    fn dump_definition(&mut self, fct: &MacroDeclarationSyntaxObject) {
         dump!(self, "{} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
@@ -230,7 +230,7 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_function(&mut self, fct: &FunctionDeclCst) {
+    fn dump_function(&mut self, fct: &FunctionDeclarationSyntaxObject) {
         dump!(self, "{} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
@@ -253,7 +253,7 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_procedure(&mut self, fct: &ProcedureDeclCst) {
+    fn dump_procedure(&mut self, fct: &ProcedureDeclarationSyntaxObject) {
         dump!(self, "{} @ {} {}", self.str(fct.name), fct.pos, fct.id);
 
         self.indent(|d| {
@@ -298,7 +298,7 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_param(&mut self, param: &ParamCst) {
+    fn dump_param(&mut self, param: &ParamSyntaxObject) {
         dump!(
             self,
             "`{}` {} @ {} {}",
@@ -309,7 +309,7 @@ impl<'a> CstDumper<'a> {
         );
     }
 
-    fn dump_type_decl(&mut self, ty: &TypeDeclCst) {
+    fn dump_type_decl(&mut self, ty: &TypeDeclarationSyntaxObject) {
         dump!(
             self,
             "{} @ {} {}",
@@ -319,7 +319,7 @@ impl<'a> CstDumper<'a> {
         );
     }
 
-    fn dump_type_ident(&mut self, ty: &TypeIdentCst) {
+    fn dump_type_ident(&mut self, ty: &TypeIdentifierSyntaxObject) {
         dump!(
             self,
             "{} @ {} {}",
@@ -329,21 +329,21 @@ impl<'a> CstDumper<'a> {
         );
     }
 
-    fn dump_stmt(&mut self, stmt: &StmtCst) {
+    fn dump_stmt(&mut self, stmt: &StmtSyntaxObject) {
         match *stmt {
-            StmtCst::Induction(ref sim) => self.dump_stmt_induction(sim),
-            StmtCst::Simulate(ref sim) => self.dump_stmt_simulate(sim),
-            StmtCst::Assert(ref ass) => self.dump_stmt_assert(ass),
-            StmtCst::Assume(ref ass) => self.dump_stmt_assume(ass),
-            StmtCst::Call(ref cal) => self.dump_stmt_call(cal),
-            StmtCst::Havoc(ref hav) => self.dump_stmt_havoc(hav),
-            StmtCst::Expr(ref expr) => self.dump_stmt_expr(expr),
-            StmtCst::Var(ref stmt) => self.dump_stmt_var(stmt),
-            StmtCst::While(ref stmt) => self.dump_stmt_while(stmt),
+            StmtSyntaxObject::Induction(ref sim) => self.dump_stmt_induction(sim),
+            StmtSyntaxObject::Simulate(ref sim) => self.dump_stmt_simulate(sim),
+            StmtSyntaxObject::Assert(ref ass) => self.dump_stmt_assert(ass),
+            StmtSyntaxObject::Assume(ref ass) => self.dump_stmt_assume(ass),
+            StmtSyntaxObject::Call(ref cal) => self.dump_stmt_call(cal),
+            StmtSyntaxObject::Havoc(ref hav) => self.dump_stmt_havoc(hav),
+            StmtSyntaxObject::Expr(ref expr) => self.dump_stmt_expr(expr),
+            StmtSyntaxObject::Var(ref stmt) => self.dump_stmt_var(stmt),
+            StmtSyntaxObject::While(ref stmt) => self.dump_stmt_while(stmt),
         }
     }
 
-    fn dump_stmt_call(&mut self, stmt: &CallStmtCst) {
+    fn dump_stmt_call(&mut self, stmt: &CallStmtSyntaxObject) {
         dump!(
             self,
             "call {} @ {} {}",
@@ -367,7 +367,7 @@ impl<'a> CstDumper<'a> {
         };
     }
 
-    fn dump_stmt_havoc(&mut self, stmt: &HavocStmtCst) {
+    fn dump_stmt_havoc(&mut self, stmt: &HavocStmtSyntaxObject) {
         dump!(
             self,
             "havoc {} @ {} {}",
@@ -377,7 +377,7 @@ impl<'a> CstDumper<'a> {
         );
     }
 
-    fn dump_stmt_var(&mut self, stmt: &VarStmtCst) {
+    fn dump_stmt_var(&mut self, stmt: &VarStmtSyntaxObject) {
         dump!(
             self,
             "let {} @ {} {}",
@@ -407,7 +407,7 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_stmt_assume(&mut self, stmt: &PredicateStmtCst) {
+    fn dump_stmt_assume(&mut self, stmt: &PredicateStmtSyntaxObject) {
         dump!(
             self,
             "assume: @ {} {}",
@@ -421,7 +421,7 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_stmt_assert(&mut self, stmt: &PredicateStmtCst) {
+    fn dump_stmt_assert(&mut self, stmt: &PredicateStmtSyntaxObject) {
         dump!(
             self,
             "assert: @ {} {}",
@@ -435,7 +435,7 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_stmt_simulate(&mut self, stmt: &SimulateStmtCst) {
+    fn dump_stmt_simulate(&mut self, stmt: &SimulateStmtSyntaxObject) {
         dump!(
             self,
             "simulate {} {} @ {} {}",
@@ -446,7 +446,7 @@ impl<'a> CstDumper<'a> {
         );
     }
 
-    fn dump_stmt_induction(&mut self, stmt: &InductionStmtCst) {
+    fn dump_stmt_induction(&mut self, stmt: &InductionStmtSyntaxObject) {
         dump!(
             self,
             "induction {} {} @ {} {}",
@@ -457,7 +457,7 @@ impl<'a> CstDumper<'a> {
         );
     }
 
-    fn dump_stmt_while(&mut self, stmt: &WhileStmtCst) {
+    fn dump_stmt_while(&mut self, stmt: &WhileStmtSyntaxObject) {
         dump!(self, "while @ {} {}", stmt.pos, stmt.id);
 
         self.indent(|d| {
@@ -473,29 +473,29 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_stmt_expr(&mut self, stmt: &ExprStmtCst) {
+    fn dump_stmt_expr(&mut self, stmt: &ExprStmtSyntaxObject) {
         self.dump_expr(&stmt.expr);
     }
 
-    fn dump_expr(&mut self, expr: &ExprCst) {
+    fn dump_expr(&mut self, expr: &ExprSyntaxObject) {
         match *expr {
-            ExprCst::Un(ref un) => self.dump_expr_un(un),
-            ExprCst::Bin(ref bin) => self.dump_expr_bin(bin),
-            ExprCst::Dot(ref field) => self.dump_expr_dot(field),
-            ExprCst::LitInt(ref lit) => self.dump_expr_lit_int(lit),
-            ExprCst::LitFloat(ref lit) => self.dump_expr_lit_float(lit),
-            ExprCst::LitBitVec(ref lit) => self.dump_expr_lit_bitvec(lit),
-            ExprCst::LitBool(ref lit) => self.dump_expr_lit_bool(lit),
-            ExprCst::Ident(ref ident) => self.dump_expr_ident(ident),
-            ExprCst::Call(ref call) => self.dump_expr_call(call),
-            ExprCst::Extract(ref deref) => self.dump_expr_extract(deref),
-            ExprCst::Block(ref expr) => self.dump_expr_block(expr),
-            ExprCst::If(ref expr) => self.dump_expr_if(expr),
-            ExprCst::Tuple(ref expr) => self.dump_expr_tuple(expr),
+            ExprSyntaxObject::Un(ref un) => self.dump_expr_un(un),
+            ExprSyntaxObject::Bin(ref bin) => self.dump_expr_bin(bin),
+            ExprSyntaxObject::Dot(ref field) => self.dump_expr_dot(field),
+            ExprSyntaxObject::LitInt(ref lit) => self.dump_expr_lit_int(lit),
+            ExprSyntaxObject::LitFloat(ref lit) => self.dump_expr_lit_float(lit),
+            ExprSyntaxObject::LitBitVec(ref lit) => self.dump_expr_lit_bitvec(lit),
+            ExprSyntaxObject::LitBool(ref lit) => self.dump_expr_lit_bool(lit),
+            ExprSyntaxObject::Identifier(ref ident) => self.dump_expr_ident(ident),
+            ExprSyntaxObject::Call(ref call) => self.dump_expr_call(call),
+            ExprSyntaxObject::Extract(ref deref) => self.dump_expr_extract(deref),
+            ExprSyntaxObject::Block(ref expr) => self.dump_expr_block(expr),
+            ExprSyntaxObject::If(ref expr) => self.dump_expr_if(expr),
+            ExprSyntaxObject::Tuple(ref expr) => self.dump_expr_tuple(expr),
         }
     }
 
-    fn dump_expr_block(&mut self, block: &BlockCst) {
+    fn dump_expr_block(&mut self, block: &BlockSyntaxObject) {
         dump!(
             self,
             "block ({} statement(s)) @ {} {}",
@@ -513,26 +513,26 @@ impl<'a> CstDumper<'a> {
         dump!(self, "block end");
     }
 
-    fn dump_init(&mut self, block: &TransitionSystemBlockCst) {
+    fn dump_init(&mut self, block: &TransitionSystemBlockSyntaxObject) {
         self.indent(|d| {
             dump!(d, "init @ {} {}", block.pos, block.id);
             d.indent(|d| d.dump_expr_block(&*block.block));
         });
     }
 
-    fn dump_next(&mut self, block: &TransitionSystemBlockCst) {
+    fn dump_next(&mut self, block: &TransitionSystemBlockSyntaxObject) {
         self.indent(|d| {
             dump!(d, "next @ {} {}", block.pos, block.id);
             d.indent(|d| d.dump_expr_block(&*block.block));
         });
     }
 
-    fn dump_control(&mut self, block: &TransitionSystemBlockCst) {
+    fn dump_control(&mut self, block: &TransitionSystemBlockSyntaxObject) {
         dump!(self, "control @ {} {}", block.pos, block.id);
         self.indent(|d| d.dump_expr_block(&*block.block));
     }
 
-    fn dump_expr_if(&mut self, expr: &IfExprCst) {
+    fn dump_expr_if(&mut self, expr: &IfExprSyntaxObject) {
         dump!(self, "if @ {} {}", expr.pos, expr.id);
 
         self.indent(|d| {
@@ -550,25 +550,25 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_expr_lit_int(&mut self, lit: &LitIntExprCst) {
+    fn dump_expr_lit_int(&mut self, lit: &LitIntExprSyntaxObject) {
         dump!(self, "lit int {} @ {} {}", lit.value, lit.pos, lit.id);
     }
 
-    fn dump_expr_lit_float(&mut self, lit: &LitFloatExprCst) {
+    fn dump_expr_lit_float(&mut self, lit: &LitFloatExprSyntaxObject) {
         dump!(self, "lit float {} @ {} {}", lit.value, lit.pos, lit.id);
     }
 
-    fn dump_expr_lit_bitvec(&mut self, lit: &LitBitVecExprCst) {
+    fn dump_expr_lit_bitvec(&mut self, lit: &LitBitVecExprSyntaxObject) {
         let mut val : Vec<String> = lit.value.iter().map(|v| format!("{}", if v {1} else {0})).collect();
         val.reverse();
         dump!(self, "lit bitvec {} @ {} {}", val.join(""), lit.pos, lit.id);
     }
 
-    fn dump_expr_lit_bool(&mut self, lit: &LitBoolExprCst) {
+    fn dump_expr_lit_bool(&mut self, lit: &LitBoolExprSyntaxObject) {
         dump!(self, "lit bool {} @ {} {}", lit.value, lit.pos, lit.id);
     }
 
-    fn dump_expr_ident(&mut self, ident: &NameCst) {
+    fn dump_expr_ident(&mut self, ident: &NameSyntaxObject) {
         dump!(
             self,
             "ident {} @ {} {}",
@@ -578,18 +578,18 @@ impl<'a> CstDumper<'a> {
         );
     }
 
-    fn dump_expr_un(&mut self, expr: &UnExprCst) {
+    fn dump_expr_un(&mut self, expr: &UnExprSyntaxObject) {
         dump!(self, "unary {:?} @ {} {}", expr.op, expr.pos, expr.id);
         self.indent(|d| d.dump_expr(&expr.opnd));
     }
 
-    fn dump_expr_bin(&mut self, expr: &BinExprCst) {
+    fn dump_expr_bin(&mut self, expr: &BinExprSyntaxObject) {
         dump!(self, "binary {:?} @ {} {}", expr.op, expr.pos, expr.id);
         self.indent(|d| d.dump_expr(&expr.lhs));
         self.indent(|d| d.dump_expr(&expr.rhs));
     }
 
-    fn dump_expr_tuple(&mut self, expr: &TupleExprCst) {
+    fn dump_expr_tuple(&mut self, expr: &TupleExprSyntaxObject) {
         dump!(self, "tuple @ {} {}", expr.pos, expr.id);
         self.indent(|d| {
             for expr in &expr.values {
@@ -598,13 +598,13 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_expr_dot(&mut self, expr: &DotExprCst) {
+    fn dump_expr_dot(&mut self, expr: &DotExprSyntaxObject) {
         self.indent(|d| d.dump_expr(&expr.rhs));
         dump!(self, "dot @ {} {}", expr.pos, expr.id);
         self.indent(|d| d.dump_expr(&expr.lhs));
     }
 
-    fn dump_expr_extract(&mut self, expr: &ExtractExprCst) {
+    fn dump_expr_extract(&mut self, expr: &ExtractExprSyntaxObject) {
         dump!(self, "extract @ {} {}", expr.pos, expr.id);
 
         self.indent(|d| {
@@ -619,7 +619,7 @@ impl<'a> CstDumper<'a> {
         });
     }
 
-    fn dump_expr_call(&mut self, expr: &CallExprCst) {
+    fn dump_expr_call(&mut self, expr: &CallExprSyntaxObject) {
         dump!(self, "function application @ {} {}", expr.pos, expr.id);
 
         self.indent(|d| {
@@ -636,7 +636,7 @@ impl<'a> CstDumper<'a> {
 
     fn indent<F>(&mut self, fct: F)
     where
-        F: Fn(&mut CstDumper) -> (),
+        F: Fn(&mut SyntaxObjectDumper) -> (),
     {
         let old = self.indent;
         self.indent = old + 1;

@@ -8,7 +8,7 @@ pub enum TokenKind {
     LitInt(String, IntBase, IntSuffix),
     LitFloat(String, FloatSuffix),
     LitBitVec(String, String),
-    Ident(String),
+    Identifier(String),
     End,
 
     // Keywords
@@ -117,7 +117,7 @@ impl TokenKind {
 
             TokenKind::LitBitVec(_, _) => "bitvec number",
 
-            TokenKind::Ident(_) => "ident",
+            TokenKind::Identifier(_) => "ident",
             TokenKind::End => "<<EOF>>",
 
             // Keywords
@@ -255,7 +255,7 @@ impl Token {
                 format!("{}{}", val, suffix)
             }
 
-            TokenKind::Ident(ref val) => val.clone(),
+            TokenKind::Identifier(ref val) => val.clone(),
 
             _ => self.kind.name().into(),
         }
