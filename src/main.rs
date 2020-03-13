@@ -74,6 +74,10 @@ pub fn start() -> i32 {
 
     walk::walk(&mut vm, &cst);
 
+    if args.flag_print {
+        println!("\n\n{}\n\n", vm);
+    }
+
     if vm.diagnostic.has_errors() {
         vm.diagnostic.dump();
         let num_errors = vm.diagnostic.errors().len();

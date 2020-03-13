@@ -1,11 +1,12 @@
 use crate::ast::terms::Term;
+use crate::ast::symbols::SymbolId;
 
 #[derive(Debug, Clone)]
 pub enum Formula {
     True,
     False,
-    Constant(u32),
-    Application(u32, Vec<Term>),
+    Constant(SymbolId),
+    Application(SymbolId, Vec<Term>),
 
     Equal(Box<Term>, Box<Term>),
 

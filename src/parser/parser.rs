@@ -736,6 +736,8 @@ impl<'a> Parser<'a> {
                     Vec::new()
                 };
 
+                let nvariants = variants.iter().map(|v| v.name).collect();
+
                 let span = self.span_from(start);
                 self.expect_semicolon()?;
 
@@ -744,7 +746,7 @@ impl<'a> Parser<'a> {
                     pos,
                     span,
                     name.name,
-                    variants,
+                    nvariants,
                 ))
             }
                                         // This gives us arrays

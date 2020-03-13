@@ -171,6 +171,8 @@ impl<'a> SyntaxObjectDumper<'a> {
                 d.dump_control(control);
             };
         });
+
+        dump!(self, "module end");
     }
 
     fn dump_field(&mut self, field: &FieldDeclarationSyntaxObject) {

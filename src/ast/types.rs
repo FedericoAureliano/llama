@@ -1,80 +1,56 @@
-use std::collections::HashMap;
-use crate::parser::interner::Name;
+use std::fmt;
 
-#[derive(Debug, Clone)]
+use crate::ast::symbols::Symbol;
+
+pub type TypeId = usize;
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Type {
     BitVec(u32),
     Array(Box<Type>, Box<Type>),
-    Lambda(Vec<Type>, Box<Type>),
-    Tuple(Vec<Type>),
+    Lambda(Vec<Box<Type>>, Box<Type>),
+    Tuple(Vec<Box<Type>>),
     Alias(Box<Type>),
-    Enum(Vec<usize>),
-}
-
-#[derive(Debug)]
-pub struct TypeMap {
-    levels: Vec<TypeLevel>,
-}
-
-impl TypeMap {
-    pub fn new() -> TypeMap {
-        TypeMap {
-            levels: vec![TypeLevel::new()],
-        }
-    }
-
-    pub fn push_level(&mut self) {
-        self.levels.push(TypeLevel::new());
-    }
-
-    pub fn pop_level(&mut self) {
-        assert!(self.levels.len() > 1);
-
-        self.levels.pop();
-    }
-
-    pub fn levels(&self) -> usize {
-        self.levels.len()
-    }
-
-    pub fn get(&self, name: Name) -> Option<usize> {
-        for level in self.levels.iter().rev() {
-            if let Some(val) = level.get(name) {
-                return Some(val.clone());
-            }
-        }
-
-        None
-    }
-
-    pub fn insert(&mut self, name: Name, sym: usize) -> Option<usize> {
-        self.levels.last_mut().unwrap().insert(name, sym)
-    }
+    Enum(Vec<Symbol>),
 }
 
 #[derive(Debug)]
 pub struct TypeLevel {
-    map: HashMap<Name, usize>,
+    map : Vec<Type>,
 }
 
 impl TypeLevel {
-    // creates a new table
     pub fn new() -> TypeLevel {
         TypeLevel {
-            map: HashMap::new(),
+            map : Vec::new(),
         }
     }
 
-    pub fn contains(&self, name: Name) -> bool {
-        self.map.contains_key(&name)
+    pub fn contains(&self, ty: &Type) -> bool {
+        self.map.contains(&ty)
     }
 
-    // finds Type in table
-    pub fn get(&self, name: Name) -> Option<&usize> {
-        self.map.get(&name)
+    pub fn get_id(&self, ty: &Type) -> Option<TypeId> {
+        for i in 0..self.map.len() {
+            if &self.map[i] == ty {
+                return Some(i)
+            }
+        }
+        None
     }
 
-    pub fn insert(&mut self, name: Name, sym: usize) -> Option<usize> {
-        self.map.insert(name, sym)
+    pub fn get_type(&self, id: &TypeId) -> Option<&Type> {
+        self.map.get(*id)
+    }
+
+    pub fn insert(&mut self, ty: Type) -> TypeId {
+        self.map.push(ty);
+        self.map.len() - 1 
+    }
+}
+
+impl fmt::Display for TypeLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.map)
     }
 }

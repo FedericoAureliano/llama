@@ -1,10 +1,12 @@
 use bit_vec::BitVec;
 
+use crate::ast::symbols::SymbolId;
+
 #[derive(Debug, Clone)]
 pub enum Term {
     SpecialConstant(Literal),
-    Constant(usize),
-    Application(usize, Vec<Term>),
+    Constant(SymbolId),
+    Application(SymbolId, Vec<Box<Term>>),
 
     BvAdd(Box<Term>, Box<Term>),
     BvMinus(Box<Term>, Box<Term>),

@@ -190,7 +190,7 @@ pub struct EnumDeclarationSyntaxObject {
     pub span: Span,
 
     pub name: Name,
-    pub variants: Vec<NameSyntaxObject>,
+    pub variants: Vec<Name>,
 }
 
 
@@ -217,7 +217,7 @@ impl TypeDeclarationSyntaxObject {
         pos: Position,
         span: Span,
         name: Name,
-        variants: Vec<NameSyntaxObject>,
+        variants: Vec<Name>,
     ) -> TypeDeclarationSyntaxObject {
         TypeDeclarationSyntaxObject::Enum(EnumDeclarationSyntaxObject {
             id,
@@ -246,7 +246,7 @@ impl TypeDeclarationSyntaxObject {
         match *self {
             TypeDeclarationSyntaxObject::Alias(ref val) => format!("`{}` := `{}`", *interner.str(val.name), val.alias.to_string(interner)),
             TypeDeclarationSyntaxObject::Enum(ref val) => {
-                let types: Vec<String> = val.variants.iter().map(|t| format!("{}", *interner.str(t.name))).collect();
+                let types: Vec<String> = val.variants.iter().map(|t| format!("{}", *interner.str(*t))).collect();
                 format!("enum {} of {{{}}}", *interner.str(val.name), types.join(", "))
             }
         }

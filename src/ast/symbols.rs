@@ -1,71 +1,55 @@
-use std::collections::HashMap;
+use std::fmt;
 
-use crate::parser::interner::Name;
+use crate::ast::types::TypeId;
 
-#[derive(Debug)]
-pub struct SymbolMap {
-    levels: Vec<SymbolLevel>,
-}
-
-impl SymbolMap {
-    pub fn new() -> SymbolMap {
-        SymbolMap {
-            levels: vec![SymbolLevel::new()],
-        }
-    }
-
-    pub fn push_level(&mut self) {
-        self.levels.push(SymbolLevel::new());
-    }
-
-    pub fn pop_level(&mut self) {
-        assert!(self.levels.len() > 1);
-
-        self.levels.pop();
-    }
-
-    pub fn levels(&self) -> usize {
-        self.levels.len()
-    }
-
-    pub fn get(&self, name: Name) -> Option<usize> {
-        for level in self.levels.iter().rev() {
-            if let Some(val) = level.get(name) {
-                return Some(val.clone());
-            }
-        }
-
-        None
-    }
-
-    pub fn insert(&mut self, name: Name, sym: usize) -> Option<usize> {
-        self.levels.last_mut().unwrap().insert(name, sym)
-    }
-}
+pub type SymbolId = usize;
+pub type Symbol = String;
 
 #[derive(Debug)]
 pub struct SymbolLevel {
-    map: HashMap<Name, usize>,
+    map : Vec<(Symbol, TypeId)>
 }
 
 impl SymbolLevel {
-    // creates a new table
     pub fn new() -> SymbolLevel {
         SymbolLevel {
-            map: HashMap::new(),
+            map : Vec::new()
         }
     }
 
-    pub fn contains(&self, name: Name) -> bool {
-        self.map.contains_key(&name)
+    pub fn get_symbol_id(&self, sy: &Symbol) -> Option<SymbolId> {
+        for i in 0..self.map.len() {
+            let (s, _) = &self.map[i];
+            if  s == sy {
+                return Some(i)
+            }
+        }
+        None
     }
 
-    // finds symbol in table
-    pub fn get(&self, name: Name) -> Option<&usize> {
-        self.map.get(&name)
+    pub fn get_type_id(&self, sy: &Symbol) -> Option<TypeId> {
+        for i in 0..self.map.len() {
+            let (s, tid) = &self.map[i];
+            if  s == sy {
+                return Some(*tid)
+            }
+        }
+        None
     }
 
-    pub fn insert(&mut self, name: Name, sym: usize) -> Option<usize> {
-        self.map.insert(name, sym)
+    pub fn get_symbol(&self, id: SymbolId) -> Option<&Symbol> {
+        let (sy, _) = self.map.get(id)?;
+        Some(sy)
+    }
+
+    pub fn insert(&mut self, sy: Symbol, ty: TypeId) -> SymbolId {
+        self.map.push((sy, ty));
+        self.map.len() - 1
+    }
+}
+
+impl fmt::Display for SymbolLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.map)
     }
 }

@@ -21,6 +21,7 @@ pub enum SemError {
     NoEnumValue(String),
 
     DuplicateAlias(String),
+    MissingAlias(String),
     
     InvalidLhsAssignment,
     VarNeedsTypeInfo(String),
@@ -108,6 +109,7 @@ impl SemError {
             SemError::NoEnumValue(ref name) => format!("enum `{}` needs at least one variant.", name),
 
             SemError::DuplicateAlias(ref name) => format!("duplicate alias `{}`.", name),
+            SemError::MissingAlias(ref name) => format!("alias to unknown type `{}`.", name),
 
             SemError::VarNeedsTypeInfo(ref name) => format!(
                 "variable `{}` needs either type declaration or expression.",
