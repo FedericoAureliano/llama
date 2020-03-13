@@ -1,7 +1,7 @@
 module main {
   // System description. 
-  var a   : integer;
-  var b   : integer;
+  var a   : bv32;
+  var b   : bv32;
   const flag : boolean;
 
   procedure set_init()

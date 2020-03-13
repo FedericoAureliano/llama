@@ -1,11 +1,11 @@
 module main
 {
-  input a : integer;
-  input b : integer;
+  input a : bv32;
+  input b : bv32;
 
-  var c : integer;
+  var c : bv32;
 
-  @synthesis function max2 (x : integer, y : integer) : integer;
+  @synthesis function max2 (x : bv32, y : bv32) : bv32;
 
   init {
     c = max2(a, b);

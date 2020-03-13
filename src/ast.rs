@@ -3,7 +3,7 @@ use crate::errors::diagnostic::Diagnostic;
 use crate::parser::parser::NodeIdGenerator;
 use crate::ast::symbols::{Symbol, SymbolId, SymbolLevel};
 use crate::ast::types::{Type, TypeId, TypeLevel};
-
+use crate::parser::cst::TypeIdentifierSyntaxObject;
 use crate::errors::message::SemError;
 use crate::parser::lexer::position::Position;
 
@@ -36,6 +36,35 @@ impl VM {
         vm
     }
 
+    pub fn parse_type(&self, so: &TypeIdentifierSyntaxObject) -> Type {
+        match so {
+            TypeIdentifierSyntaxObject::Basic(b) => {
+                let mut type_str = self.interner.str(b.name).to_string();
+
+                if let Some(tid) = self.symbol_table.name_to_typeid(&type_str) {
+                    return self.symbol_table.typeid_to_type(&tid).unwrap().clone()
+                }
+
+                let width = type_str.split_off(2).parse::<u32>().unwrap();
+                assert_eq!(type_str, "bv");
+                let base = Type::BitVec(width);
+
+                if let Some(p) = &b.params {
+                    Type::Array(Box::new(base), Box::new(self.parse_type(&p)))
+                } else {
+                    base
+                }
+            }
+            TypeIdentifierSyntaxObject::Tuple(t) => {
+                let mut contents = Vec::new();
+                for e in &t.subtypes {
+                    contents.push(Box::new(self.parse_type(&e)))
+                };
+                Type::Tuple(contents)
+            }
+        }
+    }
+
     pub fn declare_enum(&mut self, ename: Symbol, evariants: Vec<Symbol>, pos: &Position) {
         if evariants.is_empty() {
             self.diagnostic.report(*pos, SemError::NoEnumValue(ename));
@@ -44,21 +73,40 @@ impl VM {
 
         let t = Type::Enum(evariants.clone());
 
-        if self.symbol_table.type_data.contains(&t) {
-            self.diagnostic.report(*pos, SemError::DuplicateEnum(ename));
-            return
-        }
-
-        let tid = self.symbol_table.insert_type(t);
-        self.symbol_table.name_type(ename.clone(), tid);
+        let tid = match self.symbol_table.insert_type(t) {
+            Some(id) => {
+                self.symbol_table.name_type(ename.clone(), id); 
+                id
+            }
+            None => {
+                self.diagnostic.report(*pos, SemError::DuplicateEnum(ename));
+                return
+            }
+        };
 
         for vname in evariants {
-            if let Some(other_id) = self.symbol_table.get_type_id(&vname) {
-                let other_name = self.symbol_table.get_type_name(&other_id).unwrap();
+            if let Some(other_id) = self.symbol_table.symbol_to_typeid(&vname) {
+                let other_name = self.symbol_table.typeid_to_name(&other_id).unwrap();
                 self.diagnostic.report(*pos, SemError::DuplicateEnumVariant(vname, ename, other_name.clone()));
                 return
             }
             self.symbol_table.insert_symbol(vname, tid);
+        }
+    }
+
+    pub fn declare_alias(&mut self, name: Symbol, tid : TypeId, pos: &Position) {
+        if let Some(_) = self.symbol_table.name_to_typeid(&name) {
+            self.diagnostic.report(*pos, SemError::DuplicateAlias(name));
+            return
+        }
+        self.symbol_table.name_type(name, tid);
+    }
+
+    pub fn declare_type(&mut self, ty: Type) -> TypeId {
+        if let Some(tid) = self.symbol_table.type_to_typeid(&ty) {
+            tid
+        } else {
+            self.symbol_table.insert_type(ty).unwrap()
         }
     }
 }
@@ -98,7 +146,7 @@ impl SymbolTable {
         self.levels.len()
     }
 
-    pub fn get_type_id(&self, sy: &Symbol) -> Option<TypeId> {
+    pub fn symbol_to_typeid(&self, sy: &Symbol) -> Option<TypeId> {
         for level in self.levels.iter().rev() {
             if let Some(tid) = level.get_type_id(sy) {
                 return Some(tid);
@@ -112,16 +160,39 @@ impl SymbolTable {
         self.levels.last_mut().unwrap().insert(sy, tid)
     }
 
-    pub fn insert_type(&mut self, ty: Type) -> TypeId {
-        self.type_data.insert(ty)
+    pub fn insert_type(&mut self, ty: Type) -> Option<TypeId> {
+        if self.type_data.contains(&ty) {
+            None
+        } else {
+            Some(self.type_data.insert(ty))
+        }
     }
 
     pub fn name_type(&mut self, name: String, tid: TypeId) -> Option<String> {
         self.type_names.insert(tid, name)
     }
 
-    pub fn get_type_name(&self, tid: &TypeId) ->  Option<&String> {
+    pub fn typeid_to_name(&self, tid: &TypeId) ->  Option<&String> {
         self.type_names.get(&tid)
+    }
+
+
+    pub fn typeid_to_type(&self, tid: &TypeId) ->  Option<&Type> {
+        self.type_data.get_type(tid)
+    }
+
+    pub fn name_to_typeid(&self, name: &String) -> Option<TypeId> {
+        for (tid, n) in &self.type_names {
+            if n == name {
+                return Some(*tid)
+            }
+        }
+
+        None   
+    }
+
+    pub fn type_to_typeid(&self, ty: &Type) -> Option<TypeId> {
+        self.type_data.get_id(ty)
     }
 }
 

@@ -1,7 +1,7 @@
 module main {
-  var s : integer;
+  var s : bv32;
 
-  procedure foo(i : integer) returns (o : integer) {
+  procedure foo(i : bv32) returns (o : bv32) {
     o = i + 1;
     o = o + 1;
   }

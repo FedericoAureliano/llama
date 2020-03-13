@@ -71,7 +71,7 @@ pub struct BasicTypeIdentifierSyntaxObject {
 
     pub name: Name,
     // Params are for arrays
-    pub params: Vec<Box<TypeIdentifierSyntaxObject>>,
+    pub params: Option<Box<TypeIdentifierSyntaxObject>>,
 }
 
 #[derive(Clone, Debug)]
@@ -90,7 +90,7 @@ impl TypeIdentifierSyntaxObject {
         pos: Position,
         span: Span,
         name: Name,
-        params: Vec<Box<TypeIdentifierSyntaxObject>>,
+        params: Option<Box<TypeIdentifierSyntaxObject>>,
     ) -> TypeIdentifierSyntaxObject {
         TypeIdentifierSyntaxObject::Basic(BasicTypeIdentifierSyntaxObject {
             id,
@@ -135,9 +135,9 @@ impl TypeIdentifierSyntaxObject {
     pub fn to_string(&self, interner: &Interner) -> String {
         match *self {
             TypeIdentifierSyntaxObject::Basic(ref val) => {
-                if val.params.len() > 0 {
-                    let types: Vec<String> = val.params.iter().map(|t| format!("{}", t.to_string(interner))).collect();
-                    format!("[{}]{}", types.join(", "),  *interner.str(val.name))
+                if let Some(p) = &val.params {
+                    let types = format!("{}", p.to_string(interner));
+                    format!("[{}]{}", types,  *interner.str(val.name))
                 } else {
                     format!("{}", *interner.str(val.name))
                 }

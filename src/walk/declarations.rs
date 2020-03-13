@@ -25,8 +25,11 @@ impl<'x, 'cst> Visitor<'cst> for Declaration<'x> {
                 let variants : Vec<String> = e.variants.iter().map(|v| self.vm.interner.str(*v).to_string()).collect();
                 self.vm.declare_enum(name, variants, &e.pos);
             }
-            TypeDeclarationSyntaxObject::Alias(_) => {
-                
+            TypeDeclarationSyntaxObject::Alias(a) => {
+                let name = self.vm.interner.str(a.name).to_string();
+                let ty = self.vm.parse_type(&a.alias);
+                let tid = self.vm.declare_type(ty);
+                self.vm.declare_alias(name, tid, &a.pos);
             }
         }
     }

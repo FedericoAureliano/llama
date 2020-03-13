@@ -673,10 +673,24 @@ impl<'a> Parser<'a> {
                 let start = self.token.span.start();
 
                 let params = if self.token.is(TokenKind::LBracket) {
-                    self.advance_token()?;
-                    self.parse_comma_list(TokenKind::RBracket, |p| Ok(Box::new(p.parse_type_ident()?)))?
+                    let start = self.token.span.start();
+                    let token = self.advance_token()?;
+                    let subtypes = self.parse_comma_list(TokenKind::RBracket, |p| {
+                        let ty = p.parse_type_ident()?;
+                        
+                        Ok(Box::new(ty))
+                    })?;
+
+                    let span = self.span_from(start);
+    
+                    Some(Box::new(TypeIdentifierSyntaxObject::create_tuple(
+                        self.generate_id(),
+                        token.position,
+                        span,
+                        subtypes,
+                    )))
                 } else {
-                    Vec::new()
+                    None
                 };
 
                 let ident = self.expect_ident()?;
@@ -755,10 +769,9 @@ impl<'a> Parser<'a> {
                 let start = self.token.span.start();
 
                 let params = if self.token.is(TokenKind::LBracket) {
-                    self.advance_token()?;
-                    self.parse_comma_list(TokenKind::RBracket, |p| Ok(Box::new(p.parse_type_ident()?)))?
+                    Some(Box::new(self.parse_type_ident()?))
                 } else {
-                    Vec::new()
+                    None
                 };
 
                 let name = self.expect_ident()?;

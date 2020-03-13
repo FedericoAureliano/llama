@@ -1,7 +1,7 @@
 module main {  
   // Part 1: system description
-  var a : integer;
-  var b : integer;
+  var a : bv32;
+  var b : bv32;
 
   init {
     a = 0;
@@ -13,7 +13,7 @@ module main {
     b = a + b;
   }
 
-  @synthesis function h(x : integer, y : integer) : boolean;
+  @synthesis function h(x : bv32, y : bv32) : boolean;
 
   // Part 2: system specification.
   theorem a_le_b: a <= b && h(a, b);
