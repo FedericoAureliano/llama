@@ -17,7 +17,7 @@ impl SymbolLevel {
         }
     }
 
-    pub fn get_symbol_id(&self, sy: &Symbol) -> Option<SymbolId> {
+    pub fn symbol_to_symbolid(&self, sy: &Symbol) -> Option<SymbolId> {
         for i in 0..self.map.len() {
             let (s, _) = &self.map[i];
             if  s == sy {
@@ -27,7 +27,7 @@ impl SymbolLevel {
         None
     }
 
-    pub fn get_type_id(&self, sy: &Symbol) -> Option<TypeId> {
+    pub fn symbol_to_typeid(&self, sy: &Symbol) -> Option<TypeId> {
         for i in 0..self.map.len() {
             let (s, tid) = &self.map[i];
             if  s == sy {
@@ -37,7 +37,7 @@ impl SymbolLevel {
         None
     }
 
-    pub fn get_symbol(&self, id: SymbolId) -> Option<&Symbol> {
+    pub fn symbolid_to_symbol(&self, id: SymbolId) -> Option<&Symbol> {
         let (sy, _) = self.map.get(id)?;
         Some(sy)
     }

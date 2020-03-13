@@ -178,9 +178,9 @@ impl<'a> SyntaxObjectDumper<'a> {
     fn dump_field(&mut self, field: &FieldDeclarationSyntaxObject) {
         dump!(
             self,
-            "`{}` {} @ {} {}",
-            field.data_type.to_string(self.interner),
+            "{} : {} @ {} {}",
             self.str(field.name),
+            field.data_type.to_string(self.interner),
             field.pos,
             field.id
         );

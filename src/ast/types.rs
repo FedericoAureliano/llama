@@ -30,7 +30,7 @@ impl TypeLevel {
         self.map.contains(&ty)
     }
 
-    pub fn get_id(&self, ty: &Type) -> Option<TypeId> {
+    pub fn type_to_typeid(&self, ty: &Type) -> Option<TypeId> {
         for i in 0..self.map.len() {
             if &self.map[i] == ty {
                 return Some(i)
@@ -39,7 +39,7 @@ impl TypeLevel {
         None
     }
 
-    pub fn get_type(&self, id: &TypeId) -> Option<&Type> {
+    pub fn typeid_to_type(&self, id: &TypeId) -> Option<&Type> {
         self.map.get(*id)
     }
 

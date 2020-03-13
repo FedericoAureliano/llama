@@ -148,7 +148,7 @@ impl SymbolTable {
 
     pub fn symbol_to_typeid(&self, sy: &Symbol) -> Option<TypeId> {
         for level in self.levels.iter().rev() {
-            if let Some(tid) = level.get_type_id(sy) {
+            if let Some(tid) = level.symbol_to_typeid(sy) {
                 return Some(tid);
             }
         }
@@ -178,7 +178,7 @@ impl SymbolTable {
 
 
     pub fn typeid_to_type(&self, tid: &TypeId) ->  Option<&Type> {
-        self.type_data.get_type(tid)
+        self.type_data.typeid_to_type(tid)
     }
 
     pub fn name_to_typeid(&self, name: &String) -> Option<TypeId> {
@@ -192,7 +192,7 @@ impl SymbolTable {
     }
 
     pub fn type_to_typeid(&self, ty: &Type) -> Option<TypeId> {
-        self.type_data.get_id(ty)
+        self.type_data.type_to_typeid(ty)
     }
 }
 
